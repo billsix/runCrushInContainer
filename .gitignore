@@ -1,0 +1,13 @@
+# --- server/ artifacts (never commit) ---
+# Python venvs for the Hugging Face CLI / MLX
+server/.venv/
+server/.venv-mlx/
+# downloaded model weights — large
+server/models/
+*.gguf
+# llama.cpp checkout + build
+server/llama.cpp/
+
+# --- editor / tooling ---
+*~
+.ruff_cache/

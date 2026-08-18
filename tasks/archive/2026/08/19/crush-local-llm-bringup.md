@@ -1,6 +1,11 @@
 # Bring up Crush against a local Muse Glimmer server (the basics)
 
-**Status:** proposed — needs go-ahead to implement
+**Status:** complete
+**Completed:** 2026-08-19 — end-to-end confirmed: Crush generates against the local Muse
+Glimmer model over the SSH tunnel. Durable design/operations knowledge lives in
+`tasks/reference/architecture.md` (the living copy); this file is the work record. One
+spot-check left for later: a multi-step *tool-using* Crush edit (does the local model drive
+the agent loop, not just chat). Deferred conventions: `tasks/port-runclaude-conventions-systems.md`.
 **Priority:** 2
 **Difficulty:** 6
 **Started:** 2026-08-18
@@ -136,15 +141,26 @@ plumbing (not needed — the endpoint is a local, keyless llama-server behind SS
 
 ## Plan
 
-- [ ] Server: `server/Makefile` with the variables + `deps`/`llama`/`pull`/`serve` targets.
-- [ ] Server: verify the GGUF pull, the Metal build, and `serve` on the Mac; confirm the
-      `/v1` endpoint answers a `curl` chat-completions probe.
-- [ ] Server: add `serve-mlx` + document MLX vs llama.cpp; note `run-fast`/DFlash for later.
-- [ ] Client: `client/Dockerfile` (full toolchain + pinned Crush) and `client/Makefile`.
-- [ ] Client: bake a working Crush OpenAI-compatible provider config.
-- [ ] Wire-up: document + test the `ssh -N -L 8080:127.0.0.1:8080` tunnel and
-      `--network=host`; drive one real Crush session end-to-end against the Mac.
-- [ ] `.gitignore` for `server/models/*.gguf`, `server/llama.cpp/`, build dirs.
+- [x] Server: `server/Makefile` with the variables + `deps`/`llama`/`pull`/`serve`/`serve-mlx`
+      /`probe`/`check-repo` targets, plus repo-root `.gitignore`. (2026-08-19)
+- [x] Server: verify the **download plumbing** on Linux (portable, no Mac needed) — venv +
+      `huggingface_hub` install, `hf` CLI, `check-repo` resolves the repo, and the real
+      `hf download --include` command pulls a file into `models/`. (2026-08-19)
+- [ ] Server: verify the **Metal build** (`make llama`) and `serve` — Mac-only, cannot be
+      done from the Linux sandbox. Confirm the `/v1` endpoint answers a `curl` probe on the Mac.
+- [x] Server: `serve-mlx` target added; MLX vs llama.cpp documented (quant table + Notes).
+      `run-fast`/DFlash noted for later.
+- [x] Client: `client/Dockerfile` (full toolchain + Crush from source, pinned `v0.89.0`) and
+      `client/Makefile` (`image`/`shell`, `--network=host`, `PROJECT=` mount). (2026-08-19)
+- [x] Client: bake a working Crush provider config — `crushrc` with a `llamacpp` provider
+      (model auto-discovered), parse-verified against the real binary. (2026-08-19)
+- [ ] Wire-up: drive one real Crush session end-to-end against the Mac (needs the Mac + the
+      `ssh -N -L 8080:127.0.0.1:8080` tunnel up). The config path is verified; only the live
+      run remains.
+- [x] `.gitignore` for models / `llama.cpp/` / venvs / build dirs. (2026-08-19)
+- [x] Real gate: nested build of the client image **passed** — image `crushcontainer`
+      **22.3 GB**, in-image `crush version v0.89.0`, baked `crushrc` read by `crush dirs`.
+      (2026-08-19; needed the nested RAM store grown 32→50 GB to fit the commit — see log.)
 
 ## Notes / decisions
 
@@ -156,11 +172,68 @@ plumbing (not needed — the endpoint is a local, keyless llama-server behind SS
 - Q5: **full** toolchain image, everything else barebones; conventions systems deferred.
   **Decided.**
 
+### Bring-up log (2026-08-19, server side, verified on the Linux sandbox)
+
+Built `server/Makefile` + repo `.gitignore`. Verified everything that does **not** need a
+Mac; flagged what does.
+
+- **Download path proven end-to-end (portable, Linux):** `make venv` builds `.venv` with
+  `huggingface_hub` 1.28.0; `make check-repo` resolves `meta-models/Muse-Glimmer-30B-GGUF`
+  and confirms `MODEL_FILE` is present; `hf download … --include README.md` (the exact
+  `make pull` shape) pulled into `models/`. Model card: Apache-2.0, Meta, released Aug 2026,
+  `pipeline_tag: image-text-to-text` (multimodal — hence the mmproj).
+- **Actual repo contents (sizes):** `Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf` **16.76 GB**
+  (our default ✓); `…-KQuant-Dynamic-Q4_K_XL.gguf` **19.65 GB** (a higher-quality dynamic
+  4-bit — still fits 36 GB, a good Q5-adjacent step-up without leaving 4-bit);
+  `mmproj-…-Q4_K_M.gguf` 1.40 GB (vision, skip for coding); `dflash-…-Q4_K_M.gguf` 1.63 GB
+  (the DFlash drafter for `run-fast` speculative decoding); + README/LICENSE/USAGE_POLICY.
+- **NOT verifiable here (Mac-only):** `make llama` (Metal build) and `make serve` — no Metal
+  in the Linux sandbox. Must be run on the Mac Studio.
+- **`LLAMACPP_TAG`:** left at the `b10353` floor as a conservative, honest default. Per the
+  Q1 decision ("later known-good tag"), bump it to the newest llama.cpp release *verified to
+  build+serve Muse Glimmer on Metal* when building on the Mac — a "later" tag isn't
+  "known-good" until it's actually run there, so it's a build-time pick, not a guess from here.
+
+### Bring-up log (2026-08-19, client side, verified on the Linux sandbox)
+
+Built `client/{Dockerfile,Makefile,entrypoint/{01-install-base.sh,crushrc,shell.sh}}`.
+Because the client target IS Linux, more was verifiable here than for the server:
+
+- **Crush build proven for real:** `go install github.com/charmbracelet/crush@v0.89.0`
+  (Go 1.26.5) built cleanly → `crush version v0.89.0`. That is the exact Dockerfile step.
+- **Latest stable tag = `v0.89.0`** (2026-08-12) per the Go module proxy; module path
+  `github.com/charmbracelet/crush` confirmed. Set as `CRUSH_TAG` default.
+- **Config format corrected + verified.** The README-summary claim that JSON is the format
+  was misleading: the modern format is **`crushrc`** (`crush.json` is deprecated), global
+  path `~/.config/crush/crushrc` (confirmed by `crush dirs`). Baked a `crushrc` declaring a
+  **`llamacpp`**-type provider (a real provider type in `schema.json`) with the model list
+  omitted so Crush **auto-discovers** the served model. `crush models` loaded the crushrc
+  with no parse error.
+- **`base_url` has no `/v1`.** Crush source `internal/discover/llamacpp.go:44` appends
+  `/v1/models` to `base_url` itself, so `base_url = http://127.0.0.1:8080` is correct
+  (a trailing `/v1` would double to `/v1/v1/models`). Matches what llama-server exposes.
+- **Toolchain** `01-install-base.sh` is a byte-identical copy of runClaudeInContainer's
+  (has `golang`, `git`, `openssh-clients`). `make help` / `make -n image|shell` validate.
+- **Nested image build now DONE and verified** (2026-08-19). The client `crushcontainer`
+  image builds and runs: `crush version v0.89.0` on PATH, Go 1.26.5 + `ssh` present, baked
+  `crushrc` at `/root/.config/crush/crushrc` read by `crush dirs`. Image size **22.3 GB**.
+  - **Gotcha for the reference docs:** the build first FAILED at the layer-*commit* with
+    `no space left on device` — the 22.3 GB rootfs (Swift, TeX Live, full toolchain) needs
+    base+diff+temp at once, overflowing the default nested RAM store. Fix here:
+    `mount -o remount,size=50g /var/lib/containers` (this sandbox had 55 GB RAM). On a real
+    host `make image` has no such ceiling. This is a concrete data point for the open
+    `dir-backed-nested-podman-storage.md` task (disk-backed store would remove the RAM cap).
+- **Only the live end-to-end Crush→llama-server session remains** (needs the Mac serving +
+  the SSH tunnel). Everything buildable/verifiable on Linux is done.
+
+- Pin (2026-08-18): `LLAMACPP_TAG` = a **later known-good tag** ≥ `b10353` (not the `b10353`
+  floor itself) — pick the newest release verified to build+run Muse Glimmer on Metal at
+  implementation time, and record it. **Decided.**
+- Pin (2026-08-18): `CRUSH_TAG` = the **latest stable Crush release tag** at implementation
+  time (checked against `github.com/charmbracelet/crush` releases). **Decided.**
+
 ## Open questions
 
-1. **Exact llama.cpp pin.** Use `b10353` (the first release with Muse Glimmer support) or a
-   later known-good tag? Recommend pinning a *specific* recent tag ≥ `b10353` at build time
-   and recording it — verify against llama.cpp releases when we implement.
-2. **Crush tag to pin.** Which Crush release tag? Recommend the latest stable tag at
-   implementation time (checked against `github.com/charmbracelet/crush` releases), recorded
-   in `CRUSH_TAG`.
+None open. Both pins (llama.cpp, Crush) are resolved above — they resolve to "newest
+known-good at implementation time," so confirm the concrete tags against the upstream release
+pages when we build, per the verify-before-hardcode note under Server design.

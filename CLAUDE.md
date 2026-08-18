@@ -1,8 +1,9 @@
 # runCrushInContainer — project notes
 
-**Status: design / early bring-up.** The `server/` and `client/` directories described
-below are **not built yet** — the plan lives in `tasks/crush-local-llm-bringup.md`. Treat
-any `make` target named here as *intended*, not existing, until that task lands.
+**Status: working bring-up.** Both `server/` and `client/` are built and in use — the local
+model serves on the Mac (Metal, ~21 t/s) and Crush in the client container talks to it over
+the SSH tunnel and produces output. The `make` targets here exist and run. Remaining polish,
+plus the deferred conventions machinery, are tracked in `tasks/`.
 
 This repo runs a **local coding LLM** (Meta's **Muse Glimmer 30B**) and drives it with
 **Crush** (Charm's terminal coding agent, `github.com/charmbracelet/crush`). It is a sibling
@@ -53,9 +54,17 @@ conventions — is **not** ported yet, and **no auth plumbing** is needed (the e
 local, keyless llama-server behind SSH). That work is tracked in
 `tasks/port-runclaude-conventions-systems.md`.
 
+## Reference docs
+
+- `tasks/reference/architecture.md` — how the two halves fit, the pins (llama.cpp tag, Crush
+  `v0.89.0`), the quant ladder, serve tuning, the crushrc/`llamacpp` config, the SELinux
+  `label=disable` lesson, and the connection flow. Read this first when picking the project up.
+
 ## In-flight tasks
 
-- `tasks/crush-local-llm-bringup.md` — **Priority 2, Difficulty 6** — build the two parts and
-  get one Crush session working end-to-end against the Mac. (The active work.)
 - `tasks/port-runclaude-conventions-systems.md` — **Priority 6, Difficulty 4** — port the
-  conventions systems later.
+  runClaudeInContainer conventions machinery (task/stack/personal config) later. Deferred by
+  design; not part of v1.
+
+(The bring-up task is **complete** — archived at `tasks/archive/2026/08/19/crush-local-llm-bringup.md`,
+knowledge harvested into the reference doc above.)

@@ -5,9 +5,10 @@ Run a **local coding LLM** on your Mac and drive it from **[Crush](https://githu
 [runClaudeInContainer](https://github.com/billsix/runClaudeInContainer), built to be a
 template you can point at a different model or agent.
 
-> **Status: design / early bring-up.** The `server/` and `client/` directories and their
-> `make` targets described below are **not implemented yet** — this README is the intended
-> shape. The plan is in `tasks/crush-local-llm-bringup.md`.
+> **Status: working.** Both sides are built and running — the model serves on the Mac
+> (Metal) and Crush in the Linux client container generates against it over the SSH tunnel.
+> The `make` targets below are real. See `tasks/reference/architecture.md` for how it fits
+> together and the gotchas, and `tasks/` for remaining polish.
 
 ## The idea
 
@@ -44,9 +45,11 @@ Prerequisites `[MAC]`: Xcode command-line tools (`xcode-select --install`), `cma
 
 ```sh
 cd server
+make deps      # check the prerequisites above (Xcode CLT + cmake) are installed
 make llama     # clone + build llama.cpp for Metal, pinned to a known-good tag
 make pull      # download the Q4_K_M GGUF from Hugging Face into ./models
 make serve     # start llama-server on 127.0.0.1:8080 (OpenAI-compatible /v1)
+make probe     # (in another terminal) confirm the server answers before wiring the client
 ```
 
 `make serve-mlx` runs the MLX backend instead (often faster on Apple Silicon). Model, quant,
@@ -64,6 +67,28 @@ ssh -N -L 8080:127.0.0.1:8080 you@mac-studio.local
 - `-N` — don't run a remote command, just forward.
 - `-L 8080:127.0.0.1:8080` — forward **Linux-host** port `8080` → over SSH → the Mac's
   `127.0.0.1:8080`, where `llama-server` is listening.
+
+**This command looks like it hangs — that is correct.** `-N` runs the tunnel in the
+foreground with no output and no prompt; that terminal *is* the tunnel now. Leave it open and
+use another terminal for everything else. To get your prompt back instead, add `-f` (fork to
+the background after authentication):
+
+```sh
+ssh -fN -L 8080:127.0.0.1:8080 you@mac-studio.local   # returns immediately; runs in background
+pkill -f 'ssh -fN -L 8080'                             # ...tear it down later with this
+```
+
+**Verify the tunnel** from a *second* terminal on the Linux host — a JSON model listing means
+you're wired end-to-end:
+
+```sh
+curl -s http://127.0.0.1:8080/v1/models
+```
+
+Connection-refused means the server or the tunnel is not up; a clean listing means Crush will
+discover the model. The forward is *lazy* — it only connects to the Mac's `8080` when
+something (this `curl`, or Crush) actually uses the local end, which is why the `ssh` command
+sits there quietly even before anything hits it.
 
 Now `localhost:8080` on the Linux host reaches the model on the Mac. (Replace
 `you@mac-studio.local` with your Mac's user and hostname/IP.)

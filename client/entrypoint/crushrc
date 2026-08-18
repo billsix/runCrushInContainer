@@ -1,0 +1,18 @@
+# ~/.config/crush/crushrc — baked default for the runCrushInContainer client.
+#
+# Declares a single provider: the local Muse Glimmer model served by llama.cpp on the Mac,
+# reached through the host's SSH tunnel. With `type llamacpp` and no model list, Crush
+# AUTO-DISCOVERS the served model when it starts (the tunnel must be up), so there is no
+# model to name and no API key to set.
+#
+# Reachability: the client runs with `podman run --network=host`, so 127.0.0.1:8080 inside
+# the container is the host's forwarded port. On the host, keep the tunnel open:
+#     ssh -N -L 8080:127.0.0.1:8080 you@mac-studio
+# If you serve on a different port (server Makefile PORT), change the base-url below to match.
+#
+# NOTE: crushrc runs as a full shell script at load time — treat it as trusted code.
+
+provider add muse-glimmer \
+  --name "Muse Glimmer (local llama.cpp)" \
+  --type llamacpp \
+  --base-url "http://127.0.0.1:8080"
