@@ -1,0 +1,230 @@
+From 051a535a69999e5b4fcaf2cb12f562371d4d8530 Mon Sep 17 00:00:00 2001
+From: William Emerison Six <billsix@gmail.com>
+Date: Wed, 19 Aug 2026 12:42:58 +0000
+Subject: [PATCH] prompt: recursively splice @path imports in context files
+
+Crush loads context files (CLAUDE.md/AGENTS.md/CRUSH.md, etc.) but passes
+their contents to the model verbatim, so a `@path` reference written inside
+one is literal text. This adds Claude-Code-compatible `@`-import: a line that
+is exactly `@path` (leading whitespace allowed) is replaced by the referenced
+file's contents, recursively.
+
+MVP semantics: `~` is expanded; a relative path resolves against the importing
+file's directory; recursion is capped at 5 hops; cycles are guarded via a
+visited-set; an unreadable/missing target or a mid-line `@mention` is left as
+literal text. Implemented as a small helper called from processFile, so every
+loaded context file gets expansion and nothing else is touched.
+
+Carried as a local patch for runCrushInContainer (git am at image-build time).
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+---
+ internal/agent/prompt/at_import_test.go | 119 ++++++++++++++++++++++++
+ internal/agent/prompt/prompt.go         |  55 ++++++++++-
+ 2 files changed, 173 insertions(+), 1 deletion(-)
+ create mode 100644 internal/agent/prompt/at_import_test.go
+
+diff --git a/internal/agent/prompt/at_import_test.go b/internal/agent/prompt/at_import_test.go
+new file mode 100644
+index 0000000..f4dd39b
+--- /dev/null
++++ b/internal/agent/prompt/at_import_test.go
+@@ -0,0 +1,119 @@
++package prompt
++
++import (
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++)
++
++// write is a tiny fixture helper: create dir/name with body, return its full path.
++func write(t *testing.T, dir, name, body string) string {
++	t.Helper()
++	p := filepath.Join(dir, name)
++	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
++		t.Fatalf("write %s: %v", p, err)
++	}
++	return p
++}
++
++// Recursive splice: root @-imports child, child @-imports grand.
++func TestAtImport_Recursive(t *testing.T) {
++	d := t.TempDir()
++	write(t, d, "grand.md", "GRAND_MARKER")
++	write(t, d, "child.md", "CHILD_MARKER\n@grand.md\n")
++	root := write(t, d, "root.md", "ROOT_MARKER\n@child.md\ntail\n")
++
++	cf := processFile(root)
++	if cf == nil {
++		t.Fatal("processFile returned nil")
++	}
++	for _, want := range []string{"ROOT_MARKER", "CHILD_MARKER", "GRAND_MARKER", "tail"} {
++		if !strings.Contains(cf.Content, want) {
++			t.Errorf("expected %q in expanded content, got:\n%s", want, cf.Content)
++		}
++	}
++	if strings.Contains(cf.Content, "@child.md") || strings.Contains(cf.Content, "@grand.md") {
++		t.Errorf("import lines were not spliced away:\n%s", cf.Content)
++	}
++}
++
++// Relative imports resolve against the IMPORTING file's directory, not the cwd.
++func TestAtImport_RelativeToFileDir(t *testing.T) {
++	d := t.TempDir()
++	sub := filepath.Join(d, "sub")
++	if err := os.MkdirAll(sub, 0o755); err != nil {
++		t.Fatal(err)
++	}
++	write(t, sub, "leaf.md", "LEAF_MARKER")
++	root := write(t, d, "root.md", "@sub/leaf.md\n")
++
++	cf := processFile(root)
++	if cf == nil || !strings.Contains(cf.Content, "LEAF_MARKER") {
++		t.Fatalf("relative import not resolved:\n%#v", cf)
++	}
++}
++
++// Cycle guard: a imports b, b imports a — must terminate and not loop.
++func TestAtImport_Cycle(t *testing.T) {
++	d := t.TempDir()
++	write(t, d, "a.md", "A_MARKER\n@b.md\n")
++	write(t, d, "b.md", "B_MARKER\n@a.md\n")
++
++	done := make(chan *ContextFile, 1)
++	go func() { done <- processFile(filepath.Join(d, "a.md")) }()
++	cf := <-done // if this hangs, the cycle guard failed
++	if cf == nil {
++		t.Fatal("nil result")
++	}
++	if !strings.Contains(cf.Content, "A_MARKER") || !strings.Contains(cf.Content, "B_MARKER") {
++		t.Errorf("expected both markers once:\n%s", cf.Content)
++	}
++}
++
++// Missing target and a mid-line @mention are both left as literal text.
++func TestAtImport_MissingAndMidlineLiteral(t *testing.T) {
++	d := t.TempDir()
++	root := write(t, d, "root.md", "@does-not-exist.md\nemail me @ someone\ncontact @handle here\n")
++
++	cf := processFile(root)
++	if cf == nil {
++		t.Fatal("nil result")
++	}
++	for _, want := range []string{"@does-not-exist.md", "@ someone", "@handle"} {
++		if !strings.Contains(cf.Content, want) {
++			t.Errorf("expected literal %q preserved, got:\n%s", want, cf.Content)
++		}
++	}
++}
++
++// Depth cap: a chain longer than maxContextImportDepth stops expanding, leaving the
++// deepest still-unexpanded reference literal rather than recursing without bound.
++func TestAtImport_DepthCap(t *testing.T) {
++	d := t.TempDir()
++	// Build files f0 @-> f1 @-> ... @-> f7 ; each fN also carries marker MN.
++	const n = 7
++	for i := 0; i <= n; i++ {
++		body := "M" + string(rune('0'+i))
++		if i < n {
++			body += "\n@f" + string(rune('0'+i+1)) + ".md\n"
++		}
++		write(t, d, "f"+string(rune('0'+i))+".md", body)
++	}
++	cf := processFile(filepath.Join(d, "f0.md"))
++	if cf == nil {
++		t.Fatal("nil result")
++	}
++	// Depth starts at 1 for f0; maxContextImportDepth=5 means the imports at depths
++	// 1..5 splice (f1..f5, markers M0..M5), and f5's own `@f6.md` reference sits at
++	// the cap and is left literal.
++	if !strings.Contains(cf.Content, "M0") || !strings.Contains(cf.Content, "M5") {
++		t.Errorf("levels within the cap should expand:\n%s", cf.Content)
++	}
++	if !strings.Contains(cf.Content, "@f6.md") {
++		t.Errorf("expected an unexpanded reference at the depth cap:\n%s", cf.Content)
++	}
++	if strings.Contains(cf.Content, "M6") {
++		t.Errorf("content beyond the depth cap should not have expanded:\n%s", cf.Content)
++	}
++}
+diff --git a/internal/agent/prompt/prompt.go b/internal/agent/prompt/prompt.go
+index 4917b25..074e00d 100644
+--- a/internal/agent/prompt/prompt.go
++++ b/internal/agent/prompt/prompt.go
+@@ -7,6 +7,7 @@ import (
+ 	"log/slog"
+ 	"os"
+ 	"path/filepath"
++	"regexp"
+ 	"runtime"
+ 	"strings"
+ 	"text/template"
+@@ -101,10 +102,62 @@ func processFile(filePath string) *ContextFile {
+ 	if err != nil {
+ 		return nil
+ 	}
++	// Recursively splice `@path` imports (Claude-Code-compatible), so a context
++	// file can pull in other files by reference. MVP semantics: a line that is
++	// exactly `@path` (leading whitespace allowed) is replaced by the referenced
++	// file's contents; `~` is expanded; a relative path resolves against the
++	// importing file's directory; recursion is capped and cycles are guarded;
++	// an unreadable target is left as literal text.
++	abs, err := filepath.Abs(filePath)
++	if err != nil {
++		abs = filePath
++	}
++	expanded := expandContextImports(string(content), filepath.Dir(filePath), 1, map[string]bool{abs: true})
+ 	return &ContextFile{
+ 		Path:    filePath,
+-		Content: string(content),
++		Content: expanded,
++	}
++}
++
++// maxContextImportDepth bounds `@`-import recursion (matches Claude Code's ~5 hops)
++// so a chain of imports cannot expand without limit.
++const maxContextImportDepth = 5
++
++// contextImportLine matches a line that is exactly an `@path` reference: optional
++// leading whitespace, `@`, a run of non-whitespace path characters, optional
++// trailing whitespace, and nothing else on the line. A mid-line `@name` (an email,
++// a mention) does not match, so only deliberate whole-line imports are expanded.
++var contextImportLine = regexp.MustCompile(`(?m)^[ \t]*@([^\s]+)[ \t]*$`)
++
++// expandContextImports replaces whole-line `@path` references in content with the
++// referenced file's (recursively expanded) contents. baseDir is the directory of
++// the file that content came from, used to resolve relative imports. visited holds
++// the absolute paths already on the current import chain, so a cycle leaves the
++// offending reference as literal text instead of looping forever.
++func expandContextImports(content, baseDir string, depth int, visited map[string]bool) string {
++	if depth > maxContextImportDepth {
++		return content
+ 	}
++	return contextImportLine.ReplaceAllStringFunc(content, func(line string) string {
++		m := contextImportLine.FindStringSubmatch(line)
++		if m == nil {
++			return line
++		}
++		p := home.Long(m[1])
++		if !filepath.IsAbs(p) {
++			p = filepath.Join(baseDir, p)
++		}
++		abs, err := filepath.Abs(p)
++		if err != nil || visited[abs] {
++			return line // unresolved path or import cycle: keep the literal reference
++		}
++		data, err := os.ReadFile(abs)
++		if err != nil {
++			return line // missing/unreadable target: keep the literal reference
++		}
++		visited[abs] = true
++		return expandContextImports(string(data), filepath.Dir(abs), depth+1, visited)
++	})
+ }
+ 
+ func processContextPath(p string, store *config.ConfigStore) []ContextFile {
+-- 
+2.55.0
+
