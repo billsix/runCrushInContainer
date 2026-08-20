@@ -105,6 +105,27 @@ v0.89.0-specific (several absent features are on Crush's in-repo `docs/*/FUTURE.
 - **Ignore files — SUPPORTED:** `.gitignore` + `.crushignore` (per-dir) + `~/.config/crush/ignore`.
 - **Model switching — SUPPORTED:** `large`/`small` slots, `model add`, `provider add`.
 
+## Provider & model selection — the built-in catalog and how to suppress it
+
+Crush ships an embedded **Catwalk provider catalog** (OpenAI/Anthropic/… — *hundreds* of models) that it
+merges in by default and offers in the model picker. The list is built by `config.Providers(cfg)`
+(`internal/config/provider.go:170`), which returns the catalog UNLESS **`disable_default_providers`** is
+set (`provider.go:175,186` short-circuit to custom-only). Two behaviors that surprise you:
+
+- **The picker/onboarding shows the catalog when no usable provider is configured.** `IsConfigured()`
+  = ≥1 enabled provider (`config.go:720`); if false, Crush enters onboarding and lists the catalog
+  (`internal/ui/model/ui.go:491`).
+- **A custom provider (e.g. `llamacpp`) with no explicit models auto-triggers discovery** at load
+  (`GET /v1/models`, 3-second timeout, `load.go:382-475`); if discovery fails (endpoint down / airgapped)
+  the provider is **deleted** (`load.go:471`), leaving zero providers → onboarding → the catalog appears.
+  This is why an offline `crushrc` that relied on discovery showed ~15-20 models.
+
+**To offer only a local model** (crushrc): `option default-providers false` (inverted → sets
+`disable_default_providers`, `options.go:191`) **plus** an explicit `model add <provider>/<id>` so the
+provider survives without discovery. runCrushInContainer's baked `crushrc` does exactly this — verified
+`crush models` drops from **1532 → 1**. Full history + before/after:
+`tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md`.
+
 ## What Crush does NOT have (so the port must drop or rework these)
 
 - **Recursive `@`-import** — see finding 2. Use `global-context-path` instead.

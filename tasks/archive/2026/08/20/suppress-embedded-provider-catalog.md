@@ -1,11 +1,11 @@
 # Make Crush offer ONLY the local model — suppress the embedded provider catalog
 
-**Status:** IMPLEMENTED + verified (2026-08-20) — applied to `client/entrypoint/crushrc` and
-`server/Makefile`; `crush models` proves only the local model is offered. Remaining: rebuild the
-client image + a live generation check (see "Implementation" below).
+**Status:** complete — implemented + config-level verified (`crush models` 1532 → 1). Airgapped
+real-world verification tracked separately in `tasks/verify-provider-suppression-airgapped.md`.
+Durable mechanism harvested to `tasks/reference/crush-capabilities.md` ("Provider & model selection").
 **Priority:** 3
 **Difficulty:** 3
-**Started:** 2026-08-20
+**Started:** 2026-08-20 · **Completed:** 2026-08-20
 
 ## Implementation (2026-08-20)
 

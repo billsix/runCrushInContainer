@@ -70,7 +70,7 @@ sibling/template of `github.com/billsix/runClaudeInContainer`. Two machines, one
   explicit model has no such dependency and works offline/airgapped. The server pins a matching stable
   ID via `--alias $(MODEL_ALIAS)` (`server/Makefile`), so `/v1/models` reports `muse-glimmer` instead
   of the raw GGUF path. Full rationale + the `crush models` before/after (1532 → 1):
-  `tasks/suppress-embedded-provider-catalog.md`.
+  `tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md`.
 - **`--network=host`** (Linux-only) so `127.0.0.1:8080` in the container is the host's
   SSH-forwarded port.
 - **SELinux: runs UNCONFINED** (`SELINUX_OPT ?= --security-opt label=disable`, `client/Makefile`).

@@ -16,7 +16,7 @@ recommendations** — turning "I don't know" into "here's what to set."
 
 It runs wherever the tunnel's local end lives (the Linux host, or the Mac directly) — anywhere that can
 reach `127.0.0.1:8080`. **Not** inside this agent's sandbox (that's on a bridged network and can't reach
-the host loopback tunnel — see `tasks/suppress-embedded-provider-catalog.md`, the reachability note).
+the host loopback tunnel — see `tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md`, the reachability note).
 
 ## What it does (v1 scope — a compact server-health + context advisor)
 
@@ -189,4 +189,4 @@ Resolved (2026-08-20):
 
 - `tasks/context-window-sizing.md` — the findings this script operationalizes (the two limits, how
   compaction works, how to change each).
-- `tasks/suppress-embedded-provider-catalog.md` — shares the `model add … --context-window` line.
+- `tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md` — shares the `model add … --context-window` line.

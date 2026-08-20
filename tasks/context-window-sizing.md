@@ -78,7 +78,7 @@ model add muse-glimmer/<id> --context-window 32768   # match the server's -c / C
 
 (Keep this number in sync with `CTX`.) If instead you rely on runtime discovery, the llamacpp enricher
 sets `context_window` from the server's `n_ctx` automatically — but pinning is deterministic and
-offline-safe, and it ties into `tasks/suppress-embedded-provider-catalog.md`, whose proposed crushrc
+offline-safe, and it ties into `tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md`, whose proposed crushrc
 already includes `--context-window 32768`.
 
 ### If Crush is summarizing too aggressively
@@ -106,6 +106,6 @@ graceful degradation on very long sessions.
 
 ## Cross-links
 
-- `tasks/suppress-embedded-provider-catalog.md` — its proposed crushrc already pins the model with
+- `tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md` — its proposed crushrc already pins the model with
   `--context-window 32768`; these two tasks touch the same `model add` line.
 - `tasks/reference/architecture.md` — server tuning (`CTX`, `--parallel`, the KV-cache-restore note).
