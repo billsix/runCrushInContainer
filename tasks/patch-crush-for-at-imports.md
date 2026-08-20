@@ -1,7 +1,10 @@
 # Patch Crush to recursively splice `@`-imports in context files
 
-**Status:** DONE — patch delivered, wired into the image build, and nested-build-verified
-(2026-08-20). Parity gaps tracked in `tasks/crush-at-import-parity.md`.
+**Status:** in-progress (kept open per maintainer, 2026-08-20) — patch delivered, wired into the
+image build, and nested-build-verified. **Held open until the remaining checks are done:** (1) a
+live end-to-end Crush session splicing a real `@ref.md` against the Mac's llama-server (needs the
+Mac + tunnel), and (2) a full default-flags `make image` gate (only the isolated build stanza was
+exercised here). Parity gaps tracked in `tasks/crush-at-import-parity.md`.
 **Priority:** 5
 **Difficulty:** 5
 **Started:** 2026-08-19 · **MVP delivered:** 2026-08-19
