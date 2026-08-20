@@ -102,22 +102,33 @@ make shell     # podman run --rm --network=host … then launch `crush`
 ```
 
 `--network=host` makes the container share the host's network, so Crush talking to
-`127.0.0.1:8080` hits the SSH-forwarded port and, through it, the Mac. Crush is preconfigured
-as a custom OpenAI-compatible provider pointing at that endpoint.
+`127.0.0.1:8080` hits the SSH-forwarded port and, through it, the Mac. The baked `crushrc`
+preconfigures a single local provider, **pins the Muse Glimmer model explicitly, and suppresses
+Crush's built-in model catalog** so only the local model is offered.
 
 ## Layout
 
 | Path | Purpose |
 | --- | --- |
 | `server/` | macOS-native llama.cpp server (Makefile: `llama` / `pull` / `serve` / `serve-mlx`) |
-| `client/` | Linux Podman image with Crush built in (Dockerfile + Makefile) |
-| `tasks/` | Task docs — the bring-up plan and the deferred conventions-porting follow-up |
+| `client/` | Linux Podman image with Crush built in (Dockerfile + Makefile); `client/patches/` holds the local Crush patch |
+| `tasks/` | Task docs (`tasks/`), durable reference docs (`tasks/reference/`), and the dated archive (`tasks/archive/`) |
 
-## What's intentionally minimal (for now)
+## Beyond the basics (still local + keyless — no auth to set up)
 
-This first cut is just "get it running." The task/stack/personal-config machinery from
-runClaudeInContainer is **not** here yet — see `tasks/port-runclaude-conventions-systems.md`.
-No auth to set up: the endpoint is a local, keyless server behind your SSH tunnel.
+The first cut was just "get it running"; the client has since grown a few things:
+
+- **A local `@`-import patch for Crush** (`client/patches/`, applied at build when
+  `CRUSH_AT_IMPORT=1`, on by default via `make image`) so a `@path` on its own line in a context
+  file (`CLAUDE.md`/`AGENTS.md`/`CRUSH.md`) is recursively spliced in — a feature Crush lacks upstream.
+- **Only the local model is offered** — the baked `crushrc` pins Muse Glimmer explicitly and sets
+  `option default-providers false` to suppress Crush's built-in provider catalog.
+- **Host config mounts** — `~/.tmux.conf` / `~/.gitconfig` / `~/.gnupg` are mounted in when present,
+  plus a baked `.extrabashrc` (prompt, aliases).
+
+The heavier runClaudeInContainer machinery — the diversion stack, personal-overlay layering, and
+slash commands — is **still deferred** (see `tasks/port-runclaude-conventions-systems.md`); the
+task-doc and reference-doc conventions themselves are already in use here.
 
 ## License
 

@@ -35,36 +35,58 @@ Three environments are in play; label instructions so it's unambiguous:
 
 ## Conventions for changing this repo
 
-- **Pin versions in Makefile variables, never hardcode inline.** `LLAMACPP_TAG`,
-  `MODEL_REPO`, `MODEL_FILE`, `CRUSH_TAG`, `PORT`, `CTX`, `NGL`. The template value is
-  swapping these.
+- **Pin versions/knobs in Makefile variables, never hardcode inline.** Server: `LLAMACPP_TAG`,
+  `MODEL_REPO`, `MODEL_FILE`, `MODEL_ALIAS`, `PORT`, `CTX`, `NGL`, `NP`. Client: `CRUSH_TAG`,
+  `CRUSH_AT_IMPORT`. The template value is swapping these. Two cross-file couplings to keep in sync:
+  server `MODEL_ALIAS` ↔ the crushrc's pinned model ID, and server `CTX` ↔ the crushrc's
+  `--context-window`.
 - **The server binds loopback only.** Never bind llama-server to `0.0.0.0` / the LAN; the
   only ingress is the SSH tunnel. Keep it that way.
 - **The client image reuses runClaudeInContainer's full toolchain** (`01-install-base.sh`,
-  sorted, maximal — don't prune) but **omits** its auth/config layering for now (see below).
+  sorted, maximal — don't prune) and bakes: **Crush built from source** (patched with the
+  `@`-import diff when `CRUSH_AT_IMPORT=1`), the **`crushrc`** (pinned model + catalog suppression),
+  and **dotfiles** (`entrypoint/dotfiles/.extrabashrc`). It **omits** the auth/config-layering
+  machinery for now (see below). The Makefile also conditionally mounts host `~/.tmux.conf` /
+  `~/.gitconfig` / `~/.gnupg`.
 - **Verify model/tool identifiers before hardcoding them.** GGUF filenames, the HF repo path,
   and good llama.cpp / Crush tags came from a 2026-08-18 web search and drift; confirm against
   Hugging Face and the upstream release pages at implementation time.
 
-## Deliberately deferred (do not add without the follow-up task)
+## What's in use vs. deferred
 
-Per the user (2026-08-18), v1 is *the basics* only. The runClaudeInContainer machinery —
-task-doc system, diversion stack, personal-overlay/`@`-import layering, reference-doc
-conventions — is **not** ported yet, and **no auth plumbing** is needed (the endpoint is a
-local, keyless llama-server behind SSH). That work is tracked in
-`tasks/port-runclaude-conventions-systems.md`.
+The **task-doc and reference-doc conventions are now in active use** here (`tasks/`,
+`tasks/archive/<YYYY>/<MM>/<DD>/`, `tasks/reference/`) — use them normally. Still **deferred** (the
+heavier runClaudeInContainer machinery): the **diversion stack**, the **personal-overlay / `@`-import
+config layering**, and the **slash commands** (`/new-task`, `/stack-*`, …). **No auth plumbing** is
+needed either (the endpoint is a local, keyless llama-server behind SSH). That deferred work is
+tracked in `tasks/port-runclaude-conventions-systems.md`.
+
+Note: the client image itself carries a **local `@`-import patch for Crush** (`client/patches/`,
+`CRUSH_AT_IMPORT`) — that's a *Crush* feature, distinct from the deferred convention-delivery layering.
 
 ## Reference docs
 
 - `tasks/reference/architecture.md` — how the two halves fit, the pins (llama.cpp tag, Crush
-  `v0.89.0`), the quant ladder, serve tuning, the crushrc/`llamacpp` config, the SELinux
-  `label=disable` lesson, and the connection flow. Read this first when picking the project up.
+  `v0.89.0`), the quant ladder, serve tuning, the crushrc/`llamacpp` config (explicit model pin +
+  catalog suppression), dotfiles/host-config mounts, the `@`-import patch, and the SELinux
+  `label=disable` lesson. Read this first when picking the project up.
+- `tasks/reference/crush-capabilities.md` — verified map of Crush `v0.89.0`'s features (context-file
+  autoload, no native `@`-import, custom commands, hooks, provider/model selection + the
+  `disable_default_providers` catalog switch, context-window/compaction). Read before touching
+  Crush config or the port.
 
 ## In-flight tasks
 
-- `tasks/port-runclaude-conventions-systems.md` — **Priority 6, Difficulty 4** — port the
-  runClaudeInContainer conventions machinery (task/stack/personal config) later. Deferred by
-  design; not part of v1.
+Scan `tasks/` (top-level) at session start for the current list; as of 2026-08-20:
 
-(The bring-up task is **complete** — archived at `tasks/archive/2026/08/19/crush-local-llm-bringup.md`,
-knowledge harvested into the reference doc above.)
+- `port-runclaude-conventions-systems.md` (P4/D5) — port the deferred convention machinery (stack /
+  personal overlay / slash commands).
+- `patch-crush-for-at-imports.md` (P5/D5) — the `@`-import patch; delivered + wired, kept open pending
+  a live end-to-end check.
+- `verify-provider-suppression-airgapped.md` (P5/D2) — confirm the catalog-suppression fix on the
+  airgapped machine.
+- `context-advisor-script.md` (P4/D2) — a host-run server/context advisor script (drafted, on hold).
+- `crush-at-import-parity.md` (P6/D4) — bring the `@`-import patch to full Claude parity (follow-up).
+
+Completed & archived (see `tasks/archive/2026/08/`): the bring-up, provider-catalog suppression,
+dotfiles/host-config mounts, and context-window sizing.
