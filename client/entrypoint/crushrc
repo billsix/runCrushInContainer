@@ -31,7 +31,7 @@ provider add muse-glimmer \
 # dependency. The ID must match what the server reports at /v1/models — the server is pinned to
 # `--alias muse-glimmer` (server/Makefile MODEL_ALIAS), so this stays constant across quant/file
 # changes. --context-window matches the server's -c/CTX (32768) so Crush's compaction math lines
-# up (see tasks/context-window-sizing.md).
+# up (see tasks/archive/2026/08/20/context-window-sizing.md).
 model add muse-glimmer/muse-glimmer --name "Muse Glimmer 30B" --context-window 32768
 
 # Preselect it for both slots so Crush uses it immediately — no model picker at all.

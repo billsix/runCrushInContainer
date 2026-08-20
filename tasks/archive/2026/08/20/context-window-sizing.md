@@ -1,9 +1,30 @@
 # Context window — how big it is, why it feels small, and how to change it
 
-**Status:** researched — findings + how-to below; needs go-ahead on any config change (nothing applied)
+**Status:** DONE (2026-08-20) — config is consistent and cross-referenced; kept the RAM-safe 32k
+default. The only remaining items need the Mac (measure a bigger window) or a live session (diagnose
+cap-vs-compaction), captured below.
 **Priority:** 4
 **Difficulty:** 2
-**Started:** 2026-08-20
+**Started:** 2026-08-20 · **Completed:** 2026-08-20
+
+## Implementation (2026-08-20)
+
+The load-bearing change — pinning Crush's `--context-window` to the server's window so Crush's
+compaction math lines up — was **already applied** in the providers task
+(`client/entrypoint/crushrc`: `model add … --context-window 32768`, matching `server/Makefile`
+`CTX=32768`). This task closed the loop:
+
+- **`server/Makefile`** — added a **KEEP IN SYNC** note on `CTX` pointing at the crushrc
+  `--context-window` (the crushrc already pointed back), plus the Metal **wired-limit caveat** for
+  going bigger (`CTX=65536` roughly doubles KV RAM and may exceed the ~24-28 GB default wired limit →
+  raise with `sudo sysctl iogpu.wired_limit_mb`).
+
+**Deliberately NOT changed (and why):**
+- **Did not bump `CTX` past 32k.** Bigger is RAM-risky on the 36 GB Mac (weights 16.8 GB + KV +
+  wired-limit) and can't be validated from this sandbox. 32k is the safe default; `make serve
+  CTX=65536` is a one-flag override once the Mac is measured.
+- **Did not disable `auto-summarize`.** Turning off compaction is a behavior tradeoff (errors at the
+  cap instead of trimming) — the maintainer's call, not a blind default.
 
 ## The question (maintainer, 2026-08-20)
 
@@ -97,12 +118,14 @@ graceful degradation on very long sessions.
 
 ## Open questions
 
-1. **What target context size do you want** — keep 32k, or go to 64k / higher? This drives the `CTX`
-   value and the Mac RAM budget (larger = more KV RAM; 131k likely won't fit on 36 GB with Q4).
-2. **Was the "small" feeling from the 32k cap, or from Crush compacting early?** A quick way to tell on
-   the next session: if it degrades well before ~26k tokens, it's the `context_window`/auto-summarize
-   side (fix in crushrc); if it degrades near 32k, raise `CTX`. Recommend setting the crushrc
-   `--context-window` to match first (cheap), then raising `CTX` only if still cramped.
+1. **Target context size — DECIDED: keep 32k for now** (RAM-safe, can't measure bigger from here).
+   Bumping to 64k is a one-flag change (`make serve CTX=65536` + the matching crushrc `--context-window`
+   + likely a `iogpu.wired_limit_mb` raise) whenever you can measure it on the Mac. Not blocking.
+2. **Was "small" the 32k cap or early compaction? — needs a live session to tell.** On the next run:
+   degrades well before ~26k tokens ⇒ compaction (raise the window or `option auto-summarize false`);
+   degrades near 32k ⇒ the cap (raise `CTX`). The context-advisor script
+   (`tasks/context-advisor-script.md`) will print the live numbers to settle this. Folding this into
+   the airgapped verification (`tasks/verify-provider-suppression-airgapped.md`) is natural.
 
 ## Cross-links
 

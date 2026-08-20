@@ -53,6 +53,12 @@ CTX  ?= 32768        # KV-cache / context window. Bigger = room for a coding age
                      # why llama-server logged "failed to restore kv cache" and reprocessed
                      # the prompt each turn). Costs some RAM for the KV cache — fine on 36 GB
                      # with Q4. Dial back with `make serve CTX=16384`.
+                     # KEEP IN SYNC with the client's crushrc `--context-window` (see
+                     # client/entrypoint/crushrc) — Crush auto-summarizes at ~80% of that
+                     # number, so if they disagree Crush trims history early or overruns.
+                     # Going bigger (e.g. CTX=65536) roughly doubles KV RAM and may exceed
+                     # Metal's default wired limit (~24-28 GB); raise it first with
+                     # `sudo sysctl iogpu.wired_limit_mb=<mb>`. See tasks/archive/2026/08/20/context-window-sizing.md.
 NGL  ?= 999          # offload all layers to the GPU (Metal)
 NP   ?= 1            # parallel slots. 1 = the whole KV cache serves ONE client (Crush), so
                      # prompt caching works and the context isn't split across slots. Raise

@@ -102,6 +102,14 @@ v0.89.0-specific (several absent features are on Crush's in-repo `docs/*/FUTURE.
 - **LSP — SUPPORTED, first-class:** `lsp add …`, `option auto-lsp`, LSP-backed edit/view tools.
 - **Sessions — SUPPORTED:** SQLite `crush.db`; `--continue`/`-C`, `--session`/`-s`;
   `option auto-summarize` for compaction.
+- **Context window & compaction:** the effective context is `min(server -c, model context_window)`.
+  Crush auto-summarizes when the remaining budget drops below **~20% of `context_window`** (a flat
+  20k buffer if `> 200k`); `context_window == 0` (unknown) **skips** compaction entirely
+  (`internal/agent/agent.go:1038-1053`). For a `llamacpp` provider the enricher sets `context_window`
+  from the server's `n_ctx` (`internal/discover/llamacpp.go`); pin it explicitly with `model add …
+  --context-window N`. `option auto-summarize false` disables compaction. Read the server's live window
+  from `/v1/models` `meta.n_ctx` / `n_ctx_train`. Full write-up:
+  `tasks/archive/2026/08/20/context-window-sizing.md`.
 - **Ignore files — SUPPORTED:** `.gitignore` + `.crushignore` (per-dir) + `~/.config/crush/ignore`.
 - **Model switching — SUPPORTED:** `large`/`small` slots, `model add`, `provider add`.
 

@@ -8,7 +8,7 @@
 
 ## Goal
 
-The maintainer can't answer the context-sizing questions in `tasks/context-window-sizing.md` by hand,
+The maintainer can't answer the context-sizing questions in `tasks/archive/2026/08/20/context-window-sizing.md` by hand,
 **especially on an airgapped system** where the only way to learn the numbers is to query the running
 server. So: a small script that runs **outside the container**, hits the local llama-server **through
 the SSH port-forward**, and prints the current/maximum context plus **one or two concrete
@@ -187,6 +187,6 @@ Resolved (2026-08-20):
 
 ## Cross-links
 
-- `tasks/context-window-sizing.md` — the findings this script operationalizes (the two limits, how
+- `tasks/archive/2026/08/20/context-window-sizing.md` — the findings this script operationalizes (the two limits, how
   compaction works, how to change each).
 - `tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md` — shares the `model add … --context-window` line.
