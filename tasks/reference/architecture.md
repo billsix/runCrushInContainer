@@ -57,9 +57,20 @@ sibling/template of `github.com/billsix/runClaudeInContainer`. Two machines, one
   the latest stable at bring-up; module path `github.com/charmbracelet/crush`, `go install`).
 - **Crush config is `crushrc`, NOT `crush.json`** (`client/entrypoint/crushrc`; global path
   `~/.config/crush/crushrc`). `crush.json` is deprecated. The baked config declares a single
-  **`llamacpp`**-type provider so Crush **auto-discovers** the served model (no model list, no
-  API key). **`base_url` is the bare root** (`http://127.0.0.1:8080`, no `/v1`) — Crush appends
-  `/v1/models` itself (`internal/discover/llamacpp.go`). A trailing `/v1` would double-path.
+  **`llamacpp`**-type provider. **`base_url` is the bare root** (`http://127.0.0.1:8080`, no `/v1`) —
+  Crush appends `/v1/models` itself (`internal/discover/llamacpp.go`). A trailing `/v1` would
+  double-path.
+- **Provider config: `disable_default_providers` + explicit pinned model (2026-08-20).** The crushrc
+  sets `option default-providers false` (so Crush offers ONLY this provider, never its built-in
+  ~15-20-model Catwalk catalog) and pins the model explicitly with `model add
+  muse-glimmer/muse-glimmer --context-window 32768` + `model large|small` selections, rather than
+  relying on runtime auto-discovery. **Why the change from the original auto-discovery design:**
+  auto-discovery hits `/v1/models` with a 3s timeout at startup; if the tunnel/server isn't up, Crush
+  deletes the provider and falls back to its onboarding catalog (the "15-20 models" symptom). An
+  explicit model has no such dependency and works offline/airgapped. The server pins a matching stable
+  ID via `--alias $(MODEL_ALIAS)` (`server/Makefile`), so `/v1/models` reports `muse-glimmer` instead
+  of the raw GGUF path. Full rationale + the `crush models` before/after (1532 → 1):
+  `tasks/suppress-embedded-provider-catalog.md`.
 - **`--network=host`** (Linux-only) so `127.0.0.1:8080` in the container is the host's
   SSH-forwarded port.
 - **SELinux: runs UNCONFINED** (`SELINUX_OPT ?= --security-opt label=disable`, `client/Makefile`).

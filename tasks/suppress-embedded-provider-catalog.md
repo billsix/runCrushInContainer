@@ -1,10 +1,36 @@
 # Make Crush offer ONLY the local model — suppress the embedded provider catalog
 
-**Status:** researched — root cause found, served model ID captured, exact fix written below;
-**needs go-ahead to apply** to `client/entrypoint/crushrc` (nothing applied yet)
+**Status:** IMPLEMENTED + verified (2026-08-20) — applied to `client/entrypoint/crushrc` and
+`server/Makefile`; `crush models` proves only the local model is offered. Remaining: rebuild the
+client image + a live generation check (see "Implementation" below).
 **Priority:** 3
 **Difficulty:** 3
 **Started:** 2026-08-20
+
+## Implementation (2026-08-20)
+
+Applied the alias design from the Fix section:
+
+- **`client/entrypoint/crushrc`** — added `option default-providers false`, an `--api-key`, an explicit
+  `model add muse-glimmer/muse-glimmer --context-window 32768`, and `model large|small` selections.
+- **`server/Makefile`** — added `MODEL_ALIAS ?= muse-glimmer` and `--alias $(MODEL_ALIAS)` on `serve`,
+  so `/v1/models` reports the stable ID `muse-glimmer` that the crushrc pins.
+
+**Verified (before/after, `crush v0.89.0`, isolated config, endpoint intentionally unreachable):**
+`crush models` with the OLD crushrc listed **1532** models (the catalog); with the NEW crushrc it lists
+**exactly one** — `muse-glimmer/muse-glimmer` — and exits 0 without hitting the endpoint (proving the
+explicit model removes the discovery dependency). This is the airgapped symptom fixed at the root.
+
+**Maintainer actions to make it live:**
+1. **Rebuild the client image** so the new crushrc is baked: `cd client && make image` (the crushrc is
+   `COPY`d at build time).
+2. **Restart the server with the alias** so `/v1/models` reports `muse-glimmer`: re-run `make serve`
+   (picks up `--alias muse-glimmer`). *Functionally optional* — llama-server serves the single loaded
+   model regardless of the request's model field — but it makes the server's reported ID and the
+   crushrc agree, which is cleaner and avoids surprise.
+3. **Live check (open):** start a real Crush session against the running server and confirm it uses
+   Muse Glimmer immediately with no picker and no catalog. Not doable from this sandbox (can't reach
+   the host tunnel), so it's the one unverified step.
 
 ## Symptom (maintainer, on a separate airgapped machine, 2026-08-20)
 
@@ -155,9 +181,9 @@ specification is more verbose but deterministic and offline-safe.
    holds regardless of which path the airgapped box hit. Confirming which was in play needs the actual
    airgapped `crush.json` (does it set `disable_default_providers`, or list models?) — nice-to-have,
    not blocking.
-3. **Go-ahead to APPLY the fix?** Nothing is applied yet (I reverted my earlier edits). This is the
-   decision that unblocks implementation: apply the `crushrc` block (and the one `server/Makefile`
-   alias line), then rebuild the client image and confirm on a live session. Recommend yes.
+3. **Go-ahead to APPLY the fix? — DONE (2026-08-20).** Applied to `crushrc` + `server/Makefile` and
+   verified with `crush models` (see Implementation). Only the live generation check + image rebuild
+   remain, both listed as maintainer actions.
 
 ## Relevance / cross-links
 

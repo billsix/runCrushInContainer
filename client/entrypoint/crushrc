@@ -12,7 +12,28 @@
 #
 # NOTE: crushrc runs as a full shell script at load time — treat it as trusted code.
 
+# Offer ONLY this provider — never Crush's built-in Catwalk catalog. Without this, Crush
+# shows ~15-20 embedded models (and, if our provider is ever dropped, falls into an onboarding
+# picker of them). `default-providers` is inverted, so `false` = "do NOT include the built-in
+# providers" (sets disable_default_providers=true). See
+# tasks/suppress-embedded-provider-catalog.md.
+option default-providers false
+
 provider add muse-glimmer \
   --name "Muse Glimmer (local llama.cpp)" \
   --type llamacpp \
-  --base-url "http://127.0.0.1:8080"
+  --base-url "http://127.0.0.1:8080" \
+  --api-key "local-no-key-needed"
+
+# Pin the model EXPLICITLY rather than relying on runtime auto-discovery. Discovery hits
+# GET /v1/models with a 3s timeout at startup; if the tunnel/server isn't reachable yet, Crush
+# deletes the provider and shows the built-in catalog. An explicit model has no such
+# dependency. The ID must match what the server reports at /v1/models — the server is pinned to
+# `--alias muse-glimmer` (server/Makefile MODEL_ALIAS), so this stays constant across quant/file
+# changes. --context-window matches the server's -c/CTX (32768) so Crush's compaction math lines
+# up (see tasks/context-window-sizing.md).
+model add muse-glimmer/muse-glimmer --name "Muse Glimmer 30B" --context-window 32768
+
+# Preselect it for both slots so Crush uses it immediately — no model picker at all.
+model large muse-glimmer/muse-glimmer
+model small muse-glimmer/muse-glimmer

@@ -35,6 +35,13 @@ MODEL_REPO ?= meta-models/Muse-Glimmer-30B-GGUF
 MODEL_FILE ?= Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf
 MODEL_DIR  ?= ./models
 
+# Stable model ID reported at /v1/models. WITHOUT --alias, llama-server reports the raw -m
+# path (e.g. "./models/Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf"), which changes whenever
+# MODEL_FILE changes and is awkward to reference. --alias pins a clean, constant ID so the
+# client's crushrc can hardcode `model add muse-glimmer/$(MODEL_ALIAS)` without re-editing on
+# a quant/file swap. Keep this in sync with client/entrypoint/crushrc.
+MODEL_ALIAS ?= muse-glimmer
+
 # MLX alternative backend (Apple-Silicon-only).
 MLX_REPO ?= RadixArk/Muse-Glimmer-q4-MLX
 
@@ -95,7 +102,7 @@ check-repo: venv ## verify MODEL_REPO/MODEL_FILE resolve on Hugging Face WITHOUT
 
 .PHONY: serve
 serve: ## [MAC] run llama-server on loopback with an OpenAI-compatible /v1 endpoint
-	$(SERVER_BIN) -m $(MODEL_DIR)/$(MODEL_FILE) --host $(HOST) --port $(PORT) \
+	$(SERVER_BIN) -m $(MODEL_DIR)/$(MODEL_FILE) --alias $(MODEL_ALIAS) --host $(HOST) --port $(PORT) \
 		-ngl $(NGL) -c $(CTX) --parallel $(NP)
 
 .PHONY: serve-mlx
