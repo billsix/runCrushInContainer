@@ -44,6 +44,21 @@ NET_FLAGS ?= --network=host
 # confined instead, override with an empty value: `make shell SELINUX_OPT=`.
 SELINUX_OPT ?= --security-opt label=disable
 
+# Conditional host-config mounts (matching runClaudeInContainer): mount the user's tmux, git,
+# and gnupg config into the container only when the host file/dir exists. `readlink -f` resolves
+# symlinks; the `[ -f ]` / `[ -d ]` test skips a missing file so the run still works without it.
+TMUX_FILE := $(HOME)/.tmux.conf
+TMUX_REAL_PATH := $(shell readlink -f $(TMUX_FILE))
+TMUX_MOUNT := $(shell if [ -f $(TMUX_REAL_PATH) ]; then echo "-v $(TMUX_REAL_PATH):/root/.tmux.conf:Z" ; fi)
+
+GITCONFIG_FILE := $(HOME)/.gitconfig
+GITCONFIG_REAL_PATH := $(shell readlink -f $(GITCONFIG_FILE))
+GITCONFIG_MOUNT := $(shell if [ -f $(GITCONFIG_REAL_PATH) ]; then echo "-v $(GITCONFIG_REAL_PATH):/root/.gitconfig:Z" ; fi)
+
+GNUPG_FILE := $(HOME)/.gnupg
+GNUPG_REAL_PATH := $(shell readlink -f $(GNUPG_FILE))
+GNUPG_MOUNT := $(shell if [ -d $(GNUPG_REAL_PATH) ]; then echo "-v $(GNUPG_REAL_PATH):/root/.gnupg:Z" ; fi)
+
 .PHONY: all
 all: image ## Build the image
 
@@ -60,6 +75,9 @@ shell: image ## run Crush in an ephemeral container; mounts PROJECT at /work
 		$(SELINUX_OPT) \
 		$(NET_FLAGS) \
 		-v $(PROJECT):/work \
+		$(TMUX_MOUNT) \
+		$(GNUPG_MOUNT) \
+		$(GITCONFIG_MOUNT) \
 		$(EXTRA_MOUNTS) \
 		$(CONTAINER_NAME) \
 		/shell.sh

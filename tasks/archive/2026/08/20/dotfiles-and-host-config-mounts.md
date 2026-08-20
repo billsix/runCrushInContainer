@@ -1,9 +1,25 @@
 # Bake dotfiles + mount host config (tmux, gitconfig, …) like runClaudeInContainer
 
-**Status:** proposed — needs go-ahead
+**Status:** IMPLEMENTED + verified (2026-08-20). Full default-flags `make image` (22 GB) not re-run —
+the dotfiles layer was verified in isolation instead (trivial COPY+source, low risk).
 **Priority:** 5
 **Difficulty:** 3
-**Started:** 2026-08-20
+**Started:** 2026-08-20 · **Completed:** 2026-08-20
+
+## Implementation (2026-08-20)
+
+- **`client/entrypoint/dotfiles/.extrabashrc`** — created: `ls --color` alias, `GPG_TTY=$(tty)`, the
+  PS1 prompt. No git-identity exports (maintainer: Crush doesn't need `CLAUDE_USER_*`).
+- **`client/Dockerfile`** — added `COPY entrypoint/dotfiles/ /root/` + `RUN echo "source
+  ~/.extrabashrc" >> ~/.bashrc` (and refreshed the now-stale crushrc comment to say "pinned model +
+  catalog suppressed" instead of "auto-discovers").
+- **`client/Makefile`** — added `TMUX_MOUNT` / `GITCONFIG_MOUNT` / `GNUPG_MOUNT` (the runClaudeInContainer
+  `readlink -f` + `[ -f ]`/`[ -d ]` idiom, `:Z`, → `/root/…`) and appended them to the `shell` run.
+
+**Verified:** `make -n shell` emits all three `-v …:Z` flags when the host files exist (they do in this
+env); `make help` parses; a throwaway nested build proved `COPY entrypoint/dotfiles/ /root/` +
+`source ~/.extrabashrc` works (`.extrabashrc` present, `~/.bashrc` sources it, `ls` alias loads in an
+interactive shell).
 
 ## Goal
 
@@ -38,10 +54,13 @@ This is a template-conformance gap: runClaudeInContainer is the sibling template
 ## Proposed changes (this repo) — copy runClaudeInContainer verbatim, minus emacs/.claude
 
 1. **`client/entrypoint/dotfiles/.extrabashrc`** — the only baked dotfile. Copy runClaudeInContainer's
-   verbatim: `alias ls='ls --color=auto'`, `export GPG_TTY=$(tty)`, the git-identity exports, and the
-   PS1 prompt. (The exports are named `CLAUDE_USER_NAME`/`CLAUDE_USER_EMAIL` there; keep as-is for
-   template parity — they just carry the git identity; Crush doesn't read them, but attribution/prompt
-   still benefit. Rename to `CRUSH_USER_*` only if you'd rather — cosmetic.)
+   **minus the git-identity exports** (decision 2026-08-20: Crush doesn't need `CLAUDE_USER_NAME`/
+   `CLAUDE_USER_EMAIL`, and there's no `CRUSH_USER_*` equivalent to add). So it's just:
+   ```sh
+   alias ls='ls --color=auto'
+   export GPG_TTY=$(tty)
+   PS1='\[\e[36m\]┌─(\t) \[\e[32m\]\u@\h:\w\n\[\e[36m\]└─λ \[\e[0m\]'
+   ```
 2. **`client/Dockerfile`** — add, near the other COPYs:
    ```dockerfile
    COPY entrypoint/dotfiles/ /root/

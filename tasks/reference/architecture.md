@@ -80,6 +80,11 @@ sibling/template of `github.com/billsix/runClaudeInContainer`. Two machines, one
   runClaudeInContainer runs under `NESTED_PODMAN=1`. The `/work` mount carries no `:Z` (would be
   redundant and would relabel the user's project). Note the client Makefile does **not**
   implement `NESTED_PODMAN` — passing it is a silent no-op.
+- **Dotfiles + host config (2026-08-20):** the Dockerfile bakes `client/entrypoint/dotfiles/.extrabashrc`
+  (prompt, `ls` alias, `GPG_TTY`) via `COPY … /root/` + a `~/.bashrc` source line, and the Makefile
+  conditionally mounts host `~/.tmux.conf` / `~/.gitconfig` / `~/.gnupg` (runClaudeInContainer's
+  `readlink -f` + existence-test idiom, `:Z`). See
+  `tasks/archive/2026/08/20/dotfiles-and-host-config-mounts.md`.
 
 ## Connecting
 

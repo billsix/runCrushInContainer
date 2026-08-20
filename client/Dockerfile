@@ -40,9 +40,15 @@ RUN set -eux; \
     fi; \
     crush --version
 
-# Baked default Crush config: a local llama.cpp provider. Crush auto-discovers the served
-# model at runtime, so no model list / API key is needed. crushrc is the modern config
-# format (crush.json is deprecated); ~/.config/crush/crushrc is the global location.
+# Baked dotfiles (prompt, ls alias, GPG_TTY): /root/.extrabashrc, sourced from ~/.bashrc.
+# Host ~/.tmux.conf / ~/.gitconfig / ~/.gnupg are mounted conditionally by the Makefile.
+COPY entrypoint/dotfiles/ /root/
+RUN echo "source ~/.extrabashrc" >> ~/.bashrc
+
+# Baked default Crush config: a local llama.cpp provider with the model pinned explicitly and
+# the built-in catalog suppressed (see tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md).
+# crushrc is the modern config format (crush.json is deprecated); ~/.config/crush/crushrc is the
+# global location.
 COPY entrypoint/crushrc /root/.config/crush/crushrc
 
 COPY entrypoint/shell.sh /shell.sh
