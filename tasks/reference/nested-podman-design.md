@@ -43,6 +43,13 @@ flag (see runClaude's doc).
   so without it every inner run dies with `cgroup.subtree_control: Read-only file system`. A project's
   Makefile won't have this flag — add it per inner run (or use the standing "transient add + revert"
   authorization). `--cgroupns=private` does NOT fix it (tested in runClaude).
+- **Inner runs also need `--network=host` in this setup** (confirmed 2026-08-21). Bridged netavark
+  fails here with `netavark: setns: Operation not permitted` — the inner container can't create its
+  own network namespace at this nesting depth. `--network=host` sidesteps netavark (the container
+  shares the client's network, which is already the host's via the client's own `--network=host`).
+  Fine for building/testing (most project containers don't need isolated networking). So the working
+  inner invocation is: `podman run --cgroups=disabled --network=host …`. (The image *pull* works
+  without it — storage/fuse-overlayfs is fine; only container *networking* needs this.)
 - **The inner store is RAM.** `/var/lib/containers` is a tmpfs; every pulled/built inner image costs
   RAM. Budget before big builds; bump `NESTED_PODMAN_TMPFS_SIZE`. Images don't survive the session.
 - **Short names need `localhost/<tag>` and no TTY** in agent-driven runs; `make -n <target>` to print
@@ -57,11 +64,21 @@ design is validated at **one** level; three may hit RAM-store/cgroup limits. **T
 run the Crush client on the host** (or from an outer sandbox launched with `NESTED_PODMAN=1`), giving
 one clean nesting level for project work. Don't rely on three-deep.
 
-## Prerequisite check (before nested work)
+## Detecting it inside the container
+
+The client `Makefile` passes **`-e NESTED_PODMAN=$(NESTED_PODMAN)`** into the container, so a definitive
+`0`/`1` is available at `$NESTED_PODMAN` (the make *variable* is host-side and invisible inside — a
+common trap). Pair the **intent** signal with a **works** signal:
 
 ```sh
-test -e /dev/fuse && podman info >/dev/null 2>&1 && echo "nested OK" || echo "relaunch with NESTED_PODMAN=1"
+# intent: was it launched with nesting?
+[ "$NESTED_PODMAN" = "1" ] || echo "not launched with NESTED_PODMAN=1"
+# works: is the device + daemon actually usable?
+test -e /dev/fuse && podman info >/dev/null 2>&1 && echo "nested OK" || echo "nested NOT working"
 ```
-`/dev/fuse` absent ⇒ the client wasn't launched with `NESTED_PODMAN=1` (or the *outer* sandbox lacks
-nested support). The full rationale/declined-alternatives live in runClaudeInContainer's copy of this
-doc.
+
+- `$NESTED_PODMAN` != `1` ⇒ relaunch `make shell NESTED_PODMAN=1`.
+- `$NESTED_PODMAN` == `1` but `/dev/fuse` absent / `podman info` fails ⇒ the **host** (or outer
+  sandbox) lacks nested support, not the client config.
+
+The full rationale/declined-alternatives live in runClaudeInContainer's copy of this doc.

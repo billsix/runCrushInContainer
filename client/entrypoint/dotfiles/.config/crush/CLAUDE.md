@@ -157,12 +157,17 @@ fail-fast, losing the report-everything property).
 ## Running projects in a nested container
 
 When working on a container-per-project repo, you can build/run its containers **inside** this client
-— but only if it was launched with **`make shell NESTED_PODMAN=1`** (check: `test -e /dev/fuse &&
-podman info` succeeds; if not, tell me to relaunch that way). **Every inner `podman run`/`docker run`
-needs `--cgroups=disabled`** (the sandbox `/sys/fs/cgroup` is read-only, else it dies with
-`cgroup.subtree_control: Read-only file system`). A project's Makefile won't have that flag — **don't
-silently edit their build files**; add it to a one-off run, or propose the edit and wait. The inner
-image store is RAM-backed and ephemeral. Full detail lives in this repo's
+— but only if it was launched with **`make shell NESTED_PODMAN=1`**. Detect it inside the container by
+the **`$NESTED_PODMAN` env var** (`1` = launched with nesting; `0`/unset = not) — NOT by a make
+variable, which is host-side and invisible here. Confirm it actually works with
+`test -e /dev/fuse && podman info`. If `$NESTED_PODMAN` isn't `1`, tell me to relaunch with
+`NESTED_PODMAN=1`; if it's `1` but `/dev/fuse` is missing, the host itself lacks nested support.
+**Every inner `podman run`/`docker run`
+needs BOTH `--cgroups=disabled`** (the sandbox `/sys/fs/cgroup` is read-only, else
+`cgroup.subtree_control: Read-only file system`) **and `--network=host`** (bridged netavark fails
+nested with `setns: Operation not permitted`; host networking sidesteps it). A project's Makefile
+won't have those flags — **don't silently edit their build files**; add them to a one-off run, or
+propose the edit and wait. The inner image store is RAM-backed and ephemeral. Full detail:
 `tasks/reference/nested-podman-design.md`.
 
 ## Ending a session — sweep the always-read docs

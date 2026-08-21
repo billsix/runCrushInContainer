@@ -80,6 +80,9 @@ STACK_MOUNT := $(shell mkdir -p $(HOME)/.config/crush 2>/dev/null; touch $(STACK
 # See tasks/reference/nested-podman-design.md. NOTE the client is often itself run nested, so a
 # project build inside it is podman-in-podman-in-podman — run the client on the host (or an
 # outer sandbox with NESTED_PODMAN=1) for a clean single level.
+# The value is ALSO passed into the container as $NESTED_PODMAN (0/1, see the `run` below) so the
+# agent can detect it directly — the make VARIABLE alone is host-side and invisible inside; pair
+# `$NESTED_PODMAN` (intent) with `test -e /dev/fuse && podman info` (does it actually work).
 NESTED_PODMAN ?= 0
 NESTED_PODMAN_TMPFS_SIZE ?= 8g
 ifeq ($(NESTED_PODMAN),1)
@@ -110,6 +113,7 @@ image: ## build the client image: full toolchain + Crush built from source (pinn
 shell: image ## run Crush in an ephemeral container; mounts PROJECT at /work (NESTED_PODMAN=1 for podman-in-podman)
 	$(CONTAINER_CMD) run -it --rm \
 		--entrypoint /bin/bash \
+		-e NESTED_PODMAN=$(NESTED_PODMAN) \
 		$(SELINUX_OPT) \
 		$(NET_FLAGS) \
 		-v $(PROJECT):/work \

@@ -43,11 +43,15 @@ have the same capability.
       `tasks/reference/` (adapt: it's mostly tool-agnostic about the podman stack, but the banner,
       paths, and "runClaude" framing need updating for this repo).
 - [x] **Un-skip P4.4** in `tasks/port-runclaude-conventions-systems.md` (point it at this task).
-- [ ] **Verify** (needs nested-podman available on the host, i.e. the outer sandbox launched with
-      `NESTED_PODMAN=1`, or a real host): `make shell NESTED_PODMAN=1`, then inside the client build
-      or run one of the maintainer's project containers with `--cgroups=disabled` (e.g. a small
-      `podman run --rm --cgroups=disabled fedora:44 echo ok`, then a real project's `make image`).
-      Confirm `/dev/fuse` present and `podman info` works inside.
+- [x] **Verify — prerequisites confirmed (2026-08-21):** in a rebuilt client launched with
+      `make shell NESTED_PODMAN=1`, `$NESTED_PODMAN=1`, `/dev/fuse` is present, and `podman info`
+      works (maintainer-confirmed).
+- [ ] **Verify — inner run (remaining):** confirm an actual nested container runs:
+      `podman run --rm --cgroups=disabled --network=host fedora:44 echo nested-ok` inside the client,
+      then a real project's `make image` (with both flags on its inner run).
+      **Finding (2026-08-21):** the image *pull* works, but the inner run needs **both**
+      `--cgroups=disabled` (read-only cgroup) **and `--network=host`** — bridged netavark fails nested
+      with `netavark: setns: Operation not permitted`. Documented in the reference doc + conventions.
 
 ## Notes / decisions
 
@@ -74,6 +78,16 @@ have the same capability.
    because runClaude bind-mounts the host `$XDG_RUNTIME_DIR`; the barebones client does NOT, so
    there's no host podman state to collide with. Documented in the reference doc — re-add only if
    X/Wayland passthrough is ever added to the client.
+
+## Follow-up (2026-08-21): `-e NESTED_PODMAN` passthrough
+
+Symptom: Crush "thought NESTED_PODMAN wasn't set" — because `NESTED_PODMAN=1` is a host-side **make
+variable** that only adds run flags; it is **not** an env var inside the container, so the agent
+checking `$NESTED_PODMAN` always saw it empty. Fix: the `shell` target now **always** passes
+`-e NESTED_PODMAN=$(NESTED_PODMAN)` (definitive `0`/`1` inside). The conventions note + reference doc
+now tell the agent to detect nesting via `$NESTED_PODMAN` (intent) **and** `test -e /dev/fuse &&
+podman info` (works). Needs a client-image rebuild is NOT required for this (it's a `run` flag), but
+the conventions note change IS baked — so `make image` to get both.
 
 ## Cross-links
 
