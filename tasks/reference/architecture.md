@@ -38,9 +38,11 @@ sibling/template of `github.com/billsix/runClaudeInContainer`. Two machines, one
     the cache; with 2 slots and a 16k context each slot is ~8k cells, too small to restore a
     cached prompt → llama-server logs `failed to restore kv cache` and reprocesses the prompt
     every turn (non-fatal, just slow). One slot gives the whole context to the one client.
-  - **`CTX=32768`** — bigger window so a coding agent's growing context AND prompt-cache
-    restore both fit. Costs some KV-cache RAM; fine on 36 GB with Q4. Lower via `make serve
-    CTX=16384`.
+  - **`CTX=65536`** (raised from 32768 on 2026-08-21) — the always-loaded conventions + Crush's own
+    ~18k-token system prompt overflowed a 32k window; 64k leaves room for real work. Costs more
+    KV-cache RAM (may exceed Metal's default wired limit — `sudo sysctl iogpu.wired_limit_mb`). KEEP
+    IN SYNC with the crushrc `--context-window`. Model max is `n_ctx_train=131072`. Lower via
+    `make serve CTX=32768`.
   - `-ngl 999` offloads all layers to Metal. **Confirm Metal engaged** from the serve log:
     healthy is ~20 t/s generation / ~170 t/s prompt eval (GPU-class; CPU would be ~1–3 t/s).
 - **Bind loopback only** (`HOST=127.0.0.1`). The sole ingress is the SSH tunnel; never
@@ -116,16 +118,19 @@ exceeds the final size. A 32 GB store overflowed; `mount -o remount,size=50g
 host build there's no such ceiling. See runClaudeInContainer's
 `tasks/reference/nested-podman-design.md` and its `dir-backed-nested-podman-storage.md`.
 
-## Verification status (2026-08-19)
+## Verification status (updated 2026-08-21)
 
 Verified: client image builds + `crush v0.89.0` runs + `crushrc` parses; HF download plumbing;
-`base_url`/`/v1/models` wiring against Crush source; server serving on Metal (~21 t/s) and
-producing output end-to-end through Crush. Not formally exercised: a multi-step tool-using
-Crush edit (the real test of whether Muse Glimmer is a strong enough tool-caller to drive the
-agent loop) — spot-check when convenient.
+server serving on Metal (~21 t/s); the `@`-import patch splices live; the provider-suppression fix
+(`crush models` → only the local model, airgapped-verified); nested podman (an inner container ran);
+and the **ported conventions load and steer the model** (a `crush run` answered from the conventions).
+Not formally exercised: a full multi-step *tool-using* Crush edit driving the agent loop end-to-end —
+spot-check when convenient.
 
-## Deferred
+## Conventions machinery — ported (2026-08-21)
 
-The task/stack/personal-overlay conventions machinery from runClaudeInContainer is intentionally
-not ported — see `tasks/port-runclaude-conventions-systems.md`. No auth plumbing is needed (the
-endpoint is a local, keyless llama-server behind SSH).
+The task/stack/personal-overlay conventions machinery from runClaudeInContainer **is now ported** (a
+lean, always-loaded `CLAUDE.md` at `~/.config/crush/CLAUDE.md` via a `global-context-path` in `crushrc`,
+plus the diversion stack, personal overlay, slash commands, and nested podman) — see
+`tasks/port-runclaude-conventions-systems.md` and the root `CLAUDE.md` "What's in use". No auth
+plumbing is needed (the endpoint is a local, keyless llama-server behind SSH).

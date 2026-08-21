@@ -1,9 +1,10 @@
 # runCrushInContainer — project notes
 
-**Status: working bring-up.** Both `server/` and `client/` are built and in use — the local
-model serves on the Mac (Metal, ~21 t/s) and Crush in the client container talks to it over
-the SSH tunnel and produces output. The `make` targets here exist and run. Remaining polish,
-plus the deferred conventions machinery, are tracked in `tasks/`.
+**Status: working, conventions ported.** Both `server/` and `client/` are built and in use — the
+local model serves on the Mac (Metal, ~21 t/s) and Crush in the client container talks to it over
+the SSH tunnel, loads the ported conventions, and follows them. The runClaudeInContainer
+working-method machinery is now ported (see "What's in use" below); remaining items are tracked in
+`tasks/`.
 
 This repo runs a **local coding LLM** (Meta's **Muse Glimmer 30B**) and drives it with
 **Crush** (Charm's terminal coding agent, `github.com/charmbracelet/crush`). It is a sibling
@@ -52,17 +53,25 @@ Three environments are in play; label instructions so it's unambiguous:
   and good llama.cpp / Crush tags came from a 2026-08-18 web search and drift; confirm against
   Hugging Face and the upstream release pages at implementation time.
 
-## What's in use vs. deferred
+## What's in use (the runClaudeInContainer machinery is ported)
 
-The **task-doc and reference-doc conventions are now in active use** here (`tasks/`,
-`tasks/archive/<YYYY>/<MM>/<DD>/`, `tasks/reference/`) — use them normally. Still **deferred** (the
-heavier runClaudeInContainer machinery): the **diversion stack**, the **personal-overlay / `@`-import
-config layering**, and the **slash commands** (`/new-task`, `/stack-*`, …). **No auth plumbing** is
-needed either (the endpoint is a local, keyless llama-server behind SSH). That deferred work is
-tracked in `tasks/port-runclaude-conventions-systems.md`.
+The full working-method machinery is now **ported and in use** (Phases 0–4, 2026-08-21 —
+`tasks/port-runclaude-conventions-systems.md`):
 
-Note: the client image itself carries a **local `@`-import patch for Crush** (`client/patches/`,
-`CRUSH_AT_IMPORT`) — that's a *Crush* feature, distinct from the deferred convention-delivery layering.
+- **task-doc + reference-doc systems** (`tasks/`, `tasks/archive/<YYYY>/<MM>/<DD>/`, `tasks/reference/`);
+- **cross-project conventions** — a lean, always-loaded `CLAUDE.md` baked at `~/.config/crush/CLAUDE.md`
+  and registered as a `global-context-path` in `crushrc` (the reference docs + personal overlay pulled
+  in via the `@`-import patch);
+- **diversion stack** — host-mounted at `~/.config/crush/stack.md` (survives `--rm`);
+- **personal-overlay layering** (blank baked default + host `~/.ai-coding-conventions.personal.md` mount);
+- **7 slash commands** (`/new-task`, `/stack-*`, … — in Crush's `/` dialog under the **User** tab);
+- **nested-podman** (`make shell NESTED_PODMAN=1`; inner runs need `--cgroups=disabled --network=host`);
+- a local **`@`-import patch for Crush** (`client/patches/`, gated on `CRUSH_AT_IMPORT`).
+
+**Deliberately NOT ported:** auth plumbing (local keyless llama-server behind SSH — nothing to sign
+into), interactive GUI/Wayland + gamepad passthrough (headless Xvfb still works), and a dedicated
+`crush-config-layering.md` (optional — covered by `architecture.md` + `crush-capabilities.md`). Fork
+guidance is in `FORKING.md`.
 
 ## Reference docs
 
@@ -74,19 +83,22 @@ Note: the client image itself carries a **local `@`-import patch for Crush** (`c
   autoload, no native `@`-import, custom commands, hooks, provider/model selection + the
   `disable_default_providers` catalog switch, context-window/compaction). Read before touching
   Crush config or the port.
+- `tasks/reference/nested-podman-design.md` — nested-podman design/flags for the client (inner runs
+  need `--cgroups=disabled --network=host`; the `--network=host`-breaks-bridged finding).
+
+Also **baked into the image** at `~/.config/crush/reference/` (agent-readable on-demand, NOT
+always-loaded, to save the local model's context): `llm-overused-phrases.md`, `print-debugging.md`,
+`sandbox-capability-map.md`.
 
 ## In-flight tasks
 
-Scan `tasks/` (top-level) at session start for the current list; as of 2026-08-20:
+Scan `tasks/` (top-level) at session start for the current list; as of 2026-08-21:
 
-- `port-runclaude-conventions-systems.md` (P4/D5) — port the deferred convention machinery (stack /
-  personal overlay / slash commands).
-- `patch-crush-for-at-imports.md` (P5/D5) — the `@`-import patch; delivered + wired, kept open pending
-  a live end-to-end check.
-- `verify-provider-suppression-airgapped.md` (P5/D2) — confirm the catalog-suppression fix on the
-  airgapped machine.
-- `context-advisor-script.md` (P4/D2) — a host-run server/context advisor script (drafted, on hold).
+- `port-runclaude-conventions-systems.md` (P4/D5) — Phases 0–4 implemented; **testing phase deferred**
+  (run the checklist on the real setup), then archivable.
+- `add-nested-podman-to-client.md` (P3/D5) — **complete + verified**; archivable.
+- `context-advisor-script.md` (P4/D2) — host-run server/context advisor script (drafted, **on hold**).
 - `crush-at-import-parity.md` (P6/D4) — bring the `@`-import patch to full Claude parity (follow-up).
 
-Completed & archived (see `tasks/archive/2026/08/`): the bring-up, provider-catalog suppression,
-dotfiles/host-config mounts, and context-window sizing.
+Completed & archived (see `tasks/archive/2026/08/`): the bring-up, provider-catalog suppression (+ its
+airgapped verification), dotfiles/host-config mounts, context-window sizing, and the `@`-import patch.
