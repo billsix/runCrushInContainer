@@ -1,9 +1,10 @@
 # Add nested-podman support to the Crush client
 
-**Status:** proposed — needs go-ahead to implement
+**Status:** IMPLEMENTED (2026-08-21) — flags, storage.conf, conventions note, and reference doc all
+in; only the live nested-build verification remains (needs nested-podman available on the host).
 **Priority:** 3
 **Difficulty:** 5
-**Started:** 2026-08-21
+**Started:** 2026-08-21 · **Implemented:** 2026-08-21
 
 ## Goal
 
@@ -24,24 +25,24 @@ have the same capability.
 
 ## Plan
 
-- [ ] **Client Makefile — the `NESTED_PODMAN` flag set** (port from runClaudeInContainer, opt-in,
+- [x] **Client Makefile — the `NESTED_PODMAN` flag set** (port from runClaudeInContainer, opt-in,
       default off). Append to the `shell` target's `podman run` when `NESTED_PODMAN=1`:
       `--device /dev/fuse`, `--device /dev/net/tun`, `--security-opt label=disable`,
       `--security-opt unmask=ALL`, `--cap-add=sys_admin,mknod,net_admin`, a tmpfs
       `/var/lib/containers` sized by `NESTED_PODMAN_TMPFS_SIZE` (default 8g), and a tmpfs over
       `$XDG_RUNTIME_DIR/libpod`. (The client's SELinux `label=disable` is already always-on; keep it.)
-- [ ] **`storage.conf`** — bake `client/entrypoint/dotfiles/.config/containers/storage.conf`
+- [x] **`storage.conf`** — bake `client/entrypoint/dotfiles/.config/containers/storage.conf`
       (points inner podman at `/usr/bin/fuse-overlayfs`); it rides the existing dotfiles `COPY`.
       *Verify:* the toolchain already ships `podman`, `buildah`, `skopeo`, `fuse-overlayfs`
       (`01-install-base.sh`), so no package changes.
-- [ ] **Conventions** — re-add a **terse** "Running projects in a nested container" note to the lean
+- [x] **Conventions** — re-add a **terse** "Running projects in a nested container" note to the lean
       `CLAUDE.md`: the two prerequisites (launch with `NESTED_PODMAN=1`; every inner `podman run`
       needs `--cgroups=disabled`) and the RAM-store caveat. Keep it short (lean-core context budget);
       push the full rationale to the reference doc below.
-- [ ] **Reference doc** — port `nested-podman-design.md` from runClaudeInContainer into
+- [x] **Reference doc** — port `nested-podman-design.md` from runClaudeInContainer into
       `tasks/reference/` (adapt: it's mostly tool-agnostic about the podman stack, but the banner,
       paths, and "runClaude" framing need updating for this repo).
-- [ ] **Un-skip P4.4** in `tasks/port-runclaude-conventions-systems.md` (point it at this task).
+- [x] **Un-skip P4.4** in `tasks/port-runclaude-conventions-systems.md` (point it at this task).
 - [ ] **Verify** (needs nested-podman available on the host, i.e. the outer sandbox launched with
       `NESTED_PODMAN=1`, or a real host): `make shell NESTED_PODMAN=1`, then inside the client build
       or run one of the maintainer's project containers with `--cgroups=disabled` (e.g. a small
@@ -60,17 +61,19 @@ have the same capability.
   — same as runClaude, it's applied per inner run (or via the standing "transient add + revert"
   authorization in the personal overlay).
 
-## Open questions
+## Decisions (resolved 2026-08-21, maintainer: "your call")
 
-1. **Conventions section — terse always-loaded, or on-demand only?** The lean `CLAUDE.md` is kept
-   small on purpose (local-model context). Recommend a **short always-loaded** note (the 2
-   prerequisites + `--cgroups=disabled`) with the full detail in the ported `nested-podman-design.md`
-   (referenced, not `@`-imported). OK?
-2. **Port `nested-podman-design.md` verbatim or adapt?** It has runClaude-specific paths/framing.
-   Recommend **adapt** (keep the tool-agnostic podman-stack rationale; fix banner/paths for this
-   repo). OK?
-3. **Default `NESTED_PODMAN_TMPFS_SIZE`?** runClaude defaults 8g; the client image itself is ~22 GB,
-   but *inner project* images are usually smaller. Recommend **8g default**, overridable. OK?
+1. **Conventions section → terse always-loaded**, self-contained (the 2 prerequisites +
+   `--cgroups=disabled` + don't-edit-their-build-files); full detail in `tasks/reference/
+   nested-podman-design.md` (repo doc, not baked/`@`-imported — keeps the lean-core context small).
+2. **`nested-podman-design.md` → adapted, not verbatim.** Wrote a focused Crush-client version
+   (flag set, the differences from runClaude, the depth caveat) that points to runClaude's copy for
+   the full rationale/declined-alternatives.
+3. **`NESTED_PODMAN_TMPFS_SIZE` → 8g default**, overridable.
+4. **Omitted the `$XDG_RUNTIME_DIR/libpod` shadow tmpfs** (the plan listed it): it's only needed
+   because runClaude bind-mounts the host `$XDG_RUNTIME_DIR`; the barebones client does NOT, so
+   there's no host podman state to collide with. Documented in the reference doc — re-add only if
+   X/Wayland passthrough is ever added to the client.
 
 ## Cross-links
 

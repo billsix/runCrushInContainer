@@ -70,7 +70,9 @@ and fixed `~/.claude/` → `~/.config/crush/` (incl. the stack path). Baked via 
 number or "top"). They're **shortcuts** — the conventions already drive these behaviors autonomously.
 Makefile (Phase 4): `image-export`/`image-import` targets + `client/crushcontainer-*.tar` gitignored;
 `make format` + `client/entrypoint/format.sh` (shfmt, accumulate-status). P4.1 mounts were already
-done; **P4.4 (nested-podman) skipped** — the Crush client doesn't run nested containers.
+done; **P4.4 (nested-podman) — initially skipped, then implemented 2026-08-21** (the skip was wrong:
+the client is a full dev sandbox and projects build/run nested) — see
+`tasks/add-nested-podman-to-client.md`.
 
 ## Goal
 
@@ -209,9 +211,9 @@ Mostly already present in `client/` (bring-up) or directly reusable from runClau
       pair; gitignore `*.tar`.
 - [x] **P4.3 format gate (F22):** a `make format` running `shfmt` over `entrypoint/*.sh` + the
       multi-step-failure-propagation shape.
-- [ ] **P4.4 nested-podman flags (F24) — OPTIONAL:** the client Makefile does not implement
-      `NESTED_PODMAN` (architecture.md notes passing it is a silent no-op). Port the flag set only
-      if we actually want to build/run containers *inside* the Crush client. Low priority.
+- [x] **P4.4 nested-podman flags (F24) — DONE 2026-08-21** (the initial "skip" was wrong; the client
+      is a full dev sandbox and projects build/run nested). `make shell NESTED_PODMAN=1` now works;
+      full implementation + rationale: `tasks/add-nested-podman-to-client.md`.
 
 ### Phase T — Testing (run at the end, on the real setup)
 

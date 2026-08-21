@@ -78,8 +78,13 @@ sibling/template of `github.com/billsix/runClaudeInContainer`. Two machines, one
   and — the case that bit us — **can't follow symlinks that jump out to a host path** like
   `/mnt/sda1` (`permission denied`), even with `:z` on the mount. This matches how
   runClaudeInContainer runs under `NESTED_PODMAN=1`. The `/work` mount carries no `:Z` (would be
-  redundant and would relabel the user's project). Note the client Makefile does **not**
-  implement `NESTED_PODMAN` — passing it is a silent no-op.
+  redundant and would relabel the user's project).
+- **Nested podman (2026-08-21):** `make shell NESTED_PODMAN=1` runs podman inside the client so Crush
+  can build/run a project's own containers nested (opt-in, default off). Flag set (`/dev/fuse`,
+  `unmask=ALL`, `cap-add=sys_admin,mknod,net_admin`, RAM-backed tmpfs `/var/lib/containers` sized by
+  `NESTED_PODMAN_TMPFS_SIZE`) + baked `storage.conf` (fuse-overlayfs). Every inner run needs
+  `--cgroups=disabled`; the client itself is often nested, so project builds inside it are three-deep
+  (run the client on the host for a clean level). Full detail: `tasks/reference/nested-podman-design.md`.
 - **Dotfiles + host config (2026-08-20):** the Dockerfile bakes `client/entrypoint/dotfiles/.extrabashrc`
   (prompt, `ls` alias, `GPG_TTY`) via `COPY … /root/` + a `~/.bashrc` source line, and the Makefile
   conditionally mounts host `~/.tmux.conf` / `~/.gitconfig` / `~/.gnupg` (runClaudeInContainer's

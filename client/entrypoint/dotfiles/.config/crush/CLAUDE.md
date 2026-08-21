@@ -154,6 +154,17 @@ fail if **any** failed — a plain sequence exits with only the last command's s
 `status=0; cmd || status=1; … exit $status` (per-iteration in loops). `set -e` is the wrong fix (it's
 fail-fast, losing the report-everything property).
 
+## Running projects in a nested container
+
+When working on a container-per-project repo, you can build/run its containers **inside** this client
+— but only if it was launched with **`make shell NESTED_PODMAN=1`** (check: `test -e /dev/fuse &&
+podman info` succeeds; if not, tell me to relaunch that way). **Every inner `podman run`/`docker run`
+needs `--cgroups=disabled`** (the sandbox `/sys/fs/cgroup` is read-only, else it dies with
+`cgroup.subtree_control: Read-only file system`). A project's Makefile won't have that flag — **don't
+silently edit their build files**; add it to a one-off run, or propose the edit and wait. The inner
+image store is RAM-backed and ephemeral. Full detail lives in this repo's
+`tasks/reference/nested-podman-design.md`.
+
 ## Ending a session — sweep the always-read docs
 
 When I signal end-of-session, reconcile the always-read docs (`CLAUDE.md`, `README.md`, every

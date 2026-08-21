@@ -73,6 +73,30 @@ PERSONAL_MOUNT := $(shell touch $(PERSONAL_FILE) 2>/dev/null; echo "-v $(PERSONA
 STACK_FILE := $(HOME)/.config/crush/stack.md
 STACK_MOUNT := $(shell mkdir -p $(HOME)/.config/crush 2>/dev/null; touch $(STACK_FILE) 2>/dev/null; echo "-v $(STACK_FILE):/root/.config/crush/stack.md:Z")
 
+# Nested podman (opt-in: `make shell NESTED_PODMAN=1`): run podman INSIDE the client so Crush can
+# build/run a project's own containers nested (make image/run/shell for container-per-project repos).
+# Inner storage uses fuse-overlayfs (entrypoint/dotfiles/.config/containers/storage.conf). Every
+# INNER `podman run` still needs `--cgroups=disabled` (the sandbox /sys/fs/cgroup is read-only).
+# See tasks/reference/nested-podman-design.md. NOTE the client is often itself run nested, so a
+# project build inside it is podman-in-podman-in-podman — run the client on the host (or an
+# outer sandbox with NESTED_PODMAN=1) for a clean single level.
+NESTED_PODMAN ?= 0
+NESTED_PODMAN_TMPFS_SIZE ?= 8g
+ifeq ($(NESTED_PODMAN),1)
+# label=disable is already always-on via SELINUX_OPT. unmask=ALL lets the inner rootful netavark
+# write per-interface sysctls (bridged networking); net_admin is for its veth/bridge over netlink;
+# /dev/fuse backs fuse-overlayfs; the tmpfs is the (RAM-backed) inner image store. No libpod-shadow
+# tmpfs is needed here (unlike runClaudeInContainer) because the client does NOT mount the host's
+# $XDG_RUNTIME_DIR, so there's no host podman state to collide with.
+NESTED_PODMAN_FLAGS := --device /dev/fuse \
+	--device /dev/net/tun \
+	--security-opt unmask=ALL \
+	--cap-add=sys_admin,mknod,net_admin \
+	--tmpfs /var/lib/containers:rw,size=$(NESTED_PODMAN_TMPFS_SIZE)
+else
+NESTED_PODMAN_FLAGS :=
+endif
+
 .PHONY: all
 all: image ## Build the image
 
@@ -83,7 +107,7 @@ image: ## build the client image: full toolchain + Crush built from source (pinn
 		--build-arg CRUSH_AT_IMPORT=$(CRUSH_AT_IMPORT) .
 
 .PHONY: shell
-shell: image ## run Crush in an ephemeral container; mounts PROJECT at /work
+shell: image ## run Crush in an ephemeral container; mounts PROJECT at /work (NESTED_PODMAN=1 for podman-in-podman)
 	$(CONTAINER_CMD) run -it --rm \
 		--entrypoint /bin/bash \
 		$(SELINUX_OPT) \
@@ -94,6 +118,7 @@ shell: image ## run Crush in an ephemeral container; mounts PROJECT at /work
 		$(GITCONFIG_MOUNT) \
 		$(PERSONAL_MOUNT) \
 		$(STACK_MOUNT) \
+		$(NESTED_PODMAN_FLAGS) \
 		$(EXTRA_MOUNTS) \
 		$(CONTAINER_NAME) \
 		/shell.sh
