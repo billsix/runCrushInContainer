@@ -1,13 +1,13 @@
 # Patch Crush to recursively splice `@`-imports in context files
 
-**Status:** in-progress (kept open per maintainer, 2026-08-20) — patch delivered, wired into the
-image build, and nested-build-verified. **Held open until the remaining checks are done:** (1) a
-live end-to-end Crush session splicing a real `@ref.md` against the Mac's llama-server (needs the
-Mac + tunnel), and (2) a full default-flags `make image` gate (only the isolated build stanza was
-exercised here). Parity gaps tracked in `tasks/crush-at-import-parity.md`.
+**Status:** COMPLETE (2026-08-21) — patch delivered, wired into the image build, and **live-verified
+end-to-end**: a real `CLAUDE.md` with `@secret.md` was spliced in and the model returned the
+import-only secret (`crush run` against the live model → PASS). The reusable end-to-end harness was
+promoted to **`tools/at-import-live-test/`** (run `run-live-test.sh` on the host to re-verify).
+Parity gaps tracked in `tasks/crush-at-import-parity.md`.
 **Priority:** 5
 **Difficulty:** 5
-**Started:** 2026-08-19 · **MVP delivered:** 2026-08-19
+**Started:** 2026-08-19 · **MVP delivered:** 2026-08-19 · **Completed:** 2026-08-21
 
 **Decisions (2026-08-19, William Emerison Six <billsix@gmail.com>):** (1) build the **MVP**
 `@`-import (line-anchored, relative-to-file, 5-hop cap + cycle guard, silent-skip on missing);
@@ -150,7 +150,9 @@ TestAtImport` + `go build ./` — if green, regenerate the patch against the new
 `crush-capabilities.md`'s banner; (3) if `git am` FAILS to apply, `processFile`/`processContextPath`
 moved — re-locate the splice point, re-apply the ~50-line change by hand, re-run the tests, and
 `git format-patch <newtag>` to replace the patch file. This mirrors the versioned-dependency
-discipline in `tasks/reference/crush-capabilities.md`.
+discipline in `tasks/reference/crush-capabilities.md`. (4) After rebuilding the image, run the
+promoted end-to-end harness **`tools/at-import-live-test/run-live-test.sh`** on the host (server +
+tunnel up) — it confirms `+dirty` and that an `@`-import splices live (PASS/FAIL).
 
 ## Investigation plan
 

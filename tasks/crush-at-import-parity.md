@@ -7,7 +7,7 @@
 
 ## Relationship / origin
 
-Follow-up to `tasks/patch-crush-for-at-imports.md`, which delivered a **working MVP** `@`-import
+Follow-up to `tasks/archive/2026/08/21/patch-crush-for-at-imports.md`, which delivered a **working MVP** `@`-import
 patch for Crush (`client/patches/crush-at-import.patch`, against `CRUSH_TAG` v0.89.0). The MVP was
 scoped deliberately (decision 2026-08-19: MVP now, parity later). This task closes the gap between
 that MVP and Claude Code's actual `@`-import semantics — only if/when the gap matters in practice.

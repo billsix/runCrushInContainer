@@ -1,9 +1,10 @@
 # Verify the provider-suppression fix on the airgapped system
 
-**Status:** open — waiting on access to the airgapped machine
+**Status:** complete — verified working on the airgapped system (maintainer, 2026-08-21): only the
+local model is offered, no catalog/picker, and it generates.
 **Priority:** 5
 **Difficulty:** 2
-**Started:** 2026-08-20
+**Started:** 2026-08-20 · **Completed:** 2026-08-21
 
 ## Goal
 
@@ -22,17 +23,17 @@ sandbox can't reach the host's SSH tunnel). See the archived implementation task
 
 ## Steps (on the airgapped system)
 
-- [ ] **Deploy the new config.** Rebuild the client image so the new crushrc is baked
+- [x] **Deploy the new config.** Rebuild the client image so the new crushrc is baked
       (`cd client && make image`), or otherwise get the updated `crushrc` to
       `~/.config/crush/crushrc` on that machine.
-- [ ] **Restart the server with the alias** so `/v1/models` reports `muse-glimmer`: re-run `make serve`.
-- [ ] **Config check (no picker, no catalog):** with the endpoint reachable, run `crush models` — expect
+- [x] **Restart the server with the alias** so `/v1/models` reports `muse-glimmer`: re-run `make serve`.
+- [x] **Config check (no picker, no catalog):** with the endpoint reachable, run `crush models` — expect
       **only** `muse-glimmer/muse-glimmer`. Then launch `crush` and confirm it lands directly in a
       session using Muse Glimmer with **no** model picker and **none** of the ~15–20 catalog models.
-- [ ] **Offline-robustness check:** launch `crush` **before** the server/tunnel is up. It must still
+- [x] **Offline-robustness check:** launch `crush` **before** the server/tunnel is up. It must still
       show only the local model (the explicit-model pin means no discovery dependency), rather than
       falling into the onboarding catalog. This is the exact case that failed before.
-- [ ] **Generation check:** send a prompt; confirm it responds via Muse Glimmer.
+- [x] **Generation check:** send a prompt; confirm it responds via Muse Glimmer.
 
 ## Done when
 

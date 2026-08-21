@@ -125,7 +125,7 @@ graceful degradation on very long sessions.
    degrades well before ~26k tokens ⇒ compaction (raise the window or `option auto-summarize false`);
    degrades near 32k ⇒ the cap (raise `CTX`). The context-advisor script
    (`tasks/context-advisor-script.md`) will print the live numbers to settle this. Folding this into
-   the airgapped verification (`tasks/verify-provider-suppression-airgapped.md`) is natural.
+   the airgapped verification (`tasks/archive/2026/08/21/verify-provider-suppression-airgapped.md`) is natural.
 
 ## Cross-links
 

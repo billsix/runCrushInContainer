@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
 # fails the build if the install didn't produce a working binary.
 #
 # CRUSH_AT_IMPORT toggles the local `@`-import patch (see client/patches/ and
-# tasks/patch-crush-for-at-imports.md): with a `@path` on its own line in a context file
+# tasks/archive/2026/08/21/patch-crush-for-at-imports.md): with a `@path` on its own line in a context file
 # (CLAUDE.md/AGENTS.md/CRUSH.md), the patched Crush recursively splices that file's contents
 # in — the feature Crush lacks upstream. A patched build CANNOT use `go install …@tag` (the
 # module proxy is read-only), so we clone the tag, `git apply` the patch, and build from source,

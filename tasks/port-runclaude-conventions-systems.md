@@ -164,7 +164,7 @@ anything Claude-Code-binary-specific. See Phase 5.
 
 - **Delivery via `global-context-path`, not `@`-import** — decided on the research (2026-08-19),
   because Crush has no `@`-import (verified `prompt.go:99`). This is the crux of the whole port.
-  **Alternative under investigation:** `tasks/patch-crush-for-at-imports.md` — patch Crush itself to
+  **Alternative under investigation:** `tasks/archive/2026/08/21/patch-crush-for-at-imports.md` — patch Crush itself to
   add recursive `@`-splice, delivering a `git am`-able patch. If that lands and proves maintainable,
   `@`-import becomes available and the conventions body can port near-verbatim; global-context-path
   is the fallback if the patch is too costly to carry across Crush versions.

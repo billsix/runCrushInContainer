@@ -35,7 +35,7 @@ v0.89.0-specific (several absent features are on Crush's in-repo `docs/*/FUTURE.
    **Update (2026-08-20):** this repo also carries a **local patch** that adds recursive `@`-import
    to Crush itself (`client/patches/crush-at-import.patch`, applied at image build when
    `CRUSH_AT_IMPORT=1`), so under the patched image a `@path` on its own line *is* spliced — see
-   `tasks/patch-crush-for-at-imports.md`. This finding describes **stock** v0.89.0; global-context-path
+   `tasks/archive/2026/08/21/patch-crush-for-at-imports.md`. This finding describes **stock** v0.89.0; global-context-path
    stays the zero-maintenance fallback.
 3. **Custom commands exist and port**, but the file format differs: the **entire `.md` file is
    the prompt body** (no YAML frontmatter parsing — `loadCommand` at `commands.go:174` reads

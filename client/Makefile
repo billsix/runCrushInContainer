@@ -20,7 +20,7 @@ CONTAINER_NAME = crushcontainer
 CRUSH_TAG ?= v0.89.0
 
 # Apply the local `@`-import patch to Crush at build time (client/patches/, see
-# tasks/patch-crush-for-at-imports.md): makes a `@path` on its own line in a context file
+# tasks/archive/2026/08/21/patch-crush-for-at-imports.md): makes a `@path` on its own line in a context file
 # (CLAUDE.md/AGENTS.md/CRUSH.md) recursively splice that file's contents in. Default ON here;
 # `make image CRUSH_AT_IMPORT=0` builds stock upstream Crush instead. A patched build compiles
 # Crush from a git checkout rather than `go install …@tag` (which can't be patched); expect a

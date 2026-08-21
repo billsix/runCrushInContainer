@@ -11,3 +11,6 @@ server/llama.cpp/
 # --- editor / tooling ---
 *~
 .ruff_cache/
+
+# Crush per-project runtime state (crush.db, sessions) — created when running crush in a dir
+.crush/

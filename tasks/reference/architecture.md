@@ -88,8 +88,10 @@ sibling/template of `github.com/billsix/runClaudeInContainer`. Two machines, one
 - **`@`-import patch (2026-08-20):** the client builds a locally-patched Crush that recursively splices
   `@path` references inside context files (a feature stock Crush lacks). Gated on `CRUSH_AT_IMPORT`
   (Dockerfile ARG default `0` = stock `go install …@tag`; Makefile default `1` = clone the tag, `git
-  apply client/patches/crush-at-import.patch`, build from source with a version-stamp). Task (open,
-  live check pending): `tasks/patch-crush-for-at-imports.md`; mechanism: `crush-capabilities.md`.
+  apply client/patches/crush-at-import.patch`, build from source with a version-stamp). **Live-verified
+  end-to-end 2026-08-21** (a real `@secret.md` spliced into a `CLAUDE.md`, model returned the
+  import-only secret). Re-verify harness: `tools/at-import-live-test/run-live-test.sh`. Record:
+  `tasks/archive/2026/08/21/patch-crush-for-at-imports.md`; mechanism: `crush-capabilities.md`.
 
 ## Connecting
 
