@@ -2,8 +2,9 @@
 
 **Status:** COMPLETE (2026-08-21) — patch delivered, wired into the image build, and **live-verified
 end-to-end**: a real `CLAUDE.md` with `@secret.md` was spliced in and the model returned the
-import-only secret (`crush run` against the live model → PASS). The reusable end-to-end harness was
-promoted to **`tools/at-import-live-test/`** (run `run-live-test.sh` on the host to re-verify).
+import-only secret (`crush run` against the live model → PASS). The one-shot verification harness
+(a `CLAUDE.md` with `@secret.md` + `run-live-test.sh`) was removed from the tree after use — it lives
+in git history (commit `5d2515f` and earlier), recoverable if you want to re-run it.
 Parity gaps tracked in `tasks/crush-at-import-parity.md`.
 **Priority:** 5
 **Difficulty:** 5
@@ -150,9 +151,10 @@ TestAtImport` + `go build ./` — if green, regenerate the patch against the new
 `crush-capabilities.md`'s banner; (3) if `git am` FAILS to apply, `processFile`/`processContextPath`
 moved — re-locate the splice point, re-apply the ~50-line change by hand, re-run the tests, and
 `git format-patch <newtag>` to replace the patch file. This mirrors the versioned-dependency
-discipline in `tasks/reference/crush-capabilities.md`. (4) After rebuilding the image, run the
-promoted end-to-end harness **`tools/at-import-live-test/run-live-test.sh`** on the host (server +
-tunnel up) — it confirms `+dirty` and that an `@`-import splices live (PASS/FAIL).
+discipline in `tasks/reference/crush-capabilities.md`. (4) For an optional live end-to-end re-check,
+recover the harness from git history (`git show 5d2515f:...run-live-test.sh`, or a `CLAUDE.md` with a
+`@secret.md` line + `crush run`) and run it on the host with the server + tunnel up — it confirms
+`+dirty` and that an `@`-import splices live.
 
 ## Investigation plan
 

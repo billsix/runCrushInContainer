@@ -1,9 +1,58 @@
 # Port the runClaudeInContainer conventions systems into runCrushInContainer
 
-**Status:** proposed — researched, ordered, needs go-ahead to implement
+**Status:** Phases 0–2 IMPLEMENTED + verified (2026-08-21). Phases 3 (slash commands) and 4
+(Makefile polish) remain. Decisions this pass: stack → **mounted host path**; delivery → **`@`-import**
+(the patch works, so near-verbatim port) not per-doc global-context-path.
 **Priority:** 4
 **Difficulty:** 5
-**Started:** 2026-08-18 · **Researched:** 2026-08-19
+**Started:** 2026-08-18 · **Researched:** 2026-08-19 · **Phases 0–2:** 2026-08-21
+
+## Implementation of Phases 0–2 (2026-08-21)
+
+Delivery uses the **`@`-import patch** (now proven working), so the port is near-verbatim to
+runClaudeInContainer: bake `CLAUDE.md` at `~/.config/crush/CLAUDE.md`, register it as the **one**
+`option global-context-path` in `crushrc`, and let its `@`-import lines pull in the reference docs +
+personal overlay. Verified by a `processFile` test on the real baked file — the `CLAUDE.md` body +
+the personal overlay splice in, no literal `@`-lines left.
+
+**Trim for the local-model context (2026-08-21):** the first cut ported the conventions verbatim →
+~131 KB / ~32k tokens, which **overflowed the 32k server window** (a live `crush run` errored at ~50k
+tokens = conventions + Crush's own ~18k-token system prompt/tools). Fixed two ways: (1) rewrote
+`CLAUDE.md` as a **lean core** — the essential *rules* only (~11.5 KB / ~2.9k tokens), with the heavy
+overused-phrases catalog and print-debugging recipes kept **baked but referenced on-demand**, not
+`@`-imported; only the small personal overlay stays `@`-imported. (2) Raised the server window
+`CTX 32768 → 65536` (+ matching crushrc `--context-window`) for working headroom. Net: always-loaded
+conventions dropped ~11× and now fit with room for real work. See
+`tasks/archive/2026/08/20/context-window-sizing.md` for the two-limit background.
+
+- **P0.1/P0.2 (delivery):** `client/entrypoint/dotfiles/.config/crush/CLAUDE.md` baked to
+  `/root/.config/crush/CLAUDE.md` (via the existing dotfiles `COPY`); `crushrc` registers it with
+  `option global-context-path /root/.config/crush/CLAUDE.md`. **Deviation from the plan:** one
+  global-context-path (the CLAUDE.md) + `@`-imports inside it, NOT one per doc — cleaner and matches
+  the original's authoring style, enabled by the patch.
+- **P1.1 (conventions body):** copied runClaudeInContainer's shared `CLAUDE.md` and adapted — fixed all
+  `~/.claude/` → `~/.config/crush/` paths, rewrote the "Auto-imported references" section for Crush's
+  mechanism, fixed the personal-overlay path/example. **Cut three sandbox-specific sections** that
+  don't apply to the Crush client: "Running projects in a nested container", "The Bash tool runs
+  through zsh", "Verification gates in nested containers". *(Residual: a few worked-example prose bits
+  still say "runClaudeInContainer … mounted by the Makefile" — harmless, could be curated later.)*
+- **P1.2 (reference docs):** brought only the **two tool-agnostic** docs — `llm-overused-phrases.md`,
+  `print-debugging.md`. **Deviation:** skipped `nested-podman-design.md` and `sandbox-capability-map.md`
+  — those describe the *runClaudeInContainer* sandbox, not the Crush client, so copying them would
+  mislead. `claude-config-layering.md` (P1.3) also **not** ported (Crush's config model is already in
+  `crush-capabilities.md` + `architecture.md`); a dedicated `crush-config-layering.md` is optional.
+- **P1.4 (personal overlay):** blank `ai-coding-conventions.personal.md` + `.example.md` baked;
+  Makefile mounts host `~/.ai-coding-conventions.personal.md` over the blank (unconditional + auto-touch).
+- **P2.1/P2.2 (task + reference doc systems):** described in the conventions body; already in active use.
+- **P2.3 (diversion stack):** **mounted host path** — `~/.config/crush/stack.md` on the host, mounted
+  to `/root/.config/crush/stack.md` (Makefile, unconditional + mkdir/touch so it survives `--rm`). The
+  conventions body references that path.
+- **P2.4 (git-identity exports): SKIPPED** per maintainer (Crush doesn't need `CLAUDE_USER_*`).
+
+Verified: `processFile` splices the `@`-imports (131 KB); `crush models` loads the crushrc with the new
+`global-context-path` cleanly; `make -n shell` renders the personal-overlay + stack mounts. Not run: a
+full `make image` + a live session confirming the model *receives* the conventions (a user-side live
+test, analogous to the `@`-import one).
 
 ## Goal
 
@@ -56,36 +105,36 @@ history / the session that created it); each line says what it is and the concre
 
 ### Phase 0 — Delivery mechanism (unblocks everything) — Difficulty 3
 
-- [ ] **P0.1 Bake the conventions file.** Create `client/entrypoint/CLAUDE.md`, COPY it into the
+- [x] **P0.1 Bake the conventions file.** Create `client/entrypoint/CLAUDE.md`, COPY it into the
       image at `/root/.config/crush/CLAUDE.md`, and register it with `option global-context-path
       /root/.config/crush/CLAUDE.md` in `crushrc` (required — the global auto-defaults are only
       `CRUSH.md`/`AGENTS.md`, so a `CLAUDE.md` there is not picked up without the line). This
       leaves the cwd `CLAUDE.md` slot free for a mounted project's own file, which stacks on top.
       *Verified:* `config.go:32` (cwd `CLAUDE.md`), `load.go:548` (global defaults).
-- [ ] **P0.2 Stand up the global-context-path delivery.** In `client/entrypoint/crushrc`, add one
+- [x] **P0.2 Stand up the global-context-path delivery.** In `client/entrypoint/crushrc`, add one
       `option global-context-path /root/.config/crush/reference/<doc>.md` line per always-loaded
       doc, plus one for the personal overlay (same mechanism as P0.1). Bake the docs into the image
       under that dir. This replaces `@`-import (F19). *Verified:* `load.go:548`, extendable list.
 
 ### Phase 1 — The conventions content + reference docs (highest value, generic) — Difficulty 4
 
-- [ ] **P1.1 Port the conventions body (F18).** Adapt runClaudeInContainer's shared
+- [x] **P1.1 Port the conventions body (F18).** Adapt runClaudeInContainer's shared
       `.claude/CLAUDE.md` into `client/entrypoint/CLAUDE.md` (baked to
       `~/.config/crush/CLAUDE.md`). The *content* is agent-agnostic engineering/writing
       discipline and ports as-is; edit only the Claude-Code-specific delivery notes (the
       "Auto-imported references" section, `@`-import mentions, `~/.claude` paths, `/audit-repo`
       references) to describe Crush's mechanisms. Keep the opening "SHARED layer — personal goes
       in the overlay" instruction (F10) so the split stays self-maintaining.
-- [ ] **P1.2 Port the 4 generic reference docs (F6).** `llm-overused-phrases.md`,
+- [x] **P1.2 Port the 4 generic reference docs (F6).** `llm-overused-phrases.md`,
       `print-debugging.md`, `nested-podman-design.md`, `sandbox-capability-map.md` — copy
       verbatim into `tasks/reference/` (content is tool-agnostic). Register each as a
       global-context-path (P0.2) if you want them always-in-context like the original.
-- [ ] **P1.3 Rewrite the config-layering doc (F6.5).** `claude-config-layering.md` is entirely
+- [x] **P1.3 Rewrite the config-layering doc (F6.5).** `claude-config-layering.md` is entirely
       about Claude Code's auth/config files — do NOT copy it; write a new
       `tasks/reference/crush-config-layering.md` describing Crush's `crushrc` + context-path +
       global-context-path model (much of it already captured in `crush-capabilities.md`; this
       doc would cover the *mount/bake* layering specifically).
-- [ ] **P1.4 Personal-overlay split (F9/F10).** Ship a **blank**
+- [x] **P1.4 Personal-overlay split (F9/F10).** Ship a **blank**
       `client/entrypoint/ai-coding-conventions.personal.md` baked into the image, register it as a
       global-context-path, and mount the host's `~/.ai-coding-conventions.personal.md` over it in
       the client `Makefile` (auto-`touch` if absent — the mount is unconditional so the context
@@ -99,15 +148,15 @@ These are pure filing conventions; most are *described in the conventions body* 
 need their directories + the wording to point at Crush paths. The repo already has
 `tasks/reference/` (from bring-up), so the reference-doc convention is half-present.
 
-- [ ] **P2.1 Task-doc system (F1–F4):** `tasks/<slug>.md` with Priority/Difficulty header,
+- [x] **P2.1 Task-doc system (F1–F4):** `tasks/<slug>.md` with Priority/Difficulty header,
       `tasks/archive/YYYY/MM/DD/`, `tasks/adhoc/<slug>/`. Pure files; already partly in use.
-- [ ] **P2.2 Reference-doc system (F5, F7):** `tasks/reference/` + the "harvest durable knowledge
+- [x] **P2.2 Reference-doc system (F5, F7):** `tasks/reference/` + the "harvest durable knowledge
       on archive" discipline. Already seeded (`architecture.md`, `crush-capabilities.md`).
-- [ ] **P2.3 Diversion stack (F8):** a plain-markdown stack file, read bottom-up. Retarget
+- [x] **P2.3 Diversion stack (F8):** a plain-markdown stack file, read bottom-up. Retarget
       `~/.claude/stack.md` → a fixed Crush path (recommend `~/.config/crush/stack.md`, or a
       repo-agnostic host path mounted in). The *autonomous-maintenance* behavior rides on the
       conventions body (P1.1), so it works as soon as Crush loads `CRUSH.md`.
-- [ ] **P2.4 `CLAUDE_USER_NAME`/`EMAIL` from git config (F11):** port the `.extrabashrc` exports
+- [x] **P2.4 `CLAUDE_USER_NAME`/`EMAIL` from git config (F11):** port the `.extrabashrc` exports
       so per-session attribution works. Generic shell.
 
 ### Phase 3 — Slash commands (needs the Crush command rewrite) — Difficulty 4

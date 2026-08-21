@@ -1,9 +1,8 @@
 # ~/.config/crush/crushrc — baked default for the runCrushInContainer client.
 #
 # Declares a single provider: the local Muse Glimmer model served by llama.cpp on the Mac,
-# reached through the host's SSH tunnel. With `type llamacpp` and no model list, Crush
-# AUTO-DISCOVERS the served model when it starts (the tunnel must be up), so there is no
-# model to name and no API key to set.
+# reached through the host's SSH tunnel. The model is pinned EXPLICITLY (not auto-discovered)
+# and the built-in provider catalog is suppressed — see the provider/model block below.
 #
 # Reachability: the client runs with `podman run --network=host`, so 127.0.0.1:8080 inside
 # the container is the host's forwarded port. On the host, keep the tunnel open:
@@ -11,6 +10,14 @@
 # If you serve on a different port (server Makefile PORT), change the base-url below to match.
 #
 # NOTE: crushrc runs as a full shell script at load time — treat it as trusted code.
+
+# --- Cross-project conventions (the runClaudeInContainer working-method port) ---
+# Register the baked conventions file as a global context path so Crush loads it and splices it
+# into the system prompt every session, before executing anything. Its `@`-import lines (expanded
+# by the patched Crush, CRUSH_AT_IMPORT) pull in the reference docs + the personal overlay. A
+# mounted project's own /work/CLAUDE.md still auto-loads on top of this. See
+# tasks/port-runclaude-conventions-systems.md.
+option global-context-path /root/.config/crush/CLAUDE.md
 
 # Offer ONLY this provider — never Crush's built-in Catwalk catalog. Without this, Crush
 # shows ~15-20 embedded models (and, if our provider is ever dropped, falls into an onboarding
@@ -30,9 +37,9 @@ provider add muse-glimmer \
 # deletes the provider and shows the built-in catalog. An explicit model has no such
 # dependency. The ID must match what the server reports at /v1/models — the server is pinned to
 # `--alias muse-glimmer` (server/Makefile MODEL_ALIAS), so this stays constant across quant/file
-# changes. --context-window matches the server's -c/CTX (32768) so Crush's compaction math lines
+# changes. --context-window matches the server's -c/CTX (65536) so Crush's compaction math lines
 # up (see tasks/archive/2026/08/20/context-window-sizing.md).
-model add muse-glimmer/muse-glimmer --name "Muse Glimmer 30B" --context-window 32768
+model add muse-glimmer/muse-glimmer --name "Muse Glimmer 30B" --context-window 65536
 
 # Preselect it for both slots so Crush uses it immediately — no model picker at all.
 model large muse-glimmer/muse-glimmer

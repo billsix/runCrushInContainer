@@ -48,17 +48,16 @@ MLX_REPO ?= RadixArk/Muse-Glimmer-q4-MLX
 # Serving.
 HOST ?= 127.0.0.1
 PORT ?= 8080
-CTX  ?= 32768        # KV-cache / context window. Bigger = room for a coding agent's growing
-                     # context AND for prompt-cache restore to succeed (a too-small window is
-                     # why llama-server logged "failed to restore kv cache" and reprocessed
-                     # the prompt each turn). Costs some RAM for the KV cache — fine on 36 GB
-                     # with Q4. Dial back with `make serve CTX=16384`.
-                     # KEEP IN SYNC with the client's crushrc `--context-window` (see
-                     # client/entrypoint/crushrc) — Crush auto-summarizes at ~80% of that
-                     # number, so if they disagree Crush trims history early or overruns.
-                     # Going bigger (e.g. CTX=65536) roughly doubles KV RAM and may exceed
-                     # Metal's default wired limit (~24-28 GB); raise it first with
-                     # `sudo sysctl iogpu.wired_limit_mb=<mb>`. See tasks/archive/2026/08/20/context-window-sizing.md.
+CTX  ?= 65536        # KV-cache / context window. Raised 32768 -> 65536 (2026-08-21) so the
+                     # always-loaded conventions + Crush's own ~18k-token system prompt/tools leave
+                     # comfortable room for an actual coding session (the 32k window overflowed —
+                     # request was ~50k tokens). The model supports up to n_ctx_train=131072.
+                     # COST: bigger KV cache RAM. On the 36 GB Mac with Q4 (~16.8 GB weights) 64k
+                     # should fit but may exceed Metal's default wired limit (~24-28 GB) — if the
+                     # serve log warns or it swaps, raise it: `sudo sysctl iogpu.wired_limit_mb=<mb>`.
+                     # Dial back with `make serve CTX=32768`. KEEP IN SYNC with the client's crushrc
+                     # `--context-window` (Crush auto-summarizes at ~80% of it). See
+                     # tasks/archive/2026/08/20/context-window-sizing.md.
 NGL  ?= 999          # offload all layers to the GPU (Metal)
 NP   ?= 1            # parallel slots. 1 = the whole KV cache serves ONE client (Crush), so
                      # prompt caching works and the context isn't split across slots. Raise

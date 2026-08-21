@@ -90,7 +90,8 @@ sibling/template of `github.com/billsix/runClaudeInContainer`. Two machines, one
   (Dockerfile ARG default `0` = stock `go install …@tag`; Makefile default `1` = clone the tag, `git
   apply client/patches/crush-at-import.patch`, build from source with a version-stamp). **Live-verified
   end-to-end 2026-08-21** (a real `@secret.md` spliced into a `CLAUDE.md`, model returned the
-  import-only secret). Re-verify harness: `tools/at-import-live-test/run-live-test.sh`. Record:
+  import-only secret). The one-shot verification harness (a `CLAUDE.md` with `@secret.md` + a
+  `crush run`) lives in git history (commit `5d2515f` and earlier), recoverable if needed. Record:
   `tasks/archive/2026/08/21/patch-crush-for-at-imports.md`; mechanism: `crush-capabilities.md`.
 
 ## Connecting

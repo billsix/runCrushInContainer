@@ -59,6 +59,20 @@ GNUPG_FILE := $(HOME)/.gnupg
 GNUPG_REAL_PATH := $(shell readlink -f $(GNUPG_FILE))
 GNUPG_MOUNT := $(shell if [ -d $(GNUPG_REAL_PATH) ]; then echo "-v $(GNUPG_REAL_PATH):/root/.gnupg:Z" ; fi)
 
+# Personal-overlay mount (UNCONDITIONAL): the baked conventions CLAUDE.md `@`-imports
+# ai-coding-conventions.personal.md, so that path must always resolve. `touch` the host file at
+# parse time (created blank if absent) and mount it over the baked blank default, so a maintainer's
+# host overlay layers in while the tracked default stays generic. Host file is dotted; container
+# path is un-dotted (matches runClaudeInContainer).
+PERSONAL_FILE := $(HOME)/.ai-coding-conventions.personal.md
+PERSONAL_MOUNT := $(shell touch $(PERSONAL_FILE) 2>/dev/null; echo "-v $(PERSONAL_FILE):/root/.config/crush/ai-coding-conventions.personal.md:Z")
+
+# Diversion-stack mount (UNCONDITIONAL, persists across --rm): the conventions reference
+# ~/.config/crush/stack.md; keep it on the HOST so the global-across-repos stack survives the
+# ephemeral container. mkdir+touch at parse time so the mount always resolves.
+STACK_FILE := $(HOME)/.config/crush/stack.md
+STACK_MOUNT := $(shell mkdir -p $(HOME)/.config/crush 2>/dev/null; touch $(STACK_FILE) 2>/dev/null; echo "-v $(STACK_FILE):/root/.config/crush/stack.md:Z")
+
 .PHONY: all
 all: image ## Build the image
 
@@ -78,6 +92,8 @@ shell: image ## run Crush in an ephemeral container; mounts PROJECT at /work
 		$(TMUX_MOUNT) \
 		$(GNUPG_MOUNT) \
 		$(GITCONFIG_MOUNT) \
+		$(PERSONAL_MOUNT) \
+		$(STACK_MOUNT) \
 		$(EXTRA_MOUNTS) \
 		$(CONTAINER_NAME) \
 		/shell.sh
