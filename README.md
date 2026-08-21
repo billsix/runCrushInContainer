@@ -126,9 +126,16 @@ The first cut was just "get it running"; the client has since grown a few things
 - **Host config mounts** — `~/.tmux.conf` / `~/.gitconfig` / `~/.gnupg` are mounted in when present,
   plus a baked `.extrabashrc` (prompt, aliases).
 
-The heavier runClaudeInContainer machinery — the diversion stack, personal-overlay layering, and
-slash commands — is **still deferred** (see `tasks/port-runclaude-conventions-systems.md`); the
-task-doc and reference-doc conventions themselves are already in use here.
+The runClaudeInContainer working-method machinery is now **ported** — the cross-project conventions
+(a lean, always-loaded `CLAUDE.md`), the task-doc and reference-doc systems, the diversion stack
+(host-mounted so it survives `--rm`), the personal-overlay layering, the 7 slash commands, and
+nested-podman support (`make shell NESTED_PODMAN=1`). See `tasks/port-runclaude-conventions-systems.md`.
+
+## Forking
+
+runCrushInContainer is a template — point it at a different model, quant, serving port, or agent by
+editing the Makefile variables, and layer in your own personal conventions. See **`FORKING.md`** for
+exactly what to change (and what's portable vs personal).
 
 ## License
 

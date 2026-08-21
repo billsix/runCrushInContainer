@@ -55,6 +55,10 @@ flag (see runClaude's doc).
 - **Short names need `localhost/<tag>` and no TTY** in agent-driven runs; `make -n <target>` to print
   the expanded `podman run`, then re-run by hand with `--cgroups=disabled` added and `-it` dropped.
 - **Networking just works** (bridged netavark, verified in runClaude); `--network=host` is a fallback.
+- **The `Failed to mount subscriptions` WARN** on inner runs is suppressed — the client Dockerfile
+  empties `/usr/share/containers/mounts.conf` (containers-common's `/usr/share/rhel/secrets:/run/secrets`
+  entry is empty on Fedora and fails to mount nested). If you see the WARN, the image predates that
+  fix — rebuild.
 
 ## The depth caveat — podman-in-podman-in-podman
 

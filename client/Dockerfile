@@ -13,6 +13,13 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
     --mount=type=cache,target=/var/lib/dnf \
     /usr/local/bin/01-install-base.sh
 
+# Silence podman's RHEL subscription-secrets mount. containers-common ships
+# /usr/share/containers/mounts.conf = "/usr/share/rhel/secrets:/run/secrets", which podman tries to
+# inject into EVERY container it runs. That path is empty on Fedora and the mount fails under the
+# nested/label-disabled setup, so every INNER `podman run` prints a harmless "Failed to mount
+# subscriptions" WARN and skips it. Emptying the file removes the noise (we do no subscription builds).
+RUN : > /usr/share/containers/mounts.conf
+
 # Build Crush from source at a pinned tag, AT IMAGE-BUILD TIME (self-contained image:
 # the compiled binary is baked into a layer, no runtime fetch). CRUSH_TAG defaults to the
 # latest stable release; override with `make image CRUSH_TAG=vX.Y.Z`. `crush --version`

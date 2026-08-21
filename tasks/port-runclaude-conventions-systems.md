@@ -39,11 +39,14 @@ conventions dropped ~11× and now fit with room for real work. See
   don't apply to the Crush client: "Running projects in a nested container", "The Bash tool runs
   through zsh", "Verification gates in nested containers". *(Residual: a few worked-example prose bits
   still say "runClaudeInContainer … mounted by the Makefile" — harmless, could be curated later.)*
-- **P1.2 (reference docs):** brought only the **two tool-agnostic** docs — `llm-overused-phrases.md`,
-  `print-debugging.md`. **Deviation:** skipped `nested-podman-design.md` and `sandbox-capability-map.md`
-  — those describe the *runClaudeInContainer* sandbox, not the Crush client, so copying them would
-  mislead. `claude-config-layering.md` (P1.3) also **not** ported (Crush's config model is already in
-  `crush-capabilities.md` + `architecture.md`); a dedicated `crush-config-layering.md` is optional.
+- **P1.2 (reference docs):** **three** baked at `~/.config/crush/reference/` (agent-readable
+  on-demand): `llm-overused-phrases.md`, `print-debugging.md` (2026-08-21), and
+  **`sandbox-capability-map.md`** (adapted 2026-08-21 — the toolchain is byte-identical, so the
+  inventory is valid; GUI/controller passthrough + nested specifics adjusted for the client).
+  `nested-podman-design.md` was **ported as a project reference doc** in `tasks/reference/` (adapted).
+  `claude-config-layering.md` (P1.3) is **not** ported — Crush's config model is already in
+  `crush-capabilities.md` + `architecture.md`; a dedicated `crush-config-layering.md` remains optional
+  (not written).
 - **P1.4 (personal overlay):** blank `ai-coding-conventions.personal.md` + `.example.md` baked;
   Makefile mounts host `~/.ai-coding-conventions.personal.md` over the blank (unconditional + auto-touch).
 - **P2.1/P2.2 (task + reference doc systems):** described in the conventions body; already in active use.
@@ -145,15 +148,15 @@ history / the session that created it); each line says what it is and the concre
       "Auto-imported references" section, `@`-import mentions, `~/.claude` paths, `/audit-repo`
       references) to describe Crush's mechanisms. Keep the opening "SHARED layer — personal goes
       in the overlay" instruction (F10) so the split stays self-maintaining.
-- [x] **P1.2 Port the 4 generic reference docs (F6).** `llm-overused-phrases.md`,
-      `print-debugging.md`, `nested-podman-design.md`, `sandbox-capability-map.md` — copy
-      verbatim into `tasks/reference/` (content is tool-agnostic). Register each as a
-      global-context-path (P0.2) if you want them always-in-context like the original.
-- [x] **P1.3 Rewrite the config-layering doc (F6.5).** `claude-config-layering.md` is entirely
-      about Claude Code's auth/config files — do NOT copy it; write a new
-      `tasks/reference/crush-config-layering.md` describing Crush's `crushrc` + context-path +
-      global-context-path model (much of it already captured in `crush-capabilities.md`; this
-      doc would cover the *mount/bake* layering specifically).
+- [x] **P1.2 Port the generic reference docs (F6) — DONE.** `llm-overused-phrases.md`,
+      `print-debugging.md`, and `sandbox-capability-map.md` (adapted) baked at
+      `~/.config/crush/reference/` (agent-readable on-demand); `nested-podman-design.md` ported to
+      `tasks/reference/` as a project doc. See the Implementation summary for the per-doc detail.
+- [ ] **P1.3 Config-layering doc — NOT ported (optional).** `claude-config-layering.md` is entirely
+      about Claude Code's auth/config files, so it's not copied; a dedicated
+      `tasks/reference/crush-config-layering.md` covering the *mount/bake* layering was judged optional
+      (Crush's config model is already in `crush-capabilities.md` + `architecture.md`). Left unchecked
+      as a deliberate skip, not a TODO.
 - [x] **P1.4 Personal-overlay split (F9/F10).** Ship a **blank**
       `client/entrypoint/ai-coding-conventions.personal.md` baked into the image, register it as a
       global-context-path, and mount the host's `~/.ai-coding-conventions.personal.md` over it in

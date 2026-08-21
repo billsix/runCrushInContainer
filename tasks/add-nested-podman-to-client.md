@@ -1,7 +1,12 @@
 # Add nested-podman support to the Crush client
 
-**Status:** IMPLEMENTED (2026-08-21) — flags, storage.conf, conventions note, and reference doc all
-in; only the live nested-build verification remains (needs nested-podman available on the host).
+**Status:** COMPLETE + verified (2026-08-21) — flags, storage.conf, `-e NESTED_PODMAN` passthrough,
+conventions note, and reference doc all in. **Live-verified:** prerequisites pass and an inner
+`podman run --cgroups=disabled --network=host fedora:44 echo nested-ok` printed `nested-ok`. Inner
+runs need BOTH flags (netavark bridged fails nested because the client is `--network=host`). The benign
+`Failed to mount subscriptions` WARN on inner runs is now **suppressed** by emptying
+`/usr/share/containers/mounts.conf` in the client Dockerfile (the RHEL subscription-secrets mount is
+useless on Fedora; needs a rebuild to take effect).
 **Priority:** 3
 **Difficulty:** 5
 **Started:** 2026-08-21 · **Implemented:** 2026-08-21
@@ -46,7 +51,7 @@ have the same capability.
 - [x] **Verify — prerequisites confirmed (2026-08-21):** in a rebuilt client launched with
       `make shell NESTED_PODMAN=1`, `$NESTED_PODMAN=1`, `/dev/fuse` is present, and `podman info`
       works (maintainer-confirmed).
-- [ ] **Verify — inner run (remaining):** confirm an actual nested container runs:
+- [x] **Verify — inner run (remaining):** confirm an actual nested container runs:
       `podman run --rm --cgroups=disabled --network=host fedora:44 echo nested-ok` inside the client,
       then a real project's `make image` (with both flags on its inner run).
       **Finding (2026-08-21):** the image *pull* works, but the inner run needs **both**
