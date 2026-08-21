@@ -14,3 +14,6 @@ server/llama.cpp/
 
 # Crush per-project runtime state (crush.db, sessions) — created when running crush in a dir
 .crush/
+
+# image-export artifacts (large; never commit)
+client/crushcontainer-*.tar

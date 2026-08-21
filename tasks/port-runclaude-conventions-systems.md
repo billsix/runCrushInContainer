@@ -1,8 +1,11 @@
 # Port the runClaudeInContainer conventions systems into runCrushInContainer
 
-**Status:** Phases 0–2 IMPLEMENTED + verified (2026-08-21). Phases 3 (slash commands) and 4
-(Makefile polish) remain. Decisions this pass: stack → **mounted host path**; delivery → **`@`-import**
-(the patch works, so near-verbatim port) not per-doc global-context-path.
+**Status:** Phases 0–4 IMPLEMENTED (2026-08-21); **Testing phase deferred** by maintainer — task
+stays OPEN until the end-to-end test is run. Phases 0–2 live-verified on the real model; Phases 3
+(slash commands) + 4 (Makefile polish) built and parse-checked. Note (2026-08-21): custom commands
+appear under the `/` dialog's **"User" tab** (press `Tab`), and only after `make image` bakes them. Decisions: stack → **mounted host path**; delivery → **`@`-import**
+(the patch works, so near-verbatim port); conventions **trimmed to a lean core** to fit the local
+32k/64k window.
 **Priority:** 4
 **Difficulty:** 5
 **Started:** 2026-08-18 · **Researched:** 2026-08-19 · **Phases 0–2:** 2026-08-21
@@ -49,10 +52,25 @@ conventions dropped ~11× and now fit with room for real work. See
   conventions body references that path.
 - **P2.4 (git-identity exports): SKIPPED** per maintainer (Crush doesn't need `CLAUDE_USER_*`).
 
-Verified: `processFile` splices the `@`-imports (131 KB); `crush models` loads the crushrc with the new
-`global-context-path` cleanly; `make -n shell` renders the personal-overlay + stack mounts. Not run: a
-full `make image` + a live session confirming the model *receives* the conventions (a user-side live
-test, analogous to the `@`-import one).
+Verified in-sandbox: `processFile` splices the `@`-imports; `crush models` loads the crushrc with the
+`global-context-path` cleanly; `make -n shell` renders the personal-overlay + stack mounts.
+**LIVE-VERIFIED end-to-end 2026-08-21** (real model, `CTX=65536`): a `crush run` answered with facts
+that exist *only* in the loaded conventions — the diversion-stack path `~/.config/crush/stack.md` and
+the "Confirm before acting" rule (list/find = information-only, wait for go-ahead). Conventions bake →
+load → fit → steer the model. Phases 0–2 complete.
+
+**Phases 3–4 (2026-08-21).** Slash commands: ported all 7
+(`client/entrypoint/dotfiles/.config/crush/commands/`) — stripped the YAML frontmatter (Crush would
+send it as literal text), renamed `$ARGUMENTS` → named tokens (`$SLUG` for new-task/new-reference/
+archive-task, `$DIVERSION` for stack-push, `$ENTRY` for stack-drop; `stack`/`stack-pop` take none),
+and fixed `~/.claude/` → `~/.config/crush/` (incl. the stack path). Baked via the dotfiles `COPY` to
+`/root/.config/crush/commands/`. **Caveats (P3.4):** Crush commands are triggered by typing `/` in the
+**interactive TUI** (not `crush run`); args are entered in a **dialog** and are **required** (no
+`$ARGUMENTS` catch-all), so `stack-drop`'s formerly-optional arg is now a required `$ENTRY` (type a
+number or "top"). They're **shortcuts** — the conventions already drive these behaviors autonomously.
+Makefile (Phase 4): `image-export`/`image-import` targets + `client/crushcontainer-*.tar` gitignored;
+`make format` + `client/entrypoint/format.sh` (shfmt, accumulate-status). P4.1 mounts were already
+done; **P4.4 (nested-podman) skipped** — the Crush client doesn't run nested containers.
 
 ## Goal
 
@@ -171,12 +189,12 @@ Port the 7 commands (F12–F18) from `.claude/commands/*.md` to Crush's command 
    a required arg and prompts for it. Filename becomes the command name.
 3. Keep the numbered procedure body as-is (it's just prompt text the agent follows).
 
-- [ ] **P3.1** `/new-task` (F12), `/new-reference` (F13) — straightforward `$SLUG` rewrites.
-- [ ] **P3.2** `/archive-task` (F14) — the richest; keep the harvest-to-reference + adhoc-triage
+- [x] **P3.1** `/new-task` (F12), `/new-reference` (F13) — straightforward `$SLUG` rewrites.
+- [x] **P3.2** `/archive-task` (F14) — the richest; keep the harvest-to-reference + adhoc-triage
       steps.
-- [ ] **P3.3** `/stack`, `/stack-push`, `/stack-pop`, `/stack-drop` (F15–F18) — retarget the
+- [x] **P3.3** `/stack`, `/stack-push`, `/stack-pop`, `/stack-drop` (F15–F18) — retarget the
       stack path to P2.3's choice.
-- [ ] **P3.4** Note the **behavior gap:** Crush prompts for required args in a dialog and has no
+- [x] **P3.4** Note the **behavior gap:** Crush prompts for required args in a dialog and has no
       `$ARGUMENTS` catch-all — a command that took free-form multi-word input (`/stack-push <what
       we divert to>`) becomes a single prompted `$DESCRIPTION` field. Acceptable; document it.
 
@@ -184,16 +202,44 @@ Port the 7 commands (F12–F18) from `.claude/commands/*.md` to Crush's command 
 
 Mostly already present in `client/` (bring-up) or directly reusable from runClaudeInContainer.
 
-- [ ] **P4.1 Mounts:** add the personal-overlay mount (P1.4) and conditional host-config mounts
+- [x] **P4.1 Mounts:** add the personal-overlay mount (P1.4) and conditional host-config mounts
       (`~/.gitconfig`, `~/.tmux.conf`) via the `readlink -f` + existence-test idiom (F25). Keep
       the existing `--network=host` + `--security-opt label=disable`.
-- [ ] **P4.2 image-export / image-import (F23):** add the timestamped `podman save`/`load` target
+- [x] **P4.2 image-export / image-import (F23):** add the timestamped `podman save`/`load` target
       pair; gitignore `*.tar`.
-- [ ] **P4.3 format gate (F22):** a `make format` running `shfmt` over `entrypoint/*.sh` + the
+- [x] **P4.3 format gate (F22):** a `make format` running `shfmt` over `entrypoint/*.sh` + the
       multi-step-failure-propagation shape.
 - [ ] **P4.4 nested-podman flags (F24) — OPTIONAL:** the client Makefile does not implement
       `NESTED_PODMAN` (architecture.md notes passing it is a silent no-op). Port the flag set only
       if we actually want to build/run containers *inside* the Crush client. Low priority.
+
+### Phase T — Testing (run at the end, on the real setup)
+
+Do these once, on the Linux host with the Mac server + SSH tunnel up. Rebuild first so everything
+bakes in: **`cd client && make image`** (bakes the lean conventions, the reference docs, the 7
+commands, the updated crushrc), and **`[MAC] make serve`** at `CTX=65536`.
+
+- [ ] **Conventions load + steer (re-confirm the full set):** `make shell` → `crush run -q "Per your
+      loaded conventions: where is the diversion stack kept, and can you make changes on a 'list'/'find'
+      request?"` — expect `~/.config/crush/stack.md` + "no, info-only". (Passed 2026-08-21 for the lean
+      core; re-run after any convention edit.)
+- [ ] **No context overflow:** the above should NOT error with "exceeds context size". If it does, the
+      conventions grew — trim, or raise `CTX`.
+- [ ] **Slash commands appear:** in the TUI (`crush`, not `crush run`), type `/` — **the dialog opens on
+      the "System" tab; press `Tab` to reach the "User" tab** where our 7 custom commands live
+      (`new-task`, … `stack-drop`), prefixed `user:`. **GOTCHA:** the User tab only shows once the
+      commands are baked — rebuild (`make image`) first, or you'll see only System commands. (Verified in
+      source: `internal/ui/dialog/commands.go:34-36` System/User/MCP tabs; `:263` hides the tab selector
+      when there are no user commands.)
+- [ ] **A command with an arg runs:** `/new-task` → the dialog prompts for `$SLUG` → it scaffolds
+      `tasks/<slug>.md`. Try `/stack-push` (prompts `$DIVERSION`) and `/stack` (no prompt, prints the
+      stack).
+- [ ] **Stack persists across `--rm`:** push something with `/stack-push`, exit the container, `make
+      shell` again, `/stack` — the entry is still there (it's mounted from host `~/.config/crush/stack.md`).
+- [ ] **Personal overlay:** put a line in host `~/.ai-coding-conventions.personal.md`, `make shell`,
+      and confirm the agent knows it (it's `@`-imported into the conventions).
+- [ ] **Makefile polish:** `make format` runs shfmt clean; `make image-export` writes a tar (gitignored)
+      and `make image-import FILE=…` loads it.
 
 ### Phase 5 — Explicitly NOT ported (record, don't build)
 

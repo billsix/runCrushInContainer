@@ -98,6 +98,22 @@ shell: image ## run Crush in an ephemeral container; mounts PROJECT at /work
 		$(CONTAINER_NAME) \
 		/shell.sh
 
+.PHONY: format
+format: image ## format the client shell scripts with shfmt (runs in the built image)
+	$(CONTAINER_CMD) run --rm --entrypoint /bin/bash \
+		$(SELINUX_OPT) \
+		-v $(CURDIR):/src -w /src \
+		$(CONTAINER_NAME) \
+		/src/entrypoint/format.sh
+
+.PHONY: image-export
+image-export: ## save the built image to a timestamped tar (podman save)
+	$(CONTAINER_CMD) save $(CONTAINER_NAME) -o $(CONTAINER_NAME)-$(shell date +%m-%d-%Y_%H-%M-%S).tar
+
+.PHONY: image-import
+image-import: ## load an image from a tar: make image-import FILE=foo.tar
+	$(CONTAINER_CMD) load -i $(FILE)
+
 .PHONY: help
 help:
 	@grep --extended-regexp '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-14s\033[0m %s\n", $$1, $$2}'
