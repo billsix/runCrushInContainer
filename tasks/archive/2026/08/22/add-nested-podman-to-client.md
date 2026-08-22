@@ -1,15 +1,16 @@
 # Add nested-podman support to the Crush client
 
-**Status:** COMPLETE + verified (2026-08-21) — flags, storage.conf, `-e NESTED_PODMAN` passthrough,
-conventions note, and reference doc all in. **Live-verified:** prerequisites pass and an inner
-`podman run --cgroups=disabled --network=host fedora:44 echo nested-ok` printed `nested-ok`. Inner
-runs need BOTH flags (netavark bridged fails nested because the client is `--network=host`). The benign
-`Failed to mount subscriptions` WARN on inner runs is now **suppressed** by emptying
-`/usr/share/containers/mounts.conf` in the client Dockerfile (the RHEL subscription-secrets mount is
-useless on Fedora; needs a rebuild to take effect).
+**Status:** COMPLETE + verified (2026-08-22). Implementation + nested runs verified 2026-08-21. A
+2026-08-22 follow-up fixed an offline miss: the reference doc was **not reachable by the agent** —
+the baked `CLAUDE.md` (and `sandbox-capability-map.md`) pointed at `tasks/reference/nested-podman-design.md`,
+a repo-relative path absent inside the container (only three reference docs were baked; this was not
+one), so on the **offline** system Glimmer looked for the nested-podman doc and could not find it.
+Fixed by baking the doc into `~/.config/crush/reference/` and correcting both pointers; **verified in a
+rebuilt image** both statically (file present, pointers correct) and behaviorally (Glimmer read the doc
+live and returned the right path + both flags). See "Follow-up (2026-08-22)".
 **Priority:** 3
 **Difficulty:** 5
-**Started:** 2026-08-21 · **Implemented:** 2026-08-21
+**Started:** 2026-08-21 · **Implemented:** 2026-08-21 · **Reopened:** 2026-08-22 · **Completed:** 2026-08-22
 
 ## Goal
 
@@ -93,6 +94,58 @@ checking `$NESTED_PODMAN` always saw it empty. Fix: the `shell` target now **alw
 now tell the agent to detect nesting via `$NESTED_PODMAN` (intent) **and** `test -e /dev/fuse &&
 podman info` (works). Needs a client-image rebuild is NOT required for this (it's a `run` flag), but
 the conventions note change IS baked — so `make image` to get both.
+
+## Follow-up (2026-08-22): the reference doc wasn't reachable by the agent (offline miss)
+
+Symptom: on the **offline** system Glimmer, driving nested work inside the client, went looking for the
+document describing the nested-podman system and **couldn't find it**. Root cause: the doc was written
+to `tasks/reference/nested-podman-design.md` (repo path) and the always-loaded `CLAUDE.md` pointed
+there — but that path does not exist inside the container. Only three reference docs were baked into the
+image (`~/.config/crush/reference/`: `llm-overused-phrases.md`, `print-debugging.md`,
+`sandbox-capability-map.md`); `nested-podman-design.md` was **deliberately left un-baked** (Decision 1,
+to keep the lean-core context small) — but "not always-loaded" was conflated with "not present at all."
+The agent's `/work` is the *mounted project*, not the runCrush repo, so the `tasks/reference/…` pointer
+dangles; offline there's no GitHub fallback either. This is the "never cite an artifact the reader
+can't reach" rule, one step removed: the doc existed, just not from the agent's vantage point.
+
+Fix (2026-08-22):
+
+- [x] **Bake the doc** — copied `tasks/reference/nested-podman-design.md` →
+      `client/entrypoint/dotfiles/.config/crush/reference/nested-podman-design.md` (rides the existing
+      dotfiles `COPY`, joins the other three as an on-demand — not always-loaded — read, so no
+      context-budget cost).
+- [x] **Fix the pointer in the baked `CLAUDE.md`** — `tasks/reference/nested-podman-design.md` →
+      `~/.config/crush/reference/nested-podman-design.md` (now matches how the other two on-demand docs
+      are cited in the same file).
+- [x] **Fix the same dangling pointer in `sandbox-capability-map.md`** (line ~69) — it had the identical
+      `tasks/reference/nested-podman-design.md` reference; corrected to the baked path.
+- [x] **Rebuild** the client image (`make image`) — done 2026-08-22. **Static verification passed** in
+      the rebuilt image: `~/.config/crush/reference/` contains `nested-podman-design.md`, and both
+      pointers (`CLAUDE.md:171`, `sandbox-capability-map.md:69`) now read
+      `~/.config/crush/reference/nested-podman-design.md` (no bare `tasks/reference/...`). The doc is
+      present and readable. This rebuild also folds in the `mounts.conf`-suppression change.
+- [x] **Behavioral re-verify — PASSED (2026-08-22).** With the tunnel up (`n_ctx 65536` confirmed via
+      `/v1/models`) and `make shell NESTED_PODMAN=1`, `crush run -q "…read the full nested-podman design
+      doc, its path + the two flags every inner podman run needs"` answered:
+      `Path: /root/.config/crush/reference/nested-podman-design.md`, `--cgroups=disabled`,
+      `--network=host` — no "can't find". Glimmer now reads the doc live. Bug fully resolved.
+
+**Similar-issue scan (2026-08-22):** grepped all baked files (`CLAUDE.md`, `reference/*`, `commands/*`)
+for cross-references that won't resolve inside the container.
+
+- The two above were the only true dangling "go read this baked doc" pointers.
+- The **slash commands** (`archive-task.md`, `new-reference.md`) reference `tasks/reference/`, `tools/`,
+  `CLAUDE.md` — these are **correct**: they operate on the *mounted project* at `/work`, where those are
+  the right relative locations. Not bugs.
+- `print-debugging.md` references the `CLAUDE.md` "Instrumentation-driven debugging" section, which
+  exists in the baked `CLAUDE.md` — resolves. Not a bug.
+- **Minor, deferred:** `reference/llm-overused-phrases.md` (line 7) still cites the runClaude source path
+  `entrypoint/dotfiles/.claude/CLAUDE.md` (should be `.config/crush/`) — inherited provenance text, not
+  an actionable pointer and not reachable either way. Left as-is; not worth a divergence from the
+  verbatim runClaude copy.
+- **Structural note:** baked reference docs are now copies of `tasks/reference/` originals and can drift
+  (same accepted pattern as the other three, which are copies of runClaude's). Keep the two
+  `nested-podman-design.md` copies in sync on future edits.
 
 ## Cross-links
 

@@ -66,7 +66,7 @@ reaches the SSH-forwarded model port. (systemd is not PID 1 — start services m
 
 Opt-in `make shell NESTED_PODMAN=1` (podman, buildah, skopeo, fuse-overlayfs are in the image) — lets
 Crush build/run a project's own containers nested. **Inner runs need BOTH `--cgroups=disabled` and
-`--network=host`.** Full design/flags/limits: `tasks/reference/nested-podman-design.md` (read that
+`--network=host`.** Full design/flags/limits: `~/.config/crush/reference/nested-podman-design.md` (read that
 before nested work).
 
 ## Hard limits (what the sandbox can NOT do)

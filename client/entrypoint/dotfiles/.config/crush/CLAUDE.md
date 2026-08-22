@@ -168,7 +168,7 @@ needs BOTH `--cgroups=disabled`** (the sandbox `/sys/fs/cgroup` is read-only, el
 nested with `setns: Operation not permitted`; host networking sidesteps it). A project's Makefile
 won't have those flags — **don't silently edit their build files**; add them to a one-off run, or
 propose the edit and wait. The inner image store is RAM-backed and ephemeral. Full detail:
-`tasks/reference/nested-podman-design.md`. For **what tools/services this sandbox ships and its
+`~/.config/crush/reference/nested-podman-design.md`. For **what tools/services this sandbox ships and its
 limits** (before assuming something isn't available), read
 `~/.config/crush/reference/sandbox-capability-map.md`.
 

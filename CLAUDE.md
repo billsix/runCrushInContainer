@@ -88,7 +88,10 @@ guidance is in `FORKING.md`.
 
 Also **baked into the image** at `~/.config/crush/reference/` (agent-readable on-demand, NOT
 always-loaded, to save the local model's context): `llm-overused-phrases.md`, `print-debugging.md`,
-`sandbox-capability-map.md`.
+`sandbox-capability-map.md`, and `nested-podman-design.md`. **Cite a baked doc by its
+`~/.config/crush/reference/…` path, never `tasks/reference/…`** — the latter is a repo path absent
+inside the container, so the agent can't reach it (the offline miss fixed 2026-08-22; a baked doc that
+is copied from `tasks/reference/` must keep both copies in sync).
 
 ## In-flight tasks
 
