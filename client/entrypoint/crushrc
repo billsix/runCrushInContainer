@@ -44,3 +44,13 @@ model add muse-glimmer/muse-glimmer --name "Muse Glimmer 30B" --context-window 6
 # Preselect it for both slots so Crush uses it immediately — no model picker at all.
 model large muse-glimmer/muse-glimmer
 model small muse-glimmer/muse-glimmer
+
+# --- Permissions: auto-allow file read/write, ask for everything else ---
+# The client is a throwaway container and the constant prompts for FILE ACCESS (read/write) are the
+# real pain — so auto-allow just the file tools. EVERYTHING ELSE stays on ask (Crush's default),
+# deliberately conservative: `bash`, network (`fetch`/`agentic_fetch`/`download`/`sourcegraph`), MCP
+# (`list_mcp_resources`/`read_mcp_resource`), the `lsp_*` tools, sub-agents (`agent`), etc. all still
+# prompt. `permissions allow` skips the prompt ONLY for the listed tools; unlisted and any
+# newly-added tools ask (fail-safe). Tool names are Crush's registry (internal/config allToolNames).
+# See the archived task auto-allow-local-file-tools.md.
+permissions allow view edit multiedit write ls glob grep

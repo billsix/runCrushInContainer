@@ -97,7 +97,17 @@ v0.89.0-specific (several absent features are on Crush's in-repo `docs/*/FUTURE.
   `.agents/skills`, `.crush/skills`, `.claude/skills`, `.cursor/skills` (cwd + git root); global
   from `~/.config/crush/skills`, `~/.claude/skills`, etc. (`load.go:1338-1372`).
 - **Permissions — SUPPORTED:** `permissions allow/deny <tool>`, interactive ask default,
-  `--yolo`/`-y` skip-all, per-session auto-approve.
+  `--yolo`/`-y` skip-all, per-session auto-approve. (Verified from source 2026-08-22:) `allow`
+  **accumulates + dedups** across lines and skips the prompt for the listed tools; `deny` writes
+  `options.disabled_tools`, which **hides** the tool from the agent entirely (not merely prompts).
+  The tool names come from the registry **`internal/config` `allToolNames`** (29 tools; enumerated from
+  the v0.90.0 source tree — the client pins v0.89.0, and the set is expected to match, but confirm
+  against the pinned tag if it matters — file: `view edit multiedit write ls glob grep`; network:
+  `fetch agentic_fetch download sourcegraph`; MCP: `list_mcp_resources read_mcp_resource`; plus `bash
+  agent lsp_* crush_info crush_logs job_output job_kill question todos`). A PreToolUse hook can override per-call: stdout `{"decision":"allow"}`
+  skips the prompt, `"deny"` blocks, `"none"`/omit falls through to the normal prompt; the command is in
+  `$CRUSH_TOOL_INPUT_COMMAND`. runCrush uses `permissions allow` for the file tools (see
+  `architecture.md` "Permissions").
 - **MCP — SUPPORTED:** stdio/sse/http transports, per-server tool allow/deny, OAuth for http.
 - **LSP — SUPPORTED, first-class:** `lsp add …`, `option auto-lsp`, LSP-backed edit/view tools.
 - **Sessions — SUPPORTED:** SQLite `crush.db`; `--continue`/`-C`, `--session`/`-s`;

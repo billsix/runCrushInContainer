@@ -9,34 +9,35 @@ airgapped box here). Split out 2026-08-22 from the now-implemented vendoring wor
 
 ## Goal
 
-Confirm end-to-end that the vendoring machinery actually yields a **network-free rebuild** of both the
-client image and the server, on a genuinely airgapped machine. The implementation is done and the core
-mechanism (`go mod vendor` + `GOPROXY=off go build -mod=vendor`) is proven in isolation; this task is the
-full-system, real-hardware proof.
+Confirm the **vendoring is complete and offline-buildable** on a real airgapped box: the client image
+rebuilds with no network, and the vendored server sources (llama.cpp + GGUF) are present and buildable
+for the box's own hardware. Scope note: **the airgap box needn't be a Mac** (may be NVIDIA/Linux), and
+building/running the *server* there is the operator's own concern — this task verifies what the vendoring
+*provides*, not a specific serve setup. The core mechanism (`go mod vendor` + `GOPROXY=off go build
+-mod=vendor`) is already proven in isolation; this is the full-system, real-hardware proof.
 
 ## Steps
 
-1. **[ONLINE] Vendor both sides.** From the repo root: `./vendor.sh` — runs the vendoring **inside the
-   client image**, so the host needs only **podman + make**. Builds the image if needed, then populates
-   `client/vendor/crush`, `server/llama.cpp` (full history), `server/models/` GGUF. (Per-side equivalents:
-   `make -C client vendor` and `make -C server vendor`.)
-2. **Transport.** Zip/tar the whole repo (its gitignored `client/vendor/`, `server/llama.cpp`,
-   `server/models` ride along); move it to the airgapped box.
-3. **[AIRGAP / LINUX] Client rebuild, no network.** `cd client && make image CRUSH_VENDORED=1`. To prove
-   no network is touched during the Crush build, ideally cut networking for the build (e.g. verify with
-   the network physically down, or watch that no `git`/`go` proxy fetch happens). Confirm the build
-   succeeds and `crush --version` reports the pinned tag.
+1. **[ONLINE] Vendor.** From the repo root: `./vendor.sh` — runs the vendoring **inside the client
+   image**, so the host needs only **podman + make**. Populates `client/vendor/crush`, `server/llama.cpp`
+   (full history), `server/models/` GGUF. (Per-side equivalents: `make -C client vendor`, `make -C server
+   vendor`.)
+2. **Transport.** Plain `tar`/`zip` the whole repo (its gitignored `client/vendor/`, `server/llama.cpp`,
+   `server/models` ride along — NOT `git archive`); move it to the airgapped box.
+3. **[AIRGAP] Client rebuild, no network.** `cd client && make image CRUSH_VENDORED=1`. Ideally with the
+   network physically cut, to prove no `git`/`go` fetch happens. Confirm the build succeeds and
+   `crush --version` reports the pinned tag.
    - **SELinux gotcha:** if the `--volume …:/vendor/crush:ro` build mount is denied on an enforcing host,
      switch `CRUSH_VENDOR_FLAGS` in `client/Makefile` to `:ro,z`.
-4. **[AIRGAP / MAC] Server rebuild, no network.** `cd server && make llama` (reuses the pre-vendored
-   `server/llama.cpp`, builds in place — confirm it does NOT try to clone) → `make serve` serves the
-   vendored GGUF. Confirm `make probe` / `make smoke` answer.
-5. **[AIRGAP] End-to-end.** Bring up the tunnel + `make shell` and confirm Crush drives the local model.
+4. **[AIRGAP] Server sources present + buildable (operator's own build).** Confirm `server/llama.cpp` is a
+   full checkout and `server/models/<gguf>` is present, and that llama.cpp builds offline for the local
+   backend (e.g. `cmake -S server/llama.cpp -B build -DGGML_CUDA=ON && cmake --build build`). The exact
+   backend/build/run is yours — this step only checks the vendored sources suffice with no network.
 
 ## Done when
 
 - The client image builds on the airgapped box from `client/vendor/` with no network, `crush` runs.
-- The server builds llama.cpp from the vendored checkout + serves the vendored GGUF, no network.
+- The vendored `server/llama.cpp` builds offline for the box's backend and the vendored GGUF is present.
 - If any step reaches for the network, capture what and where — that's a vendoring gap to fix (feed it
   back into the archived vendoring task's approach).
 

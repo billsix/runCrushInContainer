@@ -82,8 +82,9 @@ the Go-toolchain fit at v0.90.0.**
    `prompt.go` was unchanged, but the doc covers many features (permissions, hooks, context-window,
    provider discovery) not individually re-checked here. Recommend **defer** to its own task — bumping
    the pin doesn't require the capabilities map to be re-verified in the same change, and the tripwire
-   banner already flags it. (This also intersects `tasks/auto-allow-local-file-tools.md`, which will
-   re-read the permissions/tool surface anyway — fold the re-sync into that work.)
+   banner already flags it. (The permissions/tool surface was already re-enumerated from source during
+   the file-tool auto-allow work — `tasks/archive/2026/08/22/auto-allow-local-file-tools.md` — so that
+   part of a capabilities re-sync is mostly done.)
 
 ## Cross-links
 

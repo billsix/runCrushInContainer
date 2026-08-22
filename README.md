@@ -56,6 +56,27 @@ make probe     # (in another terminal) confirm the server answers before wiring 
 port, and context size are Makefile variables — override per run, e.g.
 `make serve CTX=32768`.
 
+**How much to download** — `make pull` is driven by the `MODEL_FILES` variable:
+
+```sh
+# DEFAULT: just one quant — the Q4_K_M GGUF (~16.8 GB). Plain `make pull` does this:
+make pull
+
+# EVERYTHING: all quant GGUFs in the repo:
+make pull MODEL_FILES="*.gguf"
+
+# EVERYTHING + the full-precision (unquantized) weights too:
+make pull MODEL_FILES="*.gguf" FULL_MODEL_FILES="*.safetensors" FULL_MODEL_REPO=meta-models/Muse-Glimmer-30B
+```
+
+- **Default is the single Q4_K_M GGUF** — nothing else downloads unless you set `MODEL_FILES`.
+- Each `MODEL_FILES` entry is an exact filename or an `hf --include` glob; `"*.gguf"` grabs every quant
+  (also the mmproj/dflash extras, harmless). Run `make check-repo` to list the repo's real filenames.
+- The **full weights** are opt-in (`FULL_MODEL_FILES`, empty by default) and usually live in the base
+  `…-30B` repo, not the `…-GGUF` one — hence `FULL_MODEL_REPO`. Verify the exact repo/names on HF.
+- Serve a specific one you downloaded: `make serve MODEL_FILE=<file>` (default: the first of
+  `MODEL_FILES`). Quant ladder + sizes: `tasks/reference/architecture.md`.
+
 ## Connecting — the SSH port-forward
 
 From the **Linux host**, open the tunnel to the Mac and leave it running:
@@ -112,15 +133,25 @@ Rebuild the whole system on an airgapped machine. Only the three internet-source
 vendored — **Crush** (+ Go deps), **llama.cpp**, and the **model GGUF**. The Fedora base image and dnf
 packages are the airgapped box's own (not vendored). Design details: `tasks/reference/architecture.md`.
 
+The airgap box is **hardware-independent** — it needn't be a Mac. llama.cpp is vendored as **source**, so
+you build it for whatever backend you have there (e.g. CUDA on NVIDIA); the GGUF and Crush are
+backend-agnostic. Building and running the *server* on the airgap box is up to you and your hardware —
+this section covers only getting the vendored sources across. (The Mac/Metal + SSH-tunnel topology above
+is the maintainer's dev setup, not a requirement.)
+
 **1. Vendor — on the ONLINE box** (needs only `podman` + `make`):
 
 ```sh
-./vendor.sh
+./vendor.sh            # DEFAULT: Crush + llama.cpp source + ONE model quant (Q4_K_M)
+FULL=1 ./vendor.sh     # FULL:    the above + ALL quant GGUFs + the full-precision weights
 ```
 
 Builds the client image and runs all vendoring inside it, producing `client/vendor/crush`,
-`server/llama.cpp` (full history), and `server/models/<gguf>`. Override the Crush version with
-`CRUSH_TAG=vX.Y.Z make -C client vendor` (default in `client/Makefile`).
+`server/llama.cpp` (full history), and `server/models/`. **Default vendors just the one Q4_K_M GGUF;
+`FULL=1` vendors every quant plus the unquantized weights.** For a specific set instead, pass
+`MODEL_FILES="…"` / `FULL_MODEL_FILES="…"` (same meaning as in `server/Makefile` — run `make -C server
+check-repo` to list the repo's real filenames; verify the repo on HF). Override the Crush version with
+`CRUSH_TAG=vX.Y.Z ./vendor.sh`.
 
 **2. Transport** — tar the repo (the vendored trees are gitignored but ride along) and copy it over:
 
@@ -129,22 +160,23 @@ tar czf runCrushInContainer-airgap.tgz runCrushInContainer/
 ```
 
 > ⚠ Use a plain `tar`/`zip` of the directory — **not** `git archive`/`git bundle`, which would drop the
-> gitignored vendored sources. Expect a large archive (tens of GB — the GGUF dominates).
+> gitignored vendored sources.
 
-**3. Rebuild — on the AIRGAPPED box, no network:**
+**3. Rebuild — on the AIRGAPPED box, no network.** The client (Crush) is hardware-agnostic:
 
 ```sh
-# [LINUX] client:
 cd client && make image CRUSH_VENDORED=1
-
-# [MAC] server:
-cd server && make llama && make serve
 ```
 
 > ⚠ `CRUSH_VENDORED=1` is required on the airgap build — a plain `make image` is the online path (it
 > clones Crush and fails with no network). On enforcing SELinux, if the build mount is denied, set
 > `CRUSH_VENDOR_FLAGS` in `client/Makefile` to `:ro,z`. The airgap build installs no `hf` (it's gated
 > behind `VENDOR_TOOLS`, online-only), so the airgap dnf mirror needs nothing beyond the base packages.
+
+The **server** side you build and run to suit your hardware from the vendored `server/llama.cpp` source
+(e.g. `cmake -DGGML_CUDA=ON` for NVIDIA) and the vendored `server/models/` GGUF — that part is yours to
+set up. `server/`'s Makefile targets (`make llama`/`serve`) are Metal/macOS for the maintainer's dev box,
+not the airgap path.
 
 ## Layout
 

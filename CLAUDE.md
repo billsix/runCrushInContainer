@@ -103,8 +103,8 @@ lowest priority-number, then lowest difficulty-number):
 
 - `verify-vendored-airgap-rebuild.md` (P3/D3) — real-machine check that the vendored offline rebuild
   actually works with no network (client image + Mac server). **Gates the Crush bump.**
-- `auto-allow-local-file-tools.md` (P3/D4) — auto-allow Crush's local file tools, keep prompting for
-  network; **decisions resolved, ready to implement**.
+- `verify-auto-allow-file-tools.md` (P3/D2) — real-machine check that file tools don't prompt and
+  everything else still does (needs a client-image rebuild).
 - `bump-crush-to-v0.90.0.md` (P4/D2) — investigated (patch ports clean); **blocked on
   `verify-vendored-airgap-rebuild.md`** and on the airgapped Go being ≥1.26.6 for v0.90.0.
 - `context-advisor-script.md` (P4/D2) — host-run server/context advisor script (drafted, **on hold**).
@@ -115,5 +115,7 @@ lowest priority-number, then lowest difficulty-number):
 
 Completed & archived (see `tasks/archive/2026/08/`): the bring-up, provider-catalog suppression (+ its
 airgapped verification), dotfiles/host-config mounts, context-window sizing, the `@`-import patch,
-nested-podman support (+ the baked-doc reachability fix), and the airgap **source-vendoring** work
-(implementation + the podman+make `vendor.sh` running inside the client image, `hf` flag-gated).
+nested-podman support (+ the baked-doc reachability fix), the airgap **source-vendoring** work
+(implementation + the podman+make `vendor.sh` running inside the client image, `hf` flag-gated), the
+**file-tool auto-allow** (crushrc `permissions allow` for file R/W; conservative-ask everything else),
+and **multi-quant model vendoring** (`MODEL_FILES` list + opt-in full weights + `check-repo` discovery).

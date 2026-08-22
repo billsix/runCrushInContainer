@@ -73,6 +73,16 @@ sibling/template of `github.com/billsix/runClaudeInContainer`. Two machines, one
   ID via `--alias $(MODEL_ALIAS)` (`server/Makefile`), so `/v1/models` reports `muse-glimmer` instead
   of the raw GGUF path. Full rationale + the `crush models` before/after (1532 → 1):
   `tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md`.
+- **Permissions: auto-allow file read/write, ask for everything else (2026-08-22).** The client is a
+  throwaway container and the constant FILE-ACCESS prompts were the real pain, so the crushrc
+  `permissions allow`s **only the file tools** — `view edit multiedit write ls glob grep`. Everything
+  else stays on ask (Crush's default), deliberately conservative: `bash`, network
+  (`fetch`/`agentic_fetch`/`download`/`sourcegraph`), MCP (`list_mcp_resources`/`read_mcp_resource`),
+  the `lsp_*` tools, and sub-agents (`agent`) all still prompt. Unlisted and newly-added tools ask
+  (fail-safe). Tool names are Crush's registry (`internal/config` `allToolNames`). (Scope decision
+  2026-08-22: file R/W is the only pain point; conservative-ask everywhere else. An earlier
+  network-aware `bash` PreToolUse hook was built then dropped as more than needed — recoverable from
+  git history.) Record: the archived `auto-allow-local-file-tools.md`.
 - **`--network=host`** (Linux-only) so `127.0.0.1:8080` in the container is the host's
   SSH-forwarded port.
 - **SELinux: runs UNCONFINED** (`SELINUX_OPT ?= --security-opt label=disable`, `client/Makefile`).
@@ -109,11 +119,24 @@ own and are **not** vendored. Implemented:
 `tasks/archive/2026/08/22/vendor-build-sources-for-airgap-rebuild.md`; real-machine airgap verification is
 tracked in `tasks/verify-vendored-airgap-rebuild.md`.
 
+**The airgap deployment target is hardware-independent — the whole "Server" section above (Mac Studio,
+Metal, `-DGGML_METAL=ON`, SSH tunnel) is the MAINTAINER'S DEV SETUP, not a requirement of the airgap
+side.** The airgap box may well be **NVIDIA/Linux**. This works with no vendoring changes because
+llama.cpp is vendored as **source** (build it there for the local backend, e.g. `cmake -DGGML_CUDA=ON`),
+the GGUF is backend-agnostic, and Crush is hardware-agnostic. Building/running the *server* on the airgap
+box is the operator's concern (their hardware, their CUDA toolkit — the airgap system's own, like dnf);
+vendoring only guarantees the sources are present and offline-buildable. `server/`'s `make llama`/`serve`
+(Metal) are dev-box only; don't treat them as the airgap path.
+
 - **One-command path:** `./vendor.sh` (repo root) vendors BOTH sides **inside the client image**, so the
   online host needs only **podman + make** (the image ships go/git/python3 + a baked `hf`). It runs
   `make -C client vendor` (image + Crush) then `podman run … <image> make vendor` against a bind-mounted
   `server/` (llama.cpp + GGUF). Reads `CONTAINER_NAME` from `client/Makefile`. The base OS/dnf are still
   the airgap system's own; only the three internet-sourced artifacts are vendored.
+  - **Model scope:** `./vendor.sh` = one Q4_K_M quant (default); **`FULL=1 ./vendor.sh`** = all quant
+    GGUFs + the full-precision weights. `vendor.sh` forwards `MODEL_FILES`/`FULL_MODEL_FILES`/
+    `FULL_MODEL_REPO` (set explicitly, or preset by `FULL=1`) to the server `make vendor` → `pull` (see
+    the multi-quant record: `tasks/archive/2026/08/22/vendor-multiple-glimmer-quants.md`).
 - **Client (Crush):** `make vendor` (ONLINE) runs `client/entrypoint/vendor/vendor-crush.sh` inside
   the built image — full clone of Crush @ `CRUSH_TAG`, `git apply` the `@`-import patch, `go mod
   vendor` — landing a build-ready checkout at `client/vendor/crush` (host). Then, on the airgap box,

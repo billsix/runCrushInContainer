@@ -28,13 +28,28 @@ LLAMACPP_REPO ?= https://github.com/ggml-org/llama.cpp
 LLAMACPP_DIR  ?= ./llama.cpp
 SERVER_BIN    ?= $(LLAMACPP_DIR)/build/bin/llama-server
 
-# The model.  Q4_K_M (~16.8 GB) is the default quant for a 36 GB Mac (see the task doc
-# tasks/crush-local-llm-bringup.md for the full quant ladder).  VERIFY the repo path and
-# file name resolve on Hugging Face before relying on them — they came from a web search
-# and may differ.  The mmproj (vision) file is NOT needed for a coding agent; skip it.
-MODEL_REPO ?= meta-models/Muse-Glimmer-30B-GGUF
-MODEL_FILE ?= Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf
-MODEL_DIR  ?= ./models
+# The model(s).  MODEL_FILES is the DOWNLOAD set (space-separated; each entry is passed to
+# `hf download --include`, so an entry may be an exact filename OR a glob like '*Q5_K_M*.gguf').
+# Default is the single Q4_K_M GGUF, so behavior is unchanged unless you add more.  To vendor a
+# quant ladder, list several — run `make check-repo` FIRST to see the repo's real GGUF filenames
+# (don't guess; the repo path/names came from a web search — VERIFY on Hugging Face).  The quant
+# ladder is documented in tasks/reference/architecture.md.  mmproj (vision) / dflash (drafter) are
+# not needed for a coding agent.
+MODEL_REPO  ?= meta-models/Muse-Glimmer-30B-GGUF
+MODEL_FILES ?= Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf
+MODEL_DIR   ?= ./models
+# Which downloaded file to SERVE (single).  Defaults to the first of MODEL_FILES; override to serve a
+# different quant you vendored, e.g. `make serve MODEL_FILE=<file>`.  (Must be an exact filename, not a
+# glob.)  The --alias is constant regardless of quant, so the client crushrc still matches.
+MODEL_FILE  ?= $(firstword $(MODEL_FILES))
+
+# OPT-IN full-precision weights (OFF by default — leave FULL_MODEL_FILES empty).  Set it to also vendor
+# the full/unquantized model (F16/BF16 GGUF and/or the original BF16 safetensors), from FULL_MODEL_REPO
+# if the full weights live in a different repo than the GGUFs (e.g. the base `…-30B` repo vs `…-GGUF`).
+# These are archival/conversion artifacts; whether any given precision can be SERVED is the operator's
+# concern on their hardware. See tasks/vendor-multiple-glimmer-quants.md.
+FULL_MODEL_REPO  ?= $(MODEL_REPO)
+FULL_MODEL_FILES ?=
 
 # Stable model ID reported at /v1/models. WITHOUT --alias, llama-server reports the raw -m
 # path (e.g. "./models/Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf"), which changes whenever
@@ -71,6 +86,10 @@ VENV   ?= .venv
 PY     ?= python3
 HF     := $(VENV)/bin/hf
 SYS_HF := $(shell command -v hf 2>/dev/null)
+# Resolved CLIs: prefer the system install (client image / dnf python3-huggingface-hub) when present,
+# else the venv. If system `hf` exists so does system huggingface_hub, so system python3 can run HfApi.
+HF_BIN := $(if $(SYS_HF),hf,$(HF))
+PYBIN  := $(if $(SYS_HF),$(PY),$(VENV)/bin/python)
 
 # ---------------------------------------------------------------------------
 
@@ -97,8 +116,8 @@ vendor: ## [ONLINE] pre-fetch llama.cpp (full history @ LLAMACPP_TAG) + the GGUF
 	@# tasks/vendor-build-sources-for-airgap-rebuild.md.
 	@test -d $(LLAMACPP_DIR) || git clone --branch $(LLAMACPP_TAG) $(LLAMACPP_REPO) $(LLAMACPP_DIR)
 	$(MAKE) pull
-	@echo "vendored: $(LLAMACPP_DIR) (full history @ $(LLAMACPP_TAG)) + $(MODEL_DIR)/$(MODEL_FILE)"
-	@echo "carry the repo (with server/llama.cpp + server/models) to the airgap box, then: make llama && make serve"
+	@echo "vendored: $(LLAMACPP_DIR) (full history @ $(LLAMACPP_TAG)) + $(MODEL_DIR)/: $(MODEL_FILES) $(FULL_MODEL_FILES)"
+	@echo "carry the repo (server/llama.cpp + server/models) to the airgap box; build llama.cpp there for your backend + serve the GGUF (your hardware, your call)"
 
 # The venv holds the `hf` CLI (huggingface_hub).  Built once; `pull` depends on it.
 $(HF):
@@ -109,18 +128,26 @@ $(HF):
 venv: $(HF) ## create the python venv with the Hugging Face CLI (huggingface_hub)
 
 .PHONY: pull
-pull: $(if $(SYS_HF),,venv) ## download the GGUF from Hugging Face into MODEL_DIR (system `hf` if present, else venv)
-	$(if $(SYS_HF),hf,$(HF)) download $(MODEL_REPO) --include "$(MODEL_FILE)" --local-dir $(MODEL_DIR)
-	@echo "model at $(MODEL_DIR)/$(MODEL_FILE)"
+pull: $(if $(SYS_HF),,venv) ## download MODEL_FILES (+ opt-in FULL_MODEL_FILES) into MODEL_DIR (system `hf` if present, else venv)
+	@for f in $(MODEL_FILES); do \
+	    echo ">> $(MODEL_REPO)  $$f"; \
+	    $(HF_BIN) download $(MODEL_REPO) --include "$$f" --local-dir $(MODEL_DIR) || exit 1; \
+	done
+	@if [ -n "$(strip $(FULL_MODEL_FILES))" ]; then \
+	    for f in $(FULL_MODEL_FILES); do \
+	        echo ">> [full] $(FULL_MODEL_REPO)  $$f"; \
+	        $(HF_BIN) download $(FULL_MODEL_REPO) --include "$$f" --local-dir $(MODEL_DIR) || exit 1; \
+	    done; \
+	fi
+	@echo "models in $(MODEL_DIR): $(MODEL_FILES) $(FULL_MODEL_FILES)"
 
 .PHONY: check-repo
-check-repo: venv ## verify MODEL_REPO/MODEL_FILE resolve on Hugging Face WITHOUT downloading
-	$(VENV)/bin/python -c "from huggingface_hub import HfApi; \
+check-repo: $(if $(SYS_HF),,venv) ## list MODEL_REPO's GGUF files on Hugging Face (discovery for MODEL_FILES; no download)
+	@$(PYBIN) -c "from huggingface_hub import HfApi; \
 	    info = HfApi().model_info('$(MODEL_REPO)'); \
-	    files = [s.rfilename for s in info.siblings]; \
-	    print('repo OK:', '$(MODEL_REPO)'); \
-	    print('MODEL_FILE present:', '$(MODEL_FILE)' in files); \
-	    print('n files:', len(files))"
+	    ggufs = sorted(s.rfilename for s in info.siblings if s.rfilename.endswith('.gguf')); \
+	    print('repo OK: $(MODEL_REPO) (%d GGUFs)' % len(ggufs)); \
+	    [print('  ', f) for f in ggufs]"
 
 .PHONY: serve
 serve: ## [MAC] run llama-server on loopback with an OpenAI-compatible /v1 endpoint

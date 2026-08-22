@@ -1,10 +1,17 @@
 # Auto-allow local file read/write in Crush, but keep prompting for network
 
-**Status:** proposed — **design decisions resolved 2026-08-22** (see Decisions); implementation still
-needs go-ahead.
+**Status:** complete — crushrc `permissions allow`s **only the file tools** (`view edit multiedit write ls
+glob grep`); everything else stays on ask (conservative). Takes effect on a client-image rebuild (baked
+crushrc). Real-machine verification split to `verify-auto-allow-file-tools.md`.
 **Priority:** 3
 **Difficulty:** 4
-**Started:** 2026-08-22
+**Started:** 2026-08-22 · **Implemented:** 2026-08-22 · **Completed:** 2026-08-22
+
+**Final scope (maintainer, 2026-08-22): file read/write is the ONLY pain point — suppress just that;
+be conservative (ask) for everything else.** So the broad first cut was narrowed: the LSP/agent/meta
+allows were dropped, and the network-aware `bash` PreToolUse hook (built + battery-tested earlier this
+task) was **removed** as more than needed — bash now simply asks, like all non-file tools. The hook is
+recoverable from git history if wanted.
 
 ## Goal
 
@@ -46,31 +53,33 @@ decision:
    (per-server, can reach out). Confirm the exact tool names in v0.89.0 (`internal/agent` tools;
    `crush` tool list) before writing the allow-list — don't guess the names.
 
-## Plan
+## Implementation (final, 2026-08-22)
 
-- [ ] **Enumerate Crush v0.89.0's actual tool names** (file vs network) from `internal/agent` / the
-      tool registry — e.g. view, edit, write, ls, grep, glob (file) vs fetch, MCP tools (network).
-      Don't hardcode guessed names.
-- [ ] **Add `permissions allow …` lines for the file tools** to the baked `client/entrypoint/crushrc`,
-      leaving `fetch`/MCP (and, pending Q1, `bash`) on ask.
-- [ ] **`bash` handling (decided — see Decisions):** first cut leaves `bash` on ask; **then** add a
-      network-aware `PreToolUse` hook as a follow-up that auto-approves network-free commands and falls
-      through to ask on anything reaching out (`curl`/`wget`/`ssh`/`git fetch`/`pip`/`npm`/… or a host
-      other than `127.0.0.1`). Write the hook under the baked hook/command layout and document its
-      allow/deny rules.
-- [ ] **Verify:** rebuild the client image, run Crush, confirm file view/edit/write happen with **no**
-      prompt while a `fetch` (and a `curl` via bash, per Q1) **still** prompts. Capture the before/after.
-- [ ] **Document** in `crush-capabilities.md` (or a short note) what's auto-allowed and why, and add a
-      terse pointer in the baked `CLAUDE.md` if the agent needs to know the policy.
+Tool registry enumerated from Crush source (`internal/config` `allToolNames`, 29 tools) + the config
+skill's permission/hook contract — not guessed. **Shipped:**
 
-## Decisions (resolved 2026-08-22, maintainer: "sure for both" / "sounds good")
+- **crushrc:** one line — `permissions allow view edit multiedit write ls glob grep`. That's it.
+  Everything else (bash, network `fetch`/`agentic_fetch`/`download`/`sourcegraph`, MCP, `lsp_*`,
+  `agent`, meta) stays on ask; unlisted/new tools ask (fail-safe). (`permissions allow` accumulates +
+  dedups — `TestShellConfigPermissionsAccumulateAndDedup` — but one line suffices here.)
+- Documented in `tasks/reference/architecture.md` + crushrc comments.
 
-1. **`bash` handling → both, in order.** (a) First cut: file tools auto-allowed, **`bash` left on ask**
-   (zero risk to the network requirement). (b) Follow-up: add a **network-aware `PreToolUse` hook** that
-   auto-approves network-free bash commands and falls through to ask on outward-reaching ones. Both are
-   in scope for this task — (a) then (b).
-2. **Scope of "keep asking" → `fetch` + MCP tools only.** Everything else that is file-local is
-   auto-allowed; no other tools singled out to keep on ask.
+**Evolution (why the diff looks bigger in history):** the first cut was broader — it also auto-allowed
+the `lsp_*` and `agent`/meta tools, and added a network-aware `bash` PreToolUse hook
+(`hooks/no-network-bash.sh`) that auto-approved network-free commands and asked on network ones
+(built + battery-tested: 13 local→allow, 16 network→ask, empty→ask). The maintainer then clarified the
+scope (below); the extras and the hook were removed. The hook is recoverable from git history.
+
+- [→] Real-machine verification moved to `tasks/verify-auto-allow-file-tools.md`.
+
+## Decisions
+
+1. **Final scope (maintainer, 2026-08-22): file read/write is the ONLY pain point.** Suppress just the
+   file tools; be **conservative (ask)** for everything else — bash, network, MCP, LSP, sub-agents. This
+   superseded the earlier broader plan.
+2. **Superseded (kept for history):** an earlier round resolved "keep asking → fetch + MCP only" and a
+   two-part `bash` plan (leave-on-ask, then a network-aware hook). Both were overtaken by decision 1 —
+   the hook was built then dropped, and the allow-list narrowed from ~22 tools to 7.
 
 ## Cross-links
 
