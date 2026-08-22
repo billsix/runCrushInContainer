@@ -101,6 +101,40 @@ sibling/template of `github.com/billsix/runClaudeInContainer`. Two machines, one
   `crush run`) lives in git history (commit `5d2515f` and earlier), recoverable if needed. Record:
   `tasks/archive/2026/08/21/patch-crush-for-at-imports.md`; mechanism: `crush-capabilities.md`.
 
+## Offline / airgap rebuild — vendoring (2026-08-22)
+
+The system can be **rebuilt on an airgapped box** by vendoring the three internet-sourced artifacts;
+the base OS + toolchain (Fedora image, ~430 dnf packages incl. `golang`) are the airgapped system's
+own and are **not** vendored. Implemented:
+`tasks/archive/2026/08/22/vendor-build-sources-for-airgap-rebuild.md`; real-machine airgap verification is
+tracked in `tasks/verify-vendored-airgap-rebuild.md`.
+
+- **One-command path:** `./vendor.sh` (repo root) vendors BOTH sides **inside the client image**, so the
+  online host needs only **podman + make** (the image ships go/git/python3 + a baked `hf`). It runs
+  `make -C client vendor` (image + Crush) then `podman run … <image> make vendor` against a bind-mounted
+  `server/` (llama.cpp + GGUF). Reads `CONTAINER_NAME` from `client/Makefile`. The base OS/dnf are still
+  the airgap system's own; only the three internet-sourced artifacts are vendored.
+- **Client (Crush):** `make vendor` (ONLINE) runs `client/entrypoint/vendor/vendor-crush.sh` inside
+  the built image — full clone of Crush @ `CRUSH_TAG`, `git apply` the `@`-import patch, `go mod
+  vendor` — landing a build-ready checkout at `client/vendor/crush` (host). Then, on the airgap box,
+  `make image CRUSH_VENDORED=1` bind-mounts it (`podman build --volume …:/vendor/crush:ro`) and builds
+  `GOPROXY=off go build -mod=vendor` — no network. `client/vendor/` is gitignored and kept out of the
+  online build context by `client/.dockerignore` (the offline build mounts it instead).
+- **`hf` is vendoring-only, flag-gated:** the `hf` CLI (for the GGUF download) is installed by
+  `client/entrypoint/02-install-vendor-tools.sh` only when the image is built with `VENDOR_TOOLS=1`
+  (Dockerfile `ARG VENDOR_TOOLS=0`; `vendor.sh` sets it). A normal/airgap `make image` leaves it off, so
+  the **airgap dnf mirror never needs `python3-huggingface-hub`** — the airgap rebuild uses the vendored
+  GGUF and never downloads. `server/Makefile`'s `pull` prefers the system `hf` (in-image) and falls back
+  to a venv for standalone macOS.
+- **Server (llama.cpp + GGUF):** `make vendor` (ONLINE) full-clones llama.cpp @ `LLAMACPP_TAG` into
+  `server/llama.cpp` and `make pull`s the GGUF into `server/models`. `make llama` now full-clones
+  (dropped `--depth 1`) and reuses an existing checkout, so on the airgap Mac it builds the vendored
+  tree in place; `make serve` reads the vendored GGUF.
+- **Transport:** the repo directory itself is the unit — after `make vendor` on both sides, zip/tar the
+  repo (its gitignored `client/vendor/`, `server/llama.cpp`, `server/models` ride along) and move it.
+- **Verified:** the `go mod vendor` + `GOPROXY=off go build -mod=vendor` mechanism (Crush builds with no
+  network). **Pending:** a full offline *image* rebuild on a real airgapped box.
+
 ## Connecting
 
 - On the **Linux host**: `ssh -N -L 8080:127.0.0.1:8080 you@mac`. **`-N` makes it look hung —

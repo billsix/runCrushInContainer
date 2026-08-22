@@ -1,14 +1,16 @@
 # Bump Crush v0.89.0 → v0.90.0 (and re-verify the `@`-import patch)
 
-**Status:** proposed — **BLOCKED on `tasks/vendor-build-sources-for-airgap-rebuild.md`.** Do NOT implement
-this bump until the offline/vendoring task is implemented (maintainer, 2026-08-22). Investigation is
-complete (the `@`-import patch ports to v0.90.0 unchanged, builds + tests pass), but the actual upgrade is
-not done and needs go-ahead **that comes only after offline rebuild works**. `CRUSH_TAG` stays v0.89.0
-until then. Nothing in the repo has been changed by this task except this doc.
+**Status:** proposed — **BLOCKED on `tasks/verify-vendored-airgap-rebuild.md`.** Do NOT implement this bump
+until offline rebuild is **verified working** on the airgap box (maintainer, 2026-08-22). The vendoring
+itself is now implemented (`tasks/archive/2026/08/22/vendor-build-sources-for-airgap-rebuild.md`); what
+remains before a bump is safe is confirming the airgapped rebuild actually works. Investigation is complete
+(the `@`-import patch ports to v0.90.0 unchanged, builds + tests pass), but the actual upgrade is not done
+and needs go-ahead **that comes only after offline rebuild is verified**. `CRUSH_TAG` stays v0.89.0 until
+then. Nothing in the repo has been changed by this task except this doc.
 **Priority:** 4
 **Difficulty:** 2
 **Started:** 2026-08-22
-**Blocked by:** `tasks/vendor-build-sources-for-airgap-rebuild.md` (offline rebuild must land first).
+**Blocked by:** `tasks/verify-vendored-airgap-rebuild.md` (offline rebuild must be verified working first).
 
 ## Goal
 
@@ -55,8 +57,9 @@ Conclusion: the port is a one-line pin bump; the patch is unchanged.
 
 ## Dependency — the airgap-vendoring task must land FIRST (maintainer, 2026-08-22)
 
-This bump is **gated on `tasks/vendor-build-sources-for-airgap-rebuild.md`** — offline rebuild has to
-work before we even consider changing the pinned version. The ordering matters for two concrete reasons:
+This bump is **gated on `tasks/verify-vendored-airgap-rebuild.md`** — the vendoring is implemented
+(`tasks/archive/2026/08/22/vendor-build-sources-for-airgap-rebuild.md`), but offline rebuild has to be
+**verified working** before we change the pinned version. The ordering matters for two concrete reasons:
 
 - **Go-toolchain constraint (the decisive one).** v0.90.0's `go.mod` requires **Go ≥1.26.6**; v0.89.0
   does not. The maintainer confirms **the current crush (v0.89.0) compiles with the Go on the airgapped

@@ -1,0 +1,10 @@
+# Keep the build context small. The offline vendored Crush source ($(VENDOR_DIR)/crush) is
+# mounted into the build via `podman build --volume` on the CRUSH_VENDORED=1 path (see the
+# Makefile), NOT sent through the build context — so exclude the top-level vendor/ folder here.
+# The leading slash anchors it to the context root so it does NOT match entrypoint/vendor/,
+# which the Dockerfile COPYs into the image.
+/vendor/
+
+# Runtime / artifact junk that never belongs in the image build.
+.crush/
+crushcontainer-*.tar

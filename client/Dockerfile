@@ -13,6 +13,17 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
     --mount=type=cache,target=/var/lib/dnf \
     /usr/local/bin/01-install-base.sh
 
+# Vendoring-only tools (the `hf` CLI), gated behind VENDOR_TOOLS (default 0 — Makefile turns it
+# ON only for `make vendor`). These are needed ONLY to run `make vendor` inside this image while
+# ONLINE; the image itself and the OFFLINE airgap rebuild do not use them, so a normal/airgap
+# build never installs them and the airgap dnf mirror never needs them. See
+# tasks/vendor-via-client-image.md.
+ARG VENDOR_TOOLS=0
+COPY entrypoint/02-install-vendor-tools.sh /usr/local/bin/
+RUN --mount=type=cache,target=/var/cache/libdnf5 \
+    --mount=type=cache,target=/var/lib/dnf \
+    if [ "$VENDOR_TOOLS" = "1" ]; then /usr/local/bin/02-install-vendor-tools.sh; fi
+
 # Silence podman's RHEL subscription-secrets mount. containers-common ships
 # /usr/share/containers/mounts.conf = "/usr/share/rhel/secrets:/run/secrets", which podman tries to
 # inject into EVERY container it runs. That path is empty on Fedora and the mount fails under the
@@ -32,12 +43,26 @@ RUN : > /usr/share/containers/mounts.conf
 # module proxy is read-only), so we clone the tag, `git apply` the patch, and build from source,
 # stamping internal/version.Version so `crush --version` still reports the tag. Set
 # CRUSH_AT_IMPORT=0 for the stock upstream build.
+#
+# CRUSH_VENDORED toggles the OFFLINE/airgap build (see tasks/vendor-build-sources-for-airgap-rebuild.md).
+# When 1, Crush is NOT fetched from the network: the build reads a pre-vendored, patch-applied,
+# `go mod vendor`-ed checkout bind-mounted at /vendor/crush (via `podman build --volume …`, added by
+# `make image CRUSH_VENDORED=1`) and builds it with `GOPROXY=off go build -mod=vendor`. Produce that
+# checkout ONLINE first with `make vendor`. `entrypoint/vendor/` is baked in so `make vendor` can run
+# the vendoring script inside this image.
 ARG CRUSH_TAG=v0.89.0
 ARG CRUSH_AT_IMPORT=0
+ARG CRUSH_VENDORED=0
 ENV GOBIN=/usr/local/bin GOFLAGS=-trimpath
 COPY patches/ /patches/
+COPY entrypoint/vendor/ /usr/local/bin/vendor/
+RUN chmod +x /usr/local/bin/vendor/*.sh
 RUN set -eux; \
-    if [ "$CRUSH_AT_IMPORT" = "1" ]; then \
+    if [ "$CRUSH_VENDORED" = "1" ]; then \
+        cp -r /vendor/crush /tmp/crush; \
+        ( cd /tmp/crush && GOPROXY=off go build -mod=vendor -ldflags "-X github.com/charmbracelet/crush/internal/version.Version=${CRUSH_TAG}" -o /usr/local/bin/crush . ); \
+        rm -rf /tmp/crush; \
+    elif [ "$CRUSH_AT_IMPORT" = "1" ]; then \
         git clone --depth 1 --branch "$CRUSH_TAG" https://github.com/charmbracelet/crush /tmp/crush; \
         git -C /tmp/crush apply /patches/crush-at-import.patch; \
         ( cd /tmp/crush && go install -ldflags "-X github.com/charmbracelet/crush/internal/version.Version=${CRUSH_TAG}" . ); \

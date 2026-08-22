@@ -7,6 +7,7 @@
 #
 #    make deps      [MAC] check Xcode CLT + cmake are present
 #    make llama     [MAC] clone + build llama.cpp for Metal (pinned)
+#    make vendor    [ONLINE] pre-fetch llama.cpp (full history) + the GGUF for an offline rebuild
 #    make pull      download the GGUF from Hugging Face (portable: needs only python3)
 #    make serve     [MAC] run llama-server on 127.0.0.1 (OpenAI /v1)
 #    make serve-mlx [MAC] run the MLX backend instead (often faster on Apple Silicon)
@@ -63,10 +64,13 @@ NP   ?= 1            # parallel slots. 1 = the whole KV cache serves ONE client 
                      # prompt caching works and the context isn't split across slots. Raise
                      # only to serve multiple concurrent clients.
 
-# Python venv for the Hugging Face CLI (portable — no Metal needed).
-VENV ?= .venv
-PY   ?= python3
-HF   := $(VENV)/bin/hf
+# Hugging Face CLI. Prefer a system-installed `hf` (the client image bakes python3-huggingface-hub,
+# so `./vendor.sh` runs the download inside that image with no venv); fall back to a local venv for
+# standalone macOS use. SYS_HF is empty when no system `hf` is on PATH.
+VENV   ?= .venv
+PY     ?= python3
+HF     := $(VENV)/bin/hf
+SYS_HF := $(shell command -v hf 2>/dev/null)
 
 # ---------------------------------------------------------------------------
 
@@ -78,10 +82,23 @@ deps: ## [MAC] check that the Xcode command-line tools and cmake are installed
 
 .PHONY: llama
 llama: ## [MAC] clone + build llama.cpp for Metal, pinned to LLAMACPP_TAG
-	@test -d $(LLAMACPP_DIR) || git clone --depth 1 --branch $(LLAMACPP_TAG) $(LLAMACPP_REPO) $(LLAMACPP_DIR)
+	@# FULL clone (history kept, checked out at the tag) so the checkout doubles as the vendored
+	@# source for an offline rebuild. Reused if $(LLAMACPP_DIR) already exists — so on the airgap
+	@# box a pre-vendored checkout is built in place with no network.
+	@test -d $(LLAMACPP_DIR) || git clone --branch $(LLAMACPP_TAG) $(LLAMACPP_REPO) $(LLAMACPP_DIR)
 	cmake -S $(LLAMACPP_DIR) -B $(LLAMACPP_DIR)/build -DGGML_METAL=ON -DCMAKE_BUILD_TYPE=Release
 	cmake --build $(LLAMACPP_DIR)/build -j
 	@echo "built $(SERVER_BIN)"
+
+.PHONY: vendor
+vendor: ## [ONLINE] pre-fetch llama.cpp (full history @ LLAMACPP_TAG) + the GGUF, for an offline rebuild/serve
+	@# Populates the two server-side internet-sourced artifacts WITHOUT building (the Metal build
+	@# happens later on the airgap Mac via `make llama`, which reuses this checkout). See
+	@# tasks/vendor-build-sources-for-airgap-rebuild.md.
+	@test -d $(LLAMACPP_DIR) || git clone --branch $(LLAMACPP_TAG) $(LLAMACPP_REPO) $(LLAMACPP_DIR)
+	$(MAKE) pull
+	@echo "vendored: $(LLAMACPP_DIR) (full history @ $(LLAMACPP_TAG)) + $(MODEL_DIR)/$(MODEL_FILE)"
+	@echo "carry the repo (with server/llama.cpp + server/models) to the airgap box, then: make llama && make serve"
 
 # The venv holds the `hf` CLI (huggingface_hub).  Built once; `pull` depends on it.
 $(HF):
@@ -92,8 +109,8 @@ $(HF):
 venv: $(HF) ## create the python venv with the Hugging Face CLI (huggingface_hub)
 
 .PHONY: pull
-pull: venv ## download the GGUF from Hugging Face into MODEL_DIR (portable)
-	$(HF) download $(MODEL_REPO) --include "$(MODEL_FILE)" --local-dir $(MODEL_DIR)
+pull: $(if $(SYS_HF),,venv) ## download the GGUF from Hugging Face into MODEL_DIR (system `hf` if present, else venv)
+	$(if $(SYS_HF),hf,$(HF)) download $(MODEL_REPO) --include "$(MODEL_FILE)" --local-dir $(MODEL_DIR)
 	@echo "model at $(MODEL_DIR)/$(MODEL_FILE)"
 
 .PHONY: check-repo

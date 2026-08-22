@@ -27,6 +27,27 @@ CRUSH_TAG ?= v0.89.0
 # longer build. Re-verify the patch on every CRUSH_TAG bump (see the task doc).
 CRUSH_AT_IMPORT ?= 1
 
+# Offline/airgap vendoring (see tasks/vendor-build-sources-for-airgap-rebuild.md). `make vendor`
+# (ONLINE) pre-fetches the Crush source + all its Go module deps into $(VENDOR_DIR)/crush; then
+# `make image CRUSH_VENDORED=1` rebuilds the image from that with NO network. VENDOR_DIR is the
+# host folder that gets zipped and carried to the airgap box. When CRUSH_VENDORED=1 the image build
+# bind-mounts it read-only at /vendor/crush (podman build --volume) and the Dockerfile builds it
+# with `GOPROXY=off go build -mod=vendor`. NOTE: only the internet-sourced Crush is vendored — the
+# Fedora base image + dnf packages are the airgapped system's own (not vendored).
+VENDOR_DIR     ?= $(CURDIR)/vendor
+CRUSH_VENDORED ?= 0
+# VENDOR_TOOLS bakes the `hf` CLI into the image — needed ONLY to run `make vendor` (the online
+# GGUF download) inside the image. Default 0 so a normal/airgap `make image` does NOT install it
+# (the airgap rebuild uses the vendored GGUF and never downloads). `vendor.sh` builds with =1.
+VENDOR_TOOLS   ?= 0
+ifeq ($(CRUSH_VENDORED),1)
+# --volume mounts the vendored checkout into every build RUN step; :ro keeps it read-only. If an
+# enforcing-SELinux host denies the mount, add ,z (e.g. :ro,z).
+CRUSH_VENDOR_FLAGS := --volume $(VENDOR_DIR)/crush:/vendor/crush:ro --build-arg CRUSH_VENDORED=1
+else
+CRUSH_VENDOR_FLAGS :=
+endif
+
 # The project Crush works on, mounted at /work. Defaults to the dir you run make from.
 PROJECT ?= $(CURDIR)
 
@@ -104,10 +125,24 @@ endif
 all: image ## Build the image
 
 .PHONY: image
-image: ## build the client image: full toolchain + Crush built from source (pinned CRUSH_TAG)
+image: ## build the client image: full toolchain + Crush built from source (pinned CRUSH_TAG). CRUSH_VENDORED=1 builds offline from ./vendor
 	$(CONTAINER_CMD) build -t $(CONTAINER_NAME) \
 		--build-arg CRUSH_TAG=$(CRUSH_TAG) \
-		--build-arg CRUSH_AT_IMPORT=$(CRUSH_AT_IMPORT) .
+		--build-arg CRUSH_AT_IMPORT=$(CRUSH_AT_IMPORT) \
+		--build-arg VENDOR_TOOLS=$(VENDOR_TOOLS) \
+		$(CRUSH_VENDOR_FLAGS) .
+
+.PHONY: vendor
+vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/crush for an offline (CRUSH_VENDORED=1) rebuild
+	@mkdir -p $(VENDOR_DIR)
+	$(CONTAINER_CMD) run --rm --entrypoint /bin/bash \
+		$(SELINUX_OPT) \
+		-e CRUSH_TAG=$(CRUSH_TAG) \
+		-e CRUSH_AT_IMPORT=$(CRUSH_AT_IMPORT) \
+		-v $(VENDOR_DIR):/vendor:Z \
+		$(CONTAINER_NAME) \
+		-c '/usr/local/bin/vendor/vendor-crush.sh /vendor/crush'
+	@echo "vendored Crush into $(VENDOR_DIR)/crush — carry the repo (with ./vendor and server/) to the airgap box, then: make image CRUSH_VENDORED=1"
 
 .PHONY: shell
 shell: image ## run Crush in an ephemeral container; mounts PROJECT at /work (NESTED_PODMAN=1 for podman-in-podman)

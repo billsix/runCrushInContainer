@@ -80,6 +80,16 @@ worth reading after the work is done, and states what is TRUE not what to DO." *
 non-trivial task, first harvest its decisions/rationale into a reference doc**, then archive the thin
 work record. Read the relevant reference doc before touching a subsystem it covers.
 
+## A project README is commands-forward; prose goes in reference docs
+
+A README gets me running: **commands forward, rationale trimmed, few invocations** (prefer one
+wrapper/`make` target over many hand-run steps), each step labelled with where it runs
+(`[MAC]`/`[LINUX HOST]`/`[CONTAINER]`) and a one-line gloss — not a paragraph. Prose-heavy *why*
+(design rationale, declined alternatives, deep mechanics, the reasoning behind a flag) belongs in a
+reference doc (`tasks/reference/<slug>.md`), **linked** from the README — the README points, the
+reference doc explains. Trim, don't delete: a caveat that actually matters (a flag you MUST pass, a
+silent footgun) stays inline as a one-line `>`-note, but its explanation moves to the reference doc.
+
 ## Ad-hoc scripts (`tasks/adhoc/<task-slug>/`)
 
 Save *substantive* throwaway scripts (codemods, verification harnesses) under `tasks/adhoc/<slug>/`,

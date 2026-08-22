@@ -38,7 +38,9 @@ Three environments are in play; label instructions so it's unambiguous:
 
 - **Pin versions/knobs in Makefile variables, never hardcode inline.** Server: `LLAMACPP_TAG`,
   `MODEL_REPO`, `MODEL_FILE`, `MODEL_ALIAS`, `PORT`, `CTX`, `NGL`, `NP`. Client: `CRUSH_TAG`,
-  `CRUSH_AT_IMPORT`. The template value is swapping these. Two cross-file couplings to keep in sync:
+  `CRUSH_AT_IMPORT`, `CRUSH_VENDORED` (offline build from `client/vendor/crush`), `VENDOR_TOOLS`
+  (bake the vendoring-only `hf`; default off). The template value is swapping these. Two cross-file
+  couplings to keep in sync:
   server `MODEL_ALIAS` ↔ the crushrc's pinned model ID, and server `CTX` ↔ the crushrc's
   `--context-window`.
 - **The server binds loopback only.** Never bind llama-server to `0.0.0.0` / the LAN; the
@@ -77,8 +79,9 @@ guidance is in `FORKING.md`.
 
 - `tasks/reference/architecture.md` — how the two halves fit, the pins (llama.cpp tag, Crush
   `v0.89.0`), the quant ladder, serve tuning, the crushrc/`llamacpp` config (explicit model pin +
-  catalog suppression), dotfiles/host-config mounts, the `@`-import patch, and the SELinux
-  `label=disable` lesson. Read this first when picking the project up.
+  catalog suppression), dotfiles/host-config mounts, the `@`-import patch, the offline/airgap
+  source-vendoring workflow, and the SELinux `label=disable` lesson. Read this first when picking the
+  project up.
 - `tasks/reference/crush-capabilities.md` — verified map of Crush `v0.89.0`'s features (context-file
   autoload, no native `@`-import, custom commands, hooks, provider/model selection + the
   `disable_default_providers` catalog switch, context-window/compaction). Read before touching
@@ -95,13 +98,24 @@ is copied from `tasks/reference/` must keep both copies in sync).
 
 ## In-flight tasks
 
-Scan `tasks/` (top-level) at session start for the current list; as of 2026-08-21:
+Scan `tasks/` (top-level) at session start for the current list; as of 2026-08-22 (easy wins first —
+lowest priority-number, then lowest difficulty-number):
 
-- `port-runclaude-conventions-systems.md` (P4/D5) — Phases 0–4 implemented; **testing phase deferred**
-  (run the checklist on the real setup), then archivable.
-- `add-nested-podman-to-client.md` (P3/D5) — **complete + verified**; archivable.
+- `verify-vendored-airgap-rebuild.md` (P3/D3) — real-machine check that the vendored offline rebuild
+  actually works with no network (client image + Mac server). **Gates the Crush bump.**
+- `vendor-via-client-image.md` (P3/D3) — **IMPLEMENTED** (vendoring runs in the client image, host needs
+  only podman+make; `hf` flag-gated via `VENDOR_TOOLS`); archivable once the verify task confirms it.
+- `auto-allow-local-file-tools.md` (P3/D4) — auto-allow Crush's local file tools, keep prompting for
+  network; **decisions resolved, ready to implement**.
+- `bump-crush-to-v0.90.0.md` (P4/D2) — investigated (patch ports clean); **blocked on
+  `verify-vendored-airgap-rebuild.md`** and on the airgapped Go being ≥1.26.6 for v0.90.0.
 - `context-advisor-script.md` (P4/D2) — host-run server/context advisor script (drafted, **on hold**).
+- `offline-nested-podman-base-images.md` (P4/D5) — seed base images so *nested* project builds work
+  offline (proposed).
+- `port-runclaude-conventions-systems.md` (P4/D5) — Phases 0–4 implemented; **testing phase deferred**.
 - `crush-at-import-parity.md` (P6/D4) — bring the `@`-import patch to full Claude parity (follow-up).
 
 Completed & archived (see `tasks/archive/2026/08/`): the bring-up, provider-catalog suppression (+ its
-airgapped verification), dotfiles/host-config mounts, context-window sizing, and the `@`-import patch.
+airgapped verification), dotfiles/host-config mounts, context-window sizing, the `@`-import patch,
+nested-podman support (+ the baked-doc reachability fix), and the airgap **source-vendoring**
+implementation.

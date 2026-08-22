@@ -32,8 +32,8 @@ one way in is an SSH port-forward, so nothing is exposed on the network.
 
 [Muse Glimmer](https://huggingface.co/blog/muse-glimmer) is Meta's open-weights 30B agentic
 coding model (Apache-2.0). We run the **Q4_K_M** GGUF quant (~16.8 GB) via llama.cpp — a
-comfortable fit on 36 GB with room for a large context. Other quants (Q5_K_M, Q6_K, …) and
-the MLX backend are covered in `tasks/crush-local-llm-bringup.md`.
+comfortable fit on 36 GB with room for a large context. The quant ladder (Q5_K_M, Q6_K, …) and
+the MLX backend are covered in `tasks/reference/architecture.md`.
 
 llama.cpp gained Muse Glimmer support in release **`b10353`** (2026-08-10), so the server
 pins llama.cpp to that tag or newer.
@@ -105,6 +105,46 @@ make shell     # podman run --rm --network=host … then launch `crush`
 `127.0.0.1:8080` hits the SSH-forwarded port and, through it, the Mac. The baked `crushrc`
 preconfigures a single local provider, **pins the Muse Glimmer model explicitly, and suppresses
 Crush's built-in model catalog** so only the local model is offered.
+
+## Airgapped rebuild — vendoring the sources
+
+Rebuild the whole system on an airgapped machine. Only the three internet-sourced artifacts are
+vendored — **Crush** (+ Go deps), **llama.cpp**, and the **model GGUF**. The Fedora base image and dnf
+packages are the airgapped box's own (not vendored). Design details: `tasks/reference/architecture.md`.
+
+**1. Vendor — on the ONLINE box** (needs only `podman` + `make`):
+
+```sh
+./vendor.sh
+```
+
+Builds the client image and runs all vendoring inside it, producing `client/vendor/crush`,
+`server/llama.cpp` (full history), and `server/models/<gguf>`. Override the Crush version with
+`CRUSH_TAG=vX.Y.Z make -C client vendor` (default in `client/Makefile`).
+
+**2. Transport** — tar the repo (the vendored trees are gitignored but ride along) and copy it over:
+
+```sh
+tar czf runCrushInContainer-airgap.tgz runCrushInContainer/
+```
+
+> ⚠ Use a plain `tar`/`zip` of the directory — **not** `git archive`/`git bundle`, which would drop the
+> gitignored vendored sources. Expect a large archive (tens of GB — the GGUF dominates).
+
+**3. Rebuild — on the AIRGAPPED box, no network:**
+
+```sh
+# [LINUX] client:
+cd client && make image CRUSH_VENDORED=1
+
+# [MAC] server:
+cd server && make llama && make serve
+```
+
+> ⚠ `CRUSH_VENDORED=1` is required on the airgap build — a plain `make image` is the online path (it
+> clones Crush and fails with no network). On enforcing SELinux, if the build mount is denied, set
+> `CRUSH_VENDOR_FLAGS` in `client/Makefile` to `:ro,z`. The airgap build installs no `hf` (it's gated
+> behind `VENDOR_TOOLS`, online-only), so the airgap dnf mirror needs nothing beyond the base packages.
 
 ## Layout
 
