@@ -103,8 +103,6 @@ lowest priority-number, then lowest difficulty-number):
 
 - `verify-vendored-airgap-rebuild.md` (P3/D3) — real-machine check that the vendored offline rebuild
   actually works with no network (client image + Mac server). **Gates the Crush bump.**
-- `vendor-via-client-image.md` (P3/D3) — **IMPLEMENTED** (vendoring runs in the client image, host needs
-  only podman+make; `hf` flag-gated via `VENDOR_TOOLS`); archivable once the verify task confirms it.
 - `auto-allow-local-file-tools.md` (P3/D4) — auto-allow Crush's local file tools, keep prompting for
   network; **decisions resolved, ready to implement**.
 - `bump-crush-to-v0.90.0.md` (P4/D2) — investigated (patch ports clean); **blocked on
@@ -117,5 +115,5 @@ lowest priority-number, then lowest difficulty-number):
 
 Completed & archived (see `tasks/archive/2026/08/`): the bring-up, provider-catalog suppression (+ its
 airgapped verification), dotfiles/host-config mounts, context-window sizing, the `@`-import patch,
-nested-podman support (+ the baked-doc reachability fix), and the airgap **source-vendoring**
-implementation.
+nested-podman support (+ the baked-doc reachability fix), and the airgap **source-vendoring** work
+(implementation + the podman+make `vendor.sh` running inside the client image, `hf` flag-gated).

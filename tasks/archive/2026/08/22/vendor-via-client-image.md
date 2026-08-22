@@ -1,9 +1,11 @@
 # Rewrite `vendor.sh` to podman+make only (vendor inside the client image); bake `hf`
 
-**Status:** IMPLEMENTED 2026-08-22. `vendor.sh` now runs both sides inside the client image (host needs
-only podman+make); `python3-huggingface-hub` baked into the image; `server/Makefile` `pull` prefers the
-system `hf`. Validated in-sandbox (parse/shfmt/`make -n` both hf branches/dnf name); full podman-run path
-verified on a real box via `tasks/verify-vendored-airgap-rebuild.md`.
+**Status:** complete — `vendor.sh` runs both sides inside the client image (host needs only podman+make);
+`python3-huggingface-hub` baked into the image (flag-gated via `VENDOR_TOOLS`); `server/Makefile` `pull`
+prefers the system `hf`. Validated in-sandbox (parse/shfmt/`make -n` both hf branches/dnf name). Durable
+design captured in `tasks/reference/architecture.md`; the real-machine offline check is tracked in
+`tasks/verify-vendored-airgap-rebuild.md`.
+**Completed:** 2026-08-22
 **Priority:** 3
 **Difficulty:** 3
 **Started:** 2026-08-22
