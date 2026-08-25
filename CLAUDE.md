@@ -54,6 +54,12 @@ Three environments are in play; label instructions so it's unambiguous:
 - **Verify model/tool identifiers before hardcoding them.** GGUF filenames, the HF repo path,
   and good llama.cpp / Crush tags came from a 2026-08-18 web search and drift; confirm against
   Hugging Face and the upstream release pages at implementation time.
+- **Entrypoint scripts must stay executable (mode 755).** The Dockerfile invokes
+  `01-install-base.sh` and `02-install-vendor-tools.sh` **directly** (`RUN /usr/local/bin/…`),
+  and `vendor.sh` runs as `./vendor.sh`, so a dropped `+x` breaks `make image` / `make vendor`.
+  After editing any `entrypoint/*.sh` or `vendor.sh`, confirm `git ls-files -s` still shows
+  `100755`. A content rewrite (e.g. adding an SPDX header) resets the mode to 644 — this bit us
+  2026-08-25.
 
 ## What's in use (the runClaudeInContainer machinery is ported)
 
