@@ -57,3 +57,9 @@ a useful template for the equivalent analysis of another agent.
 The portable `CLAUDE.md` and the `tasks/reference/` docs are written maintainer-agnostic. A proper-noun
 reference to the maintainer's repos, host, or identity leaking into those (rather than into the
 personal overlay) is a bug in the separation — please report it.
+
+## License
+
+This template is **Apache-2.0** (see `LICENSE`); the grant covers the repo's own files, and bundled or
+vendored components (llama.cpp, Crush, the model weights) keep their own licenses — see the README
+"License" section. Your fork may relicense its own additions.

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 William Emerison Six
+# SPDX-License-Identifier: Apache-2.0
 # Format the client's shell scripts with shfmt.
 #
 # Portable: runs from the client/ dir either in the built image (`make format`) or on the host

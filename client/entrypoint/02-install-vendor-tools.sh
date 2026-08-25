@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 William Emerison Six
+# SPDX-License-Identifier: Apache-2.0
 # Extra packages needed ONLY to run `make vendor` inside this image — i.e. online
 # source-vendoring for an airgap rebuild. NOT needed by the image itself, and NOT needed by
 # the offline airgap rebuild (which uses the already-vendored GGUF and never downloads).

@@ -1,9 +1,35 @@
 # License this project under Apache-2.0
 
-**Status:** proposed — needs go-ahead. Not started.
+**Status:** DONE 2026-08-25 (William Emerison Six <billsix@gmail.com>) — see Outcome.
 **Priority:** 3
 **Difficulty:** 2
 **Created:** 2026-08-25 (William Emerison Six <billsix@gmail.com>)
+
+## Outcome (2026-08-25)
+
+Implemented and staged:
+
+- **`LICENSE`** added at repo root — the **verbatim Apache-2.0** text (202 lines, fetched from
+  `apache.org/licenses/LICENSE-2.0.txt`, not hand-transcribed).
+- **`README.md` `## License`** rewritten from the vague "follows the family" line to explicit
+  **Apache-2.0 (see `LICENSE`)** + the vendored-deps caveat (grant covers the repo's own files; bundled
+  llama.cpp/Crush/model keep their own licenses). Same caveat added as a new `## License` in `FORKING.md`.
+- **SPDX headers** (`# Copyright (c) 2026 William Emerison Six` / `# SPDX-License-Identifier: Apache-2.0`,
+  family style) added to the **11 own source files**: `vendor.sh`, `client/Dockerfile`, `client/Makefile`,
+  `server/Makefile`, the six `client/entrypoint/*.sh` (incl. `vendor/vendor-crush.sh`), `.extrabashrc`,
+  and `crushrc`. Header goes after the shebang where present. All shell scripts still pass `bash -n`.
+- **`CLAUDE.md`** needed no change (it stated no license).
+
+**Deliberately NOT headered** (reported exceptions): the vendored trees `client/vendor/crush` &
+`server/llama.cpp` (keep upstream licenses); `client/patches/crush-at-import.patch` (a diff — a header
+could break `git apply`, and it patches third-party Crush); all `.md` docs and the baked family reference
+copies (prose; LICENSE + README cover them); `storage.conf` and the ignore files (config/noise);
+`client/.crush/*` runtime state (gitignored).
+
+**Open question 1 (family alignment):** left for you — this repo is Apache-2.0; whether
+`runClaudeInContainer` itself should be relicensed for consistency is a separate repo/task.
+**Open question 2 (Crush's exact license):** the README/FORKING caveat says "Charm's terms" rather than
+naming Crush's specific license — a minor follow-up if you want it pinned down precisely.
 
 ## Goal
 

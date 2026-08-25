@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 William Emerison Six
+# SPDX-License-Identifier: Apache-2.0
 # What `make shell` runs. Barebones: land in the mounted project and remind the user how to
 # reach the model. No auth, no conventions layering — that's deferred (see the task docs).
 cd /work 2>/dev/null || cd /

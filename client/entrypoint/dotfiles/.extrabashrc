@@ -1,3 +1,5 @@
+# Copyright (c) 2026 William Emerison Six
+# SPDX-License-Identifier: Apache-2.0
 alias ls='ls --color=auto'
 export GPG_TTY=$(tty)
 PS1='\[\e[36m\]┌─(\t) \[\e[32m\]\u@\h:\w\n\[\e[36m\]└─λ \[\e[0m\]'

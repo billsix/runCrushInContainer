@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 William Emerison Six
+# SPDX-License-Identifier: Apache-2.0
 # Vendor everything for an OFFLINE / airgap rebuild. Runs the vendoring INSIDE the client
 # image, so this online host needs only **podman + make** — no host go/git/python3.
 #

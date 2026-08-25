@@ -1,3 +1,5 @@
+# Copyright (c) 2026 William Emerison Six
+# SPDX-License-Identifier: Apache-2.0
 .DEFAULT_GOAL := help
 
 # ============================================================================

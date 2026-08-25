@@ -211,4 +211,10 @@ exactly what to change (and what's portable vs personal).
 
 ## License
 
-Follows the `runClaudeInContainer` family. Copyright © 2026 William Emerison Six.
+**Apache-2.0** — see [`LICENSE`](LICENSE). Copyright © 2026 William Emerison Six.
+
+The grant covers **this repository's own files** (the Makefiles, Dockerfile, entrypoint scripts,
+`crushrc`, dotfiles, and docs). **Bundled and vendored components keep their own licenses** — llama.cpp
+(MIT), Crush and its bundled Go modules under `client/vendor/crush` (**FSL-1.1-MIT** — Functional Source
+License 1.1, © Charmbracelet, Inc., which converts to MIT two years after each release), and the Muse
+Glimmer model weights (Apache-2.0, from Meta). A fork may relicense its own additions.

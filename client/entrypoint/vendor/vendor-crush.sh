@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 William Emerison Six
+# SPDX-License-Identifier: Apache-2.0
 # Vendor the Crush source for an OFFLINE (airgapped) client-image rebuild.
 #
 # Clones the FULL Crush git repo (with history) at $CRUSH_TAG, applies the local
