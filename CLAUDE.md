@@ -88,6 +88,9 @@ guidance is in `FORKING.md`.
   Crush config or the port.
 - `tasks/reference/nested-podman-design.md` — nested-podman design/flags for the client (inner runs
   need `--cgroups=disabled --network=host`; the `--network=host`-breaks-bridged finding).
+- `tasks/reference/glimmer-models-and-airgap-quant-selection.md` — survey of Meta's Muse Glimmer model
+  family + the third-party quant landscape (sizes, licenses — all Apache-2.0), with a hardware-deferred
+  recommendation for which GGUF quant to vendor to an airgap box. Read when deciding what/how much to pull.
 
 Also **baked into the image** at `~/.config/crush/reference/` (agent-readable on-demand, NOT
 always-loaded, to save the local model's context): `llm-overused-phrases.md`, `print-debugging.md`,
@@ -98,7 +101,7 @@ is copied from `tasks/reference/` must keep both copies in sync).
 
 ## In-flight tasks
 
-Scan `tasks/` (top-level) at session start for the current list; as of 2026-08-22 (easy wins first —
+Scan `tasks/` (top-level) at session start for the current list; as of 2026-08-25 (easy wins first —
 lowest priority-number, then lowest difficulty-number):
 
 - `verify-vendored-airgap-rebuild.md` (P3/D3) — real-machine check that the vendored offline rebuild
@@ -112,10 +115,15 @@ lowest priority-number, then lowest difficulty-number):
   offline (proposed).
 - `port-runclaude-conventions-systems.md` (P4/D5) — Phases 0–4 implemented; **testing phase deferred**.
 - `crush-at-import-parity.md` (P6/D4) — bring the `@`-import patch to full Claude parity (follow-up).
+- `verify-vendor-pulls-all-quants.md` (P4/D3) — **deferred** (needs the target airgap hardware/quant);
+  model-universe research done in `tasks/reference/glimmer-models-and-airgap-quant-selection.md`.
+- `port-blocked-task-convention.md` (P5/D3) — port the blocked-task convention from runClaudeInContainer.
 
 Completed & archived (see `tasks/archive/2026/08/`): the bring-up, provider-catalog suppression (+ its
 airgapped verification), dotfiles/host-config mounts, context-window sizing, the `@`-import patch,
 nested-podman support (+ the baked-doc reachability fix), the airgap **source-vendoring** work
 (implementation + the podman+make `vendor.sh` running inside the client image, `hf` flag-gated), the
 **file-tool auto-allow** (crushrc `permissions allow` for file R/W; conservative-ask everything else),
-and **multi-quant model vendoring** (`MODEL_FILES` list + opt-in full weights + `check-repo` discovery).
+**multi-quant model vendoring** (`MODEL_FILES` list + opt-in full weights + `check-repo` discovery),
+the **`hf` install dnf-or-pip fallback** (dnf `python3-huggingface-hub`, else pip — for RHEL9-style repos),
+and **Apache-2.0 licensing** of the project (root `LICENSE` + SPDX headers; vendored trees keep theirs).

@@ -144,7 +144,9 @@ vendoring only guarantees the sources are present and offline-buildable. `server
   `GOPROXY=off go build -mod=vendor` — no network. `client/vendor/` is gitignored and kept out of the
   online build context by `client/.dockerignore` (the offline build mounts it instead).
 - **`hf` is vendoring-only, flag-gated:** the `hf` CLI (for the GGUF download) is installed by
-  `client/entrypoint/02-install-vendor-tools.sh` only when the image is built with `VENDOR_TOOLS=1`
+  `client/entrypoint/02-install-vendor-tools.sh` (which prefers the `python3-huggingface-hub` dnf package
+  and falls back to `pip install huggingface_hub` on distros whose repos lack it — Fedora has it, RHEL9
+  doesn't) only when the image is built with `VENDOR_TOOLS=1`
   (Dockerfile `ARG VENDOR_TOOLS=0`; `vendor.sh` sets it). A normal/airgap `make image` leaves it off, so
   the **airgap dnf mirror never needs `python3-huggingface-hub`** — the airgap rebuild uses the vendored
   GGUF and never downloads. `server/Makefile`'s `pull` prefers the system `hf` (in-image) and falls back
