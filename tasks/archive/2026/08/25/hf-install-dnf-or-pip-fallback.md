@@ -1,9 +1,30 @@
 # Install `hf` from the official dnf repo when available, else pip
 
-**Status:** proposed — needs go-ahead. Not started.
+**Status:** DONE 2026-08-25 (William Emerison Six <billsix@gmail.com>) — see Outcome.
 **Priority:** 4
 **Difficulty:** 2
 **Created:** 2026-08-25 (William Emerison Six <billsix@gmail.com>)
+
+## Outcome (2026-08-25)
+
+Implemented in `client/entrypoint/02-install-vendor-tools.sh` and **verified in real containers** (nested
+podman). Logic: try `dnf install python3-huggingface-hub` **and** confirm it actually provides `hf` (an
+old package ships only `huggingface-cli`); on absence-or-too-old, fall back to pip —
+`dnf install python3-pip` then `python3 -m pip install --break-system-packages huggingface_hub || python3
+-m pip install huggingface_hub`. The `--break-system-packages` first-try covers Fedora's PEP-668
+externally-managed Python; the plain-pip fallback covers RHEL9's older pip that doesn't know that flag.
+The real gate is a final `command -v hf` that `exit 1`s if `hf` is still missing; `set -e` aborts on
+genuine errors. The stale "single dnf is the gate" header was replaced.
+
+**Verification (both branches, nested podman):**
+- **`fedora:44` → dnf path** — `python3-huggingface-hub` *is* in Fedora's repos; installed `hf` **1.24.0**.
+- **`ubi9` (RHEL9) → pip fallback** — package absent, fell through to pip, installed `hf` **1.8.0**.
+- Static: `bash -n`, `shfmt -d`, `shellcheck` all clean.
+
+**Open questions resolved:** (1) Fedora 44 *has* the package (dnf path); RHEL9 does *not* (confirmed by
+Bill and by the ubi9 run) — so the fallback is a real fix, not just hardening. (2) pip mechanism =
+`--break-system-packages` with a plain-pip fallback (chosen over venv/pipx for simplicity in a throwaway,
+online-only vendoring image), plus `dnf install python3-pip` so the fallback works on a bare RHEL9 host.
 
 ## Goal
 
