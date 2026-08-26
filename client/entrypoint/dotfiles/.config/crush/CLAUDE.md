@@ -170,12 +170,14 @@ fail-fast, losing the report-everything property).
 
 ## Running projects in a nested container
 
-When working on a container-per-project repo, you can build/run its containers **inside** this client
-— but only if it was launched with **`make shell NESTED_PODMAN=1`**. Detect it inside the container by
-the **`$NESTED_PODMAN` env var** (`1` = launched with nesting; `0`/unset = not) — NOT by a make
-variable, which is host-side and invisible here. Confirm it actually works with
-`test -e /dev/fuse && podman info`. If `$NESTED_PODMAN` isn't `1`, tell me to relaunch with
-`NESTED_PODMAN=1`; if it's `1` but `/dev/fuse` is missing, the host itself lacks nested support.
+When working on a container-per-project repo, you can build/run its containers **inside** this client.
+**Assume nesting is available and just run the nested command** (with the flags below) — don't
+pre-check every time; the run itself is the test. **Only if a nested run errors** do you diagnose:
+nesting needs **`make shell NESTED_PODMAN=1`** at launch, detectable inside the container by the
+**`$NESTED_PODMAN` env var** (`1` = on; `0`/unset = not — NOT a make variable, which is host-side and
+invisible here) and confirmable with `test -e /dev/fuse && podman info`. If `$NESTED_PODMAN` isn't
+`1`, tell me to relaunch with `NESTED_PODMAN=1`; if it's `1` but `/dev/fuse` is missing, the host
+itself lacks nested support.
 **Every inner `podman run`/`docker run`
 needs BOTH `--cgroups=disabled`** (the sandbox `/sys/fs/cgroup` is read-only, else
 `cgroup.subtree_control: Read-only file system`) **and `--network=host`** (bridged netavark fails
