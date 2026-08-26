@@ -94,7 +94,11 @@ silent footgun) stays inline as a one-line `>`-note, but its explanation moves t
 
 Save *substantive* throwaway scripts (codemods, verification harnesses) under `tasks/adhoc/<slug>/`,
 run from there, commit as an audit trail. Skip one-liners. Make a file-mutating codemod **idempotent
-and prove it** (run twice, second run = zero changes). At archive: **one-shot → `git rm`** (history
+and prove it** (run twice, second run = zero changes). If the script changes mid-task, **revert its
+inputs and re-run the FINAL script once** (don't re-apply on top of already-transformed files) so it
+reproduces its diff from the original — checkout **only the processed files** (`git checkout
+<pre-script-SHA> -- <files>`), NOT a whole-tree `git checkout <SHA>` (that deletes the script itself);
+run once, confirm `git diff` on those files is empty. At archive: **one-shot → `git rm`** (history
 keeps it); **reusable → promote** to `tools/`.
 
 ## The diversion stack (`~/.config/crush/stack.md`) — you maintain it
