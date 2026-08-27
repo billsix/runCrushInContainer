@@ -78,7 +78,11 @@ Durable knowledge that outlives the work that produced it (comparisons, investig
 design rationale, gap analyses, domain notes) — **never archived**, updated in place. The test: "still
 worth reading after the work is done, and states what is TRUE not what to DO." **When archiving a
 non-trivial task, first harvest its decisions/rationale into a reference doc**, then archive the thin
-work record. Read the relevant reference doc before touching a subsystem it covers.
+work record. Read the relevant reference doc before touching a subsystem it covers. **When you archive a
+survey / investigation / research task whose deliverable recommends an action, also scaffold the
+follow-on task for that action** (`proposed — needs go-ahead`, or `blocked` on the one decision it
+hinges on), cross-linked to the reference doc — don't strand the recommendation in the archived doc. (A
+"don't do X" recommendation needs no task; fold findings into an existing task rather than duplicating.)
 
 ## A project README is commands-forward; prose goes in reference docs
 
