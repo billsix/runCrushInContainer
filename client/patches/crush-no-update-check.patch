@@ -1,0 +1,51 @@
+From 9e46030a55e480d6a68a3a24dae51af887035e27 Mon Sep 17 00:00:00 2001
+From: William Emerison Six <billsix@gmail.com>
+Date: Thu, 27 Aug 2026 02:35:02 +0000
+Subject: [PATCH] app: disable the startup update check (no phone-home to
+ api.github.com)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Crush launches `go app.checkForUpdates(ctx)` unconditionally in App.New,
+which GETs https://api.github.com/repos/charmbracelet/crush/releases/latest
+on every startup (internal/update/update.go). That is unsolicited outbound
+traffic the runCrushInContainer client should never make — the project is
+privacy-conscious and airgap-oriented, and on an airgapped box the check just
+times out after 30s in a background goroutine.
+
+Remove the launch. checkForUpdates (and update.Check) are left defined but
+uncalled — an unused method is legal Go, so this stays a minimal, one-site
+patch that is trivial to re-verify on a CRUSH_TAG bump. Any user-initiated
+update path is unaffected; only the automatic startup check is disabled.
+
+Carried as a local patch for runCrushInContainer, applied unconditionally at
+image-build time (no build flag — a runCrush client never wants this check).
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+---
+ internal/app/app.go | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/internal/app/app.go b/internal/app/app.go
+index a19cfe4..2c8ae58 100644
+--- a/internal/app/app.go
++++ b/internal/app/app.go
+@@ -135,8 +135,12 @@ func New(ctx context.Context, conn *sql.DB, store *config.ConfigStore, skillsMgr
+ 		slog.Warn("Clipboard initialization failed", "error", err)
+ 	}
+ 
+-	// Check for updates in the background.
+-	go app.checkForUpdates(ctx)
++	// Update check DISABLED for runCrushInContainer: no unsolicited egress to
++	// api.github.com on startup (see tasks/disable-crush-telemetry.md). The
++	// checkForUpdates method is left defined (an unused method is legal Go) so
++	// this patch stays a one-line removal of the launch, easy to re-verify on a
++	// CRUSH_TAG bump.
++	_ = app.checkForUpdates
+ 
+ 	// Arm initialization synchronously before launching it so WaitForInit
+ 	// blocks for the in-flight init instead of racing the goroutine and
+-- 
+2.55.0
+

@@ -37,6 +37,14 @@ v0.89.0-specific (several absent features are on Crush's in-repo `docs/*/FUTURE.
    `CRUSH_AT_IMPORT=1`), so under the patched image a `@path` on its own line *is* spliced — see
    `tasks/archive/2026/08/21/patch-crush-for-at-imports.md`. This finding describes **stock** v0.89.0; global-context-path
    stays the zero-maintenance fallback.
+   **Update (2026-08-27):** a second local patch, `client/patches/crush-no-update-check.patch`,
+   removes the unconditional startup update check (`go app.checkForUpdates(ctx)`,
+   `internal/app/app.go` → GET `api.github.com/.../releases/latest`). It is **always applied** (no
+   build flag) in every source build, so as of now a non-vendored build **always** clones + builds
+   from source (`go install …@tag` is no longer used); `CRUSH_AT_IMPORT` only toggles whether the
+   `@`-import patch is *also* applied. Telemetry to `data.charm.land` is disabled separately via env
+   (`CRUSH_DISABLE_METRICS`/`DO_NOT_TRACK`) + `option metrics false`. See
+   `tasks/disable-crush-telemetry.md`.
 3. **Custom commands exist and port**, but the file format differs: the **entire `.md` file is
    the prompt body** (no YAML frontmatter parsing — `loadCommand` at `commands.go:174` reads
    the whole file as `Content`; the filename is the command name), and arguments are any

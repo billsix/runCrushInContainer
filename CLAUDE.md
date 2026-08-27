@@ -74,7 +74,13 @@ The full working-method machinery is now **ported and in use** (Phases 0–4, 20
 - **personal-overlay layering** (blank baked default + host `~/.ai-coding-conventions.personal.md` mount);
 - **7 slash commands** (`/new-task`, `/stack-*`, … — in Crush's `/` dialog under the **User** tab);
 - **nested-podman** (`make shell NESTED_PODMAN=1`; inner runs need `--cgroups=disabled --network=host`);
-- a local **`@`-import patch for Crush** (`client/patches/`, gated on `CRUSH_AT_IMPORT`).
+- **two local Crush patches** (`client/patches/`): `crush-at-import.patch` (gated on
+  `CRUSH_AT_IMPORT`) and `crush-no-update-check.patch` (**always applied** — disables the startup
+  GitHub update check; see below). Because a patch needs a source tree, every non-vendored build now
+  clones + builds Crush from source (no plain `go install …@tag`).
+- **no telemetry / no phone-home** — PostHog telemetry (`data.charm.land`) off via Dockerfile
+  `ENV CRUSH_DISABLE_METRICS=1 DO_NOT_TRACK=1` + `option metrics false`; the GitHub update check off
+  via `crush-no-update-check.patch`. See `tasks/disable-crush-telemetry.md`.
 
 **Deliberately NOT ported:** auth plumbing (local keyless llama-server behind SSH — nothing to sign
 into), interactive GUI/Wayland + gamepad passthrough (headless Xvfb still works), and a dedicated
@@ -107,9 +113,13 @@ is copied from `tasks/reference/` must keep both copies in sync).
 
 ## In-flight tasks
 
-Scan `tasks/` (top-level) at session start for the current list; as of 2026-08-25 (easy wins first —
+Scan `tasks/` (top-level) at session start for the current list; as of 2026-08-27 (easy wins first —
 lowest priority-number, then lowest difficulty-number):
 
+- `disable-crush-telemetry.md` (P6/D2, **blocked**) — telemetry (`data.charm.land`) + GitHub
+  update-check disabled in the client image (implemented + staged 2026-08-27). **Blocked on** a
+  real-machine image-rebuild + runtime egress check (folds into `verify-auto-allow-file-tools.md`);
+  `/recheck-blocked` tests it. Last gate before archive.
 - `verify-vendored-airgap-rebuild.md` (P3/D3) — real-machine check that the vendored offline rebuild
   actually works with no network (client image + Mac server). **Gates the Crush bump.**
 - `verify-auto-allow-file-tools.md` (P3/D2) — real-machine check that file tools don't prompt and

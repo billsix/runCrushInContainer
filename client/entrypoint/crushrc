@@ -21,6 +21,15 @@
 # tasks/port-runclaude-conventions-systems.md.
 option global-context-path /root/.config/crush/CLAUDE.md
 
+# --- Privacy: no telemetry ---
+# Disable Crush's PostHog usage telemetry (endpoint data.charm.land). The image ALSO sets
+# CRUSH_DISABLE_METRICS=1 / DO_NOT_TRACK=1 (Dockerfile ENV) — that env is the robust,
+# launch-independent guarantee; this line documents the intent in the config the user reads and
+# covers a config-only build. `metrics` is inverted, so `false` sets options.disable_metrics=true.
+# (The unsolicited GitHub update check is disabled by a source patch — see
+# client/patches/crush-no-update-check.patch and tasks/disable-crush-telemetry.md.)
+option metrics false
+
 # Offer ONLY this provider — never Crush's built-in Catwalk catalog. Without this, Crush
 # shows ~15-20 embedded models (and, if our provider is ever dropped, falls into an onboarding
 # picker of them). `default-providers` is inverted, so `false` = "do NOT include the built-in

@@ -104,12 +104,28 @@ sibling/template of `github.com/billsix/runClaudeInContainer`. Two machines, one
   `tasks/archive/2026/08/20/dotfiles-and-host-config-mounts.md`.
 - **`@`-import patch (2026-08-20):** the client builds a locally-patched Crush that recursively splices
   `@path` references inside context files (a feature stock Crush lacks). Gated on `CRUSH_AT_IMPORT`
-  (Dockerfile ARG default `0` = stock `go install …@tag`; Makefile default `1` = clone the tag, `git
-  apply client/patches/crush-at-import.patch`, build from source with a version-stamp). **Live-verified
-  end-to-end 2026-08-21** (a real `@secret.md` spliced into a `CLAUDE.md`, model returned the
-  import-only secret). The one-shot verification harness (a `CLAUDE.md` with `@secret.md` + a
-  `crush run`) lives in git history (commit `5d2515f` and earlier), recoverable if needed. Record:
-  `tasks/archive/2026/08/21/patch-crush-for-at-imports.md`; mechanism: `crush-capabilities.md`.
+  (Dockerfile ARG default `0`, Makefile default `1`): when `1`, the build also `git apply`s
+  `client/patches/crush-at-import.patch`. **Live-verified end-to-end 2026-08-21** (a real `@secret.md`
+  spliced into a `CLAUDE.md`, model returned the import-only secret). The one-shot verification harness
+  (a `CLAUDE.md` with `@secret.md` + a `crush run`) lives in git history (commit `5d2515f` and earlier),
+  recoverable if needed. Record: `tasks/archive/2026/08/21/patch-crush-for-at-imports.md`; mechanism:
+  `crush-capabilities.md`.
+- **No telemetry / no phone-home (2026-08-27):** Crush v0.89.0 makes two unsolicited outbound calls;
+  both are disabled in the client image. Record: `tasks/disable-crush-telemetry.md`.
+  - **PostHog usage telemetry → `https://data.charm.land`** (`internal/event/event.go`) — disabled via
+    the Dockerfile `ENV CRUSH_DISABLE_METRICS=1 DO_NOT_TRACK=1` (Crush's built-in opt-out, gated in
+    `shouldEnableMetrics`; no source patch needed), plus `option metrics false` in the baked `crushrc`
+    for visibility. (Prompts/responses were never sent — usage metadata only — but it's off regardless.)
+  - **GitHub update check → `api.github.com/.../releases/latest`** (unconditional `go
+    app.checkForUpdates(ctx)` in `internal/app/app.go`) — no built-in off switch, so disabled by
+    `client/patches/crush-no-update-check.patch`, **always applied (no build flag)** in both build
+    paths (Dockerfile RUN + `vendor-crush.sh` for the offline tree). **Consequence:** because a patch
+    needs a source tree, EVERY non-vendored build now clones + builds from source — the old plain
+    `go install …@tag` path is gone, and `CRUSH_AT_IMPORT=0` now means "source build without the
+    `@`-import patch" (the update-check patch is still applied), not "stock upstream".
+  - Already silent, no action: `catwalk.charm.land` (provider catalog — the catwalk fetch is skipped
+    when `option default-providers false` is set, source-verified `provider.go:176`) and
+    `hyper.charm.land` (unused hosted provider). Re-verify both patches apply on each `CRUSH_TAG` bump.
 
 ## Offline / airgap rebuild — vendoring (2026-08-22)
 
@@ -138,8 +154,9 @@ vendoring only guarantees the sources are present and offline-buildable. `server
     `FULL_MODEL_REPO` (set explicitly, or preset by `FULL=1`) to the server `make vendor` → `pull` (see
     the multi-quant record: `tasks/archive/2026/08/22/vendor-multiple-glimmer-quants.md`).
 - **Client (Crush):** `make vendor` (ONLINE) runs `client/entrypoint/vendor/vendor-crush.sh` inside
-  the built image — full clone of Crush @ `CRUSH_TAG`, `git apply` the `@`-import patch, `go mod
-  vendor` — landing a build-ready checkout at `client/vendor/crush` (host). Then, on the airgap box,
+  the built image — full clone of Crush @ `CRUSH_TAG`, `git apply` the patches (crush-no-update-check
+  always, crush-at-import when `CRUSH_AT_IMPORT=1`), `go mod vendor` — landing a build-ready checkout
+  at `client/vendor/crush` (host). Then, on the airgap box,
   `make image CRUSH_VENDORED=1` bind-mounts it (`podman build --volume …:/vendor/crush:ro`) and builds
   `GOPROXY=off go build -mod=vendor` — no network. `client/vendor/` is gitignored and kept out of the
   online build context by `client/.dockerignore` (the offline build mounts it instead).

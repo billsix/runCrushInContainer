@@ -38,13 +38,21 @@ RUN : > /usr/share/containers/mounts.conf
 # latest stable release; override with `make image CRUSH_TAG=vX.Y.Z`. `crush --version`
 # fails the build if the install didn't produce a working binary.
 #
-# CRUSH_AT_IMPORT toggles the local `@`-import patch (see client/patches/ and
-# tasks/archive/2026/08/21/patch-crush-for-at-imports.md): with a `@path` on its own line in a context file
-# (CLAUDE.md/AGENTS.md/CRUSH.md), the patched Crush recursively splices that file's contents
-# in — the feature Crush lacks upstream. A patched build CANNOT use `go install …@tag` (the
-# module proxy is read-only), so we clone the tag, `git apply` the patch, and build from source,
-# stamping internal/version.Version so `crush --version` still reports the tag. Set
-# CRUSH_AT_IMPORT=0 for the stock upstream build.
+# Two local patches live in client/patches/ (applied by `git apply` to the cloned source):
+#   - crush-no-update-check.patch — ALWAYS applied (no build flag). Removes the unconditional
+#     `go app.checkForUpdates(ctx)` launch so Crush never GETs api.github.com on startup. A
+#     runCrush client never wants that unsolicited egress (privacy + airgap). See
+#     tasks/disable-crush-telemetry.md. (Telemetry to data.charm.land is disabled separately,
+#     via the CRUSH_DISABLE_METRICS/DO_NOT_TRACK env below — it has a built-in opt-out.)
+#   - crush-at-import.patch — toggled by CRUSH_AT_IMPORT (see
+#     tasks/archive/2026/08/21/patch-crush-for-at-imports.md): with a `@path` on its own line in a context file
+#     (CLAUDE.md/AGENTS.md/CRUSH.md), the patched Crush recursively splices that file's contents
+#     in — a feature Crush lacks upstream.
+# Because a patch needs a source tree, EVERY non-vendored build clones the tag and builds from
+# source (`go install .`), stamping internal/version.Version so `crush --version` still reports
+# the tag — we can't `go install …@tag` (the module proxy is read-only, can't be patched).
+# CRUSH_AT_IMPORT=0 therefore means "source build WITHOUT the @-import patch" (the update-check
+# patch is still applied), not a plain upstream `go install`.
 #
 # CRUSH_VENDORED toggles the OFFLINE/airgap build (see tasks/vendor-build-sources-for-airgap-rebuild.md).
 # When 1, Crush is NOT fetched from the network: the build reads a pre-vendored, patch-applied,
@@ -55,6 +63,13 @@ RUN : > /usr/share/containers/mounts.conf
 ARG CRUSH_TAG=v0.89.0
 ARG CRUSH_AT_IMPORT=0
 ARG CRUSH_VENDORED=0
+# Disable Crush's PostHog usage telemetry (endpoint data.charm.land). Crush has a built-in
+# opt-out (internal/cmd/root.go shouldEnableMetrics), so an env var is enough — no source patch.
+# Both are set belt-and-suspenders: CRUSH_DISABLE_METRICS is Crush's own switch, DO_NOT_TRACK is
+# the cross-tool https://donottrack.sh convention. Env is launch-independent (covers `crush`,
+# `crush run`, `crush stats`) and survives a mounted-config override. The baked crushrc also sets
+# `option metrics false` for visibility. See tasks/disable-crush-telemetry.md.
+ENV CRUSH_DISABLE_METRICS=1 DO_NOT_TRACK=1
 ENV GOBIN=/usr/local/bin GOFLAGS=-trimpath
 COPY patches/ /patches/
 COPY entrypoint/vendor/ /usr/local/bin/vendor/
@@ -63,15 +78,13 @@ RUN set -eux; \
     if [ "$CRUSH_VENDORED" = "1" ]; then \
         cp -r /vendor/crush /tmp/crush; \
         ( cd /tmp/crush && GOPROXY=off go build -mod=vendor -ldflags "-X github.com/charmbracelet/crush/internal/version.Version=${CRUSH_TAG}" -o /usr/local/bin/crush . ); \
-        rm -rf /tmp/crush; \
-    elif [ "$CRUSH_AT_IMPORT" = "1" ]; then \
-        git clone --depth 1 --branch "$CRUSH_TAG" https://github.com/charmbracelet/crush /tmp/crush; \
-        git -C /tmp/crush apply /patches/crush-at-import.patch; \
-        ( cd /tmp/crush && go install -ldflags "-X github.com/charmbracelet/crush/internal/version.Version=${CRUSH_TAG}" . ); \
-        rm -rf /tmp/crush; \
     else \
-        go install "github.com/charmbracelet/crush@${CRUSH_TAG}"; \
+        git clone --depth 1 --branch "$CRUSH_TAG" https://github.com/charmbracelet/crush /tmp/crush; \
+        git -C /tmp/crush apply /patches/crush-no-update-check.patch; \
+        if [ "$CRUSH_AT_IMPORT" = "1" ]; then git -C /tmp/crush apply /patches/crush-at-import.patch; fi; \
+        ( cd /tmp/crush && go install -ldflags "-X github.com/charmbracelet/crush/internal/version.Version=${CRUSH_TAG}" . ); \
     fi; \
+    rm -rf /tmp/crush; \
     crush --version
 
 # Baked dotfiles (prompt, ls alias, GPG_TTY): /root/.extrabashrc, sourced from ~/.bashrc.

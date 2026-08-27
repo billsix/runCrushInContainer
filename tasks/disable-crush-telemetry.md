@@ -1,9 +1,17 @@
 # Disable Crush telemetry & phone-home in the client image
 
-**Status:** in-progress
-**Priority:** 3
+**Status:** blocked
+**Priority:** 6
 **Difficulty:** 2
 **Started:** 2026-08-27
+**Blocked on:** a real-machine client-image rebuild + runtime egress check — only the maintainer can
+run it on the target host (the image is ~22 GB; not done in-sandbox). Implementation is complete and
+staged; this is the last gate before archive.
+**Recheck:** on the host, `make -C client image` (green build proves the restructured RUN + both
+patches apply), then start Crush with egress watched (e.g. `strace -f -e trace=network` or a tcpdump
+on the bridge) and confirm **no** connection to `data.charm.land` or `api.github.com` and that the
+model still answers. Cleared = build green + zero egress to those two hosts. (Folds into
+`verify-auto-allow-file-tools.md`, which also needs a rebuild.)
 
 ## Goal
 
@@ -43,51 +51,73 @@ update check has none and needs a source patch or an accepted-and-documented exc
   patch machinery (`client/patches/crush-at-import.patch`, gated by `CRUSH_AT_IMPORT`) — or leaving
   it and documenting it as an accepted low-sensitivity exception.
 
-### 3. Other charm.land hosts (context — not in scope unless we decide otherwise)
+### 3. Other charm.land hosts (context — confirmed, no action needed)
 - `catwalk.charm.land` — the embedded provider catalog. **Already suppressed** in this repo's baked
-  `crushrc` via `option default-providers false` (see `architecture.md` "Permissions/Provider").
-  Worth a quick confirm that suppression also skips the catwalk *fetch*, not just the picker.
+  `crushrc` via `option default-providers false`. **Confirmed source-side (2026-08-27):** the catwalk
+  fetch goroutine in `Providers()` starts with `if customProvidersOnly { return }` where
+  `customProvidersOnly := cfg.Options.DisableDefaultProviders` (`internal/config/provider.go:176,184-185`).
+  So the flag **skips the HTTP fetch entirely**, not just the picker — `catwalk.charm.land` is never
+  contacted. No work needed.
 - `hyper.charm.land` — Charm's hosted "Hyper" provider/OAuth. **Not used** in this setup (local
-  llamacpp provider only); reachable only if someone configures it. Env override `HYPER_URL`.
+  llamacpp provider only); the Hyper token refresher only fires if a Hyper provider is configured.
+  Env override `HYPER_URL`. No work needed.
 
-## Plan
+## Plan (approach decided 2026-08-27 — see Decisions) — IMPLEMENTED 2026-08-27
 
-- [ ] **Telemetry (do first — cheap, high value):** add `ENV CRUSH_DISABLE_METRICS=1` (and
-      `DO_NOT_TRACK=1` belt-and-suspenders) to `client/Dockerfile` near the other `ENV`/`ARG`
-      lines (~L55-58). Env is launch-independent — covers `crush`, `crush run`, `crush stats`, and
-      survives a mounted-config override, unlike a crushrc-only switch.
-- [ ] **Telemetry (defense-in-depth + visibility):** also add `option metrics false` to the baked
-      `client/entrypoint/crushrc`, with a comment, so the intent is discoverable in the config the
-      user actually reads. (Decide: env-only, crushrc-only, or both — see Q1.)
-- [ ] **Update check (pending Q2):** if disabling, add `client/patches/crush-no-update-check.patch`
-      that no-ops `checkForUpdates` (or short-circuits `update.Check`), applied at image build
-      alongside the `@`-import patch; wire it into both the online (`go install`/source) and
-      vendored (`CRUSH_VENDORED=1`) build paths in the Dockerfile. Re-verify on every `CRUSH_TAG`
-      bump (same caveat as the `@`-import patch).
-- [ ] **Verify:** rebuild the client image; confirm `crush` starts with no outbound to
-      `data.charm.land` or `api.github.com` (e.g. run under nested podman with egress watched, or
-      grep the debug log for the PostHog/update slog lines). Confirm the model still works.
-- [ ] Update `tasks/reference/architecture.md` (a "Telemetry / phone-home" note) and, if the
-      update-check patch lands, `crush-capabilities.md` + the `CLAUDE.md` patch list.
+- [x] **Telemetry — Dockerfile env:** `ENV CRUSH_DISABLE_METRICS=1 DO_NOT_TRACK=1` added to
+      `client/Dockerfile` (above the `GOBIN` ENV), with a comment.
+- [x] **Telemetry — crushrc visibility:** `option metrics false` added to `client/entrypoint/crushrc`
+      (new "Privacy: no telemetry" block), with a comment cross-referencing the env + the patch.
+- [x] **Update check — patch it out (always applied):** created
+      `client/patches/crush-no-update-check.patch` — removes the `go app.checkForUpdates(ctx)` launch
+      in `internal/app/app.go` (`checkForUpdates`/`update.Check` left defined but uncalled; an unused
+      method is legal Go, so it's a one-site patch). Wired into **both** build paths:
+      - **Dockerfile RUN restructured** — the non-vendored branch now ALWAYS `git clone`s + `git
+        apply`s `crush-no-update-check.patch`, then applies `crush-at-import.patch` only if
+        `CRUSH_AT_IMPORT=1`, then `go install .`. Consequence (intended): the old plain
+        `go install …@tag` else-branch is gone — a patch needs a source tree, so every non-vendored
+        build is now a source build. `CRUSH_AT_IMPORT=0` now means "source build without the
+        @-import patch" (update-check patch still applied), not "stock upstream". Dockerfile comment
+        updated to say so.
+      - **`vendor-crush.sh`** — applies `crush-no-update-check.patch` unconditionally (new
+        `UPDATE_PATCH_FILE`, default `/patches/crush-no-update-check.patch`) before the conditional
+        `@`-import patch, so the offline `CRUSH_VENDORED=1` tree carries it. `make vendor` needs no
+        change (runs inside the image where `/patches/` is baked; passes `CRUSH_TAG`/`CRUSH_AT_IMPORT`).
+      - Re-verify both patches apply on every `CRUSH_TAG` bump (same caveat as `@`-import).
+- [~] **Verify:** DONE cheaply — patch applies cleanly to pristine v0.89.0 (`git apply --check`),
+      the patched `internal/app` package compiles (`go build ./internal/app/` → exit 0), gofmt-clean,
+      and `bash -n vendor-crush.sh` passes. PENDING (real machine): a full client-image rebuild +
+      confirm `crush` starts with no egress to `data.charm.land` / `api.github.com` and the model
+      still works. Folds naturally into `verify-auto-allow-file-tools.md` (needs a rebuild anyway) and
+      `verify-vendored-airgap-rebuild.md` (exercises the vendored patch path). Not attempted here:
+      the client image is ~22 GB and nested three-deep — real-machine territory per this repo's
+      workflow.
+- [ ] Update `tasks/reference/architecture.md` (a "Telemetry / phone-home" note) and
+      `crush-capabilities.md` + the `CLAUDE.md` patch list (for the new update-check patch). *(Do at
+      session-end doc sweep or when the rebuild verification lands.)*
 
 ## Notes / decisions
 
-- Cleanest telemetry home is the **Dockerfile `ENV`**, not just crushrc: it disables metrics
-  regardless of how Crush is invoked or whether the config is overridden, and it needs no source
-  patch. The crushrc `option metrics false` is additive (documents intent where the user looks).
-- The update check is the only phone-home with **no built-in off switch** — it's the one that
-  actually requires touching Crush's source (or accepting it).
+Decisions confirmed by William Emerison Six <billsix@gmail.com>, 2026-08-27:
+
+1. **Telemetry — do BOTH.** Dockerfile `ENV CRUSH_DISABLE_METRICS=1 DO_NOT_TRACK=1` (the robust,
+   launch-independent guarantee that survives a config override) **and** `option metrics false` in
+   the baked crushrc (documents intent where the user actually looks). Cheap either way.
+2. **Update check — PATCH IT OUT.** Consistent with the repo's airgap orientation and the fact it
+   already patches Crush (`client/patches/`): the stance is "no unsolicited egress at all", not
+   "low-sensitivity, leave it". New patch applied at build alongside the `@`-import patch, in both
+   the online and vendored build paths — **always applied, no build flag** (a runCrush client never
+   wants the update check; unlike `@`-import, there's no fork case for a toggle).
+3. **catwalk scope — quick confirm done, no work needed.** Source-verified that
+   `option default-providers false` skips the catwalk *fetch* (not just the picker) — see
+   Findings §3. `hyper.charm.land` is likewise never contacted in this local-only setup.
+
+Design rationale that stands regardless: the Dockerfile `ENV` is the cleanest telemetry home
+because it disables metrics no matter how Crush is invoked or whether the config is overridden, with
+no source patch. The update check is the only phone-home with **no built-in off switch**, so it's
+the one that genuinely requires touching Crush's source.
 
 ## Open questions
 
-1. **Telemetry disable mechanism** — env in Dockerfile, crushrc `option metrics false`, or both?
-   Recommend **both** (env is the robust guarantee; crushrc makes the intent visible in the config
-   the user edits). Trivial either way.
-2. **The GitHub update check** — disable it via a source patch (fits the existing
-   `client/patches/` + build-flag machinery, but adds a patch to re-verify on each `CRUSH_TAG`
-   bump), or leave it and document it as an accepted low-sensitivity exception (no identifying
-   payload; just times out offline)? Recommend **patch it** — the repo already patches Crush and is
-   explicitly airgap-oriented, so "no unsolicited egress at all" is the consistent stance.
-3. **Scope** — keep this task to telemetry + update check only, or also add a one-line confirmation
-   that `catwalk.charm.land` is not fetched under `default-providers false`? Recommend a **quick
-   confirm** (item in Findings §3), no separate work.
+None — approach fully decided (see Notes / decisions). The update-check patch is **always applied,
+no build flag** (confirmed 2026-08-27). Ready to implement on go-ahead.
