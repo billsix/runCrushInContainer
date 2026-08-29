@@ -7,7 +7,7 @@
 
 ## BLUF
 
-Decide whether the dependency network audit (`tasks/audit-dependency-network-egress.md`) should be
+Decide whether the dependency network audit (`tasks/archive/2026/08/29/audit-dependency-network-egress.md`) should be
 *enforced* by a runtime egress check — and if yes, design and run it. "Done" = a recorded yes/no
 decision from the maintainer; if yes, additionally a working check (strace/tcpdump trace or a
 firewall rule set) that asserts Crush contacts **no host other than the local model endpoint**,
@@ -17,7 +17,7 @@ run on the real machine.
 
 Read first:
 
-- `tasks/audit-dependency-network-egress.md` — the audit this would verify. Its
+- `tasks/archive/2026/08/29/audit-dependency-network-egress.md` — the audit this would verify. Its
   "Verification / hardening idea" section holds the full design discussion; this task was split out
   of it on 2026-08-29 (the maintainer deferred verification: decide *whether* before building *what*).
 - `tasks/disable-crush-telemetry.md` — the prior two-host egress check idea this would supersede/extend.

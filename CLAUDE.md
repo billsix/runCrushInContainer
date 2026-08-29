@@ -102,8 +102,10 @@ The full working-method machinery is now **ported and in use** (Phases 0–4, 20
 - **no telemetry / no phone-home** — PostHog telemetry (`data.charm.land`) off via Dockerfile
   `ENV CRUSH_DISABLE_METRICS=1 DO_NOT_TRACK=1` + `option metrics false`; the GitHub update check off
   via `crush-no-update-check.patch`. See `tasks/disable-crush-telemetry.md`. That covers **Crush's own
-  code**; a full audit of the **~213 vendored Go deps** for their own egress (+ a flag-driven per-decision
-  patch system for the airgap build) is tracked in `tasks/audit-dependency-network-egress.md`. Note the
+  code**; the full audit of the **213 vendored Go deps** is DONE (2026-08-29) —
+  `tasks/reference/dependency-network-audit.md` holds the findings and the twelve confirmed
+  `PATCH_OUT_<X>` decisions (implementation: `tasks/implement-egress-patch-flags.md`; triage
+  scanner: `tools/triage_dependency_egress.py`, re-run on every `CRUSH_TAG` bump). Note the
   invariant either way: **local/loopback to the model (`127.0.0.1:8080`) is essential — only external
   egress is ever a target.**
 
@@ -146,11 +148,14 @@ lowest priority-number, then lowest difficulty-number):
   update-check disabled in the client image (implemented + staged 2026-08-27). **Blocked on** a
   real-machine image-rebuild + runtime egress check (folds into `verify-auto-allow-file-tools.md`);
   `/recheck-blocked` tests it. Last gate before archive.
-- `audit-dependency-network-egress.md` (P4/D7, proposed) — full source-level audit of the **~213
-  vendored Go deps** for their own external egress, with a **flag-driven, one-patch-per-decision**
-  system (KEEP-useful / PATCH-OUT phone-home / REMOVE out-of-design) baked coherently into vendoring
-  (vendor-complete, patch-at-build). Deliverable: a verbose reference doc. **Extends**
-  `disable-crush-telemetry.md`; written self-contained for a cold-start model.
+- `implement-egress-patch-flags.md` (P3/D6, proposed) — implement the dependency-network audit's
+  twelve confirmed decisions: rewrite `vendor-crush.sh` (vendor complete + unpatched) +
+  `03-build-crush.sh` (ALL patches flag-guarded at build time, both paths), author the eleven new
+  per-concern patches, thread the `PATCH_OUT_<X>` build-args. Findings + flag index:
+  `tasks/reference/dependency-network-audit.md`.
+- `decide-egress-verification.md` (P6/D3, proposed) — decide whether the audit needs an enforced
+  runtime egress check (strace/tcpdump or firewall permitting only the local model endpoint), or
+  whether the source-level audit suffices; real-machine if built.
 - `standardize-project-container-template.md` (P5/D5, proposed) — adopt the cross-project
   container-template standard (the `shell`/`shell-exec` pair + `SHELL_RUN_FLAGS`, mount conventions)
   in this repo's docs + `client/`; sibling task in runClaudeInContainer.
@@ -179,4 +184,6 @@ the **`hf` install dnf-or-pip fallback** (dnf `python3-huggingface-hub`, else pi
 **Apache-2.0 licensing** of the project (root `LICENSE` + SPDX headers; vendored trees keep theirs), the
 **`make shell-exec`** target (batch twin of `make shell`, shared `SHELL_RUN_FLAGS`; 2026/08/29), and the
 **Crush-build extraction** into `entrypoint/03-build-crush.sh` (the inline Dockerfile `RUN` → a
-flag-passing script; 2026/08/29).
+flag-passing script; 2026/08/29), and the **dependency network audit** (all 213 vendored Go modules
+triaged, 66 deep-audited at source, twelve `PATCH_OUT_<X>` decisions confirmed — findings in
+`tasks/reference/dependency-network-audit.md`; 2026/08/29).

@@ -2,8 +2,13 @@
 # Copyright (c) 2026 William Emerison Six
 # SPDX-License-Identifier: Apache-2.0
 #
-# Triage every vendored Go module for network capability (phase 1 of
-# tasks/audit-dependency-network-egress.md).
+# Triage every vendored Go module for network capability — phase 1 of the dependency
+# network audit (tasks/reference/dependency-network-audit.md; work record:
+# tasks/archive/2026/08/29/audit-dependency-network-egress.md).
+#
+# WHEN TO RUN: after any `make vendor` regeneration, and on EVERY CRUSH_TAG bump —
+# diff the new table against the reference doc's §3 to find modules that appeared,
+# vanished, or changed tier, then deep-audit the changes per the reference doc's method.
 #
 # Reads client/vendor/crush/vendor/modules.txt for the module list, then scans each
 # module's vendored .go source for cheap network signals:

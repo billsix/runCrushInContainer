@@ -21,7 +21,7 @@ predates `crush-no-update-check.patch` (added 2026-08-27) — only the `@`-impor
 (`git status` in the tree shows just `internal/agent/prompt/prompt.go` modified).** Under the
 current build model (vendored path applies no patches), a `make image CRUSH_VENDORED=1` from this
 tree builds a Crush **with** the startup update check. Resolution: the patch-model revision decided
-in `tasks/audit-dependency-network-egress.md` (vendor unpatched, apply ALL patches flag-guarded at
+in `tasks/archive/2026/08/29/audit-dependency-network-egress.md` (vendor unpatched, apply ALL patches flag-guarded at
 build time) fixes this class of drift; until that lands, re-run `make vendor` before an airgap
 rebuild, or accept the update-check call (it fails harmlessly offline).
 
