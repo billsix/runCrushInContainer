@@ -104,6 +104,17 @@ EXTRA_MOUNTS ?=
 # port. This is why the client is Linux-only for now.
 NET_FLAGS ?= --network=host
 
+# Extra flags for every container `run` THIS Makefile performs. Auto-set when this Makefile
+# itself runs nested inside a runClaudeInContainer/runCrushInContainer sandbox (which exports
+# NESTED_PODMAN=1 — the three-deep client case); empty, and byte-identical behavior, on a normal
+# Linux host. Overridable per invocation. Threaded into `run` lines only, never `build`
+# (podman build rejects --cgroups and doesn't need it). Convention:
+# runClaudeInContainer tasks/reference/nested-podman-design.md ("The PODMAN_RUN_FLAGS convention").
+# NOTE: distinct from the NESTED_PODMAN launch flag below (which makes the container this
+# Makefile LAUNCHES nested-capable); both read the env via `?=`, so a nested session also
+# inherits the launch flag — capability deliberately carries inward.
+PODMAN_RUN_FLAGS ?= $(if $(filter 1,$(NESTED_PODMAN)),--cgroups=disabled)
+
 # SELinux: run the container UNCONFINED, matching how the sibling runClaudeInContainer runs
 # under NESTED_PODMAN=1. Without this, on an enforcing host the confined container is denied
 # access to bind-mounted host dirs and — the case that bit us — cannot follow symlinks that
@@ -185,9 +196,9 @@ image: ## build the client image: full toolchain + Crush built from source (pinn
 vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/crush for an offline (CRUSH_VENDORED=1) rebuild
 	@mkdir -p $(VENDOR_DIR)
 	$(CONTAINER_CMD) run --rm --entrypoint /bin/bash \
+		$(PODMAN_RUN_FLAGS) \
 		$(SELINUX_OPT) \
 		-e CRUSH_TAG=$(CRUSH_TAG) \
-		-e CRUSH_AT_IMPORT=$(CRUSH_AT_IMPORT) \
 		-v $(VENDOR_DIR):/vendor:Z \
 		$(CONTAINER_NAME) \
 		-c '/usr/local/bin/vendor/vendor-crush.sh /vendor/crush'
@@ -198,6 +209,7 @@ vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/cr
 # tasks/add-shell-exec-target.md for the design.
 SHELL_RUN_FLAGS = \
 		--entrypoint /bin/bash \
+		$(PODMAN_RUN_FLAGS) \
 		-v ./entrypoint/shell.sh:/shell.sh:Z \
 		-e NESTED_PODMAN=$(NESTED_PODMAN) \
 		$(SELINUX_OPT) \
@@ -230,6 +242,7 @@ shell-exec: image ## run a script/command in the container env (no TTY): make sh
 .PHONY: format
 format: image ## format the client shell scripts with shfmt (runs in the built image)
 	$(CONTAINER_CMD) run --rm --entrypoint /bin/bash \
+		$(PODMAN_RUN_FLAGS) \
 		$(SELINUX_OPT) \
 		-v $(CURDIR):/src -w /src \
 		$(CONTAINER_NAME) \

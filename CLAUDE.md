@@ -87,7 +87,7 @@ The full working-method machinery is now **ported and in use** (Phases 0–4, 20
   it every session and the tracked conventions stay maintainer-agnostic. Example to copy:
   `client/entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md`; see `FORKING.md`;
 - **7 slash commands** (`/new-task`, `/stack-*`, … — in Crush's `/` dialog under the **User** tab);
-- **nested-podman** (`make shell NESTED_PODMAN=1`; inner runs need `--cgroups=disabled --network=host`);
+- **nested-podman** (`make shell NESTED_PODMAN=1`; inner runs: `--network=host` needed at this depth, and the cgroups flag auto-applies via the PODMAN_RUN_FLAGS convention — see `tasks/reference/nested-podman-design.md`);
 - **`make shell-exec`** (`client/Makefile`) — the batch twin of `make shell`: `make shell-exec
   SCRIPT=<path under the mounted PROJECT at /work> | CMD='...'` runs a script/command in the same
   container env and exits (no TTY) — for ad-hoc/CI use. `shell` + `shell-exec` share one
@@ -132,7 +132,7 @@ guidance is in `FORKING.md`.
   `disable_default_providers` catalog switch, context-window/compaction). Read before touching
   Crush config or the port.
 - `tasks/reference/nested-podman-design.md` — nested-podman design/flags for the client (inner runs
-  need `--cgroups=disabled --network=host`; the `--network=host`-breaks-bridged finding).
+  use the PODMAN_RUN_FLAGS convention + `--network=host`; the `--network=host`-breaks-bridged finding).
 - `tasks/reference/glimmer-models-and-airgap-quant-selection.md` — survey of Meta's Muse Glimmer model
   family + the third-party quant landscape (sizes, licenses — all Apache-2.0), with a hardware-deferred
   recommendation for which GGUF quant to vendor to an airgap box. Read when deciding what/how much to pull.

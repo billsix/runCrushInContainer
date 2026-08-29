@@ -39,10 +39,18 @@ flag (see runClaude's doc).
 
 ## Operating it — the rules that bite
 
-- **Every INNER `podman run` needs `--cgroups=disabled`.** The sandbox `/sys/fs/cgroup` is read-only,
-  so without it every inner run dies with `cgroup.subtree_control: Read-only file system`. A project's
-  Makefile won't have this flag — add it per inner run (or use the standing "transient add + revert"
-  authorization). `--cgroupns=private` does NOT fix it (tested in runClaude).
+- **Inner `podman run`s and `--cgroups=disabled` — the `PODMAN_RUN_FLAGS` convention (2026-08-29).**
+  Historically the sandbox `/sys/fs/cgroup` was read-only and every inner run died with
+  `cgroup.subtree_control: Read-only file system`; on the current host stack cgroup2 mounts rw and
+  flagless inner runs work (verified in runClaude), but the flag stays as harmless belt-and-braces.
+  The standing convention: the sandbox exports `NESTED_PODMAN=1` into nested-capable sessions
+  (this client's Makefile always did; runClaude's does as of 2026-08-29), and converted project
+  Makefiles carry `PODMAN_RUN_FLAGS ?= $(if $(filter 1,$(NESTED_PODMAN)),--cgroups=disabled)`
+  threaded into their `run` lines (never `build`) — so containerized targets Just Work nested and
+  are byte-identical on a host. This client's own Makefile follows the convention too (shell/
+  shell-exec/vendor/format). Full design: runClaudeInContainer
+  `tasks/reference/nested-podman-design.md`; for an unconverted project, add the flag per inner
+  run (or use the standing "transient add + revert" authorization).
 - **Inner runs also need `--network=host` in this setup** (confirmed 2026-08-21). Bridged netavark
   fails here with `netavark: setns: Operation not permitted` — the inner container can't create its
   own network namespace at this nesting depth. `--network=host` sidesteps netavark (the container
