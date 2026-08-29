@@ -1,9 +1,30 @@
 # Audit ALL vendored Go dependencies for network / phone-home (airgap hardening)
 
-**Status:** proposed — needs go-ahead.
+**Status:** in progress — go-ahead given 2026-08-29 (William Emerison Six <billsix@gmail.com>).
 **Priority:** 4
 **Difficulty:** 7
 **Created:** 2026-08-29 (William Emerison Six <billsix@gmail.com>)
+
+**Decisions confirmed 2026-08-29 (William Emerison Six <billsix@gmail.com>)** — every open question
+was put to the maintainer explicitly, including the "settled" ones; all four answered:
+
+1. **Web search: KEEP by default** — `PATCH_OUT_WEB_SEARCH ?= 0`, patch present but off.
+2. **Cloud/GenAI SDKs: REMOVE by default** — `PATCH_OUT_CLOUD_SDKS ?= 1`, import-dropping Crush patch.
+3. **Dep phone-home: PATCH OUT by default** — one patch + one `PATCH_OUT_<concern> ?= 1` flag per
+   finding. Provably-inert deps (exporter-less OTel): DOCUMENT only, no flag (nothing to toggle).
+4. **Patch model: full revision confirmed** — vendor the complete UNPATCHED tree; ALL patches
+   (including the two existing ones) applied at build time in `03-build-crush.sh`, flag-guarded, both
+   paths. `crush-no-update-check` gets `PATCH_OUT_UPDATE_CHECK ?= 1`; `crush-at-import` keeps
+   `CRUSH_AT_IMPORT ?= 1`.
+
+**Standing principle behind all four (maintainer, 2026-08-29): every decision is a flag with a
+default — nothing is irreversible, so defaults are starting points, not commitments.** Borderline
+cases default to KEEP + FLAG and are called out in the reference doc for later review.
+
+**Verification: split out** — deferred to `tasks/decide-egress-verification.md` (decide *whether* a
+runtime egress check is needed at all, after the audit's findings exist). The "Verification /
+hardening idea" section below is the design discussion that task inherits; open question 3 is
+thereby answered.
 
 ## BLUF
 

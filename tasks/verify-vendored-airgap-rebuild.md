@@ -16,6 +16,15 @@ building/running the *server* there is the operator's own concern — this task 
 *provides*, not a specific serve setup. The core mechanism (`go mod vendor` + `GOPROXY=off go build
 -mod=vendor`) is already proven in isolation; this is the full-system, real-hardware proof.
 
+**Finding (2026-08-29, from the dependency-audit work): the on-disk `client/vendor/crush` tree
+predates `crush-no-update-check.patch` (added 2026-08-27) — only the `@`-import patch is applied
+(`git status` in the tree shows just `internal/agent/prompt/prompt.go` modified).** Under the
+current build model (vendored path applies no patches), a `make image CRUSH_VENDORED=1` from this
+tree builds a Crush **with** the startup update check. Resolution: the patch-model revision decided
+in `tasks/audit-dependency-network-egress.md` (vendor unpatched, apply ALL patches flag-guarded at
+build time) fixes this class of drift; until that lands, re-run `make vendor` before an airgap
+rebuild, or accept the update-check call (it fails harmlessly offline).
+
 ## Steps
 
 1. **[ONLINE] Vendor.** From the repo root: `./vendor.sh` — runs the vendoring **inside the client
