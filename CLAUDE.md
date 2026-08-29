@@ -158,6 +158,12 @@ lowest priority-number, then lowest difficulty-number):
 - `decide-egress-verification.md` (P6/D3, proposed) — decide whether the audit needs an enforced
   runtime egress check (strace/tcpdump or firewall permitting only the local model endpoint), or
   whether the source-level audit suffices; real-machine if built.
+- `minimal-client-image.md` (P4/D3, proposed) — split the image build behind a `FULL_TOOLCHAIN`
+  flag (Makefile `?=1` = the maintainer's full ~22 GB image; `FULL_TOOLCHAIN=0` = a ~2 GB minimal
+  image: golang/git/utilities/strace/tcpdump). **Agent note: once implemented, in-sandbox
+  image-level verification uses `make image FULL_TOOLCHAIN=0`** — the full image exceeds the
+  nested-podman store. Same tag for both variants (maintainer's call). Design Q&A recorded in the
+  task doc.
 - `standardize-project-container-template.md` (P5/D5, proposed) — adopt the cross-project
   container-template standard (the `shell`/`shell-exec` pair + `SHELL_RUN_FLAGS`, mount conventions)
   in this repo's docs + `client/`; sibling task in runClaudeInContainer.
