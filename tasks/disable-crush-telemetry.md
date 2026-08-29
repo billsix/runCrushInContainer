@@ -22,6 +22,11 @@ the image/config level so the throwaway client never phones home — matching th
 privacy-conscious, airgap-oriented posture. The telemetry half has built-in opt-outs (easy); the
 update check has none and needs a source patch or an accepted-and-documented exception.
 
+**Scope note:** this task audits **Crush's OWN code** only. A full audit of the **~213 vendored Go
+dependencies** for their own network/phone-home behavior (and a per-decision, flag-driven patch system
+for the airgap build) is tracked separately in **`audit-dependency-network-egress.md`**, which extends
+this work.
+
 ## Findings (source-verified against v0.89.0, commit `ba531a4`, 2026-08-27)
 
 ### 1. PostHog usage telemetry → `https://data.charm.land`

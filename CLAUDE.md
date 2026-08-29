@@ -101,7 +101,11 @@ The full working-method machinery is now **ported and in use** (Phases 0–4, 20
   clones + builds Crush from source (no plain `go install …@tag`).
 - **no telemetry / no phone-home** — PostHog telemetry (`data.charm.land`) off via Dockerfile
   `ENV CRUSH_DISABLE_METRICS=1 DO_NOT_TRACK=1` + `option metrics false`; the GitHub update check off
-  via `crush-no-update-check.patch`. See `tasks/disable-crush-telemetry.md`.
+  via `crush-no-update-check.patch`. See `tasks/disable-crush-telemetry.md`. That covers **Crush's own
+  code**; a full audit of the **~213 vendored Go deps** for their own egress (+ a flag-driven per-decision
+  patch system for the airgap build) is tracked in `tasks/audit-dependency-network-egress.md`. Note the
+  invariant either way: **local/loopback to the model (`127.0.0.1:8080`) is essential — only external
+  egress is ever a target.**
 
 **Deliberately NOT ported:** auth plumbing (local keyless llama-server behind SSH — nothing to sign
 into), interactive GUI/Wayland + gamepad passthrough (headless Xvfb still works), and a dedicated
@@ -134,13 +138,21 @@ is copied from `tasks/reference/` must keep both copies in sync).
 
 ## In-flight tasks
 
-Scan `tasks/` (top-level) at session start for the current list; as of 2026-08-27 (easy wins first —
+Scan `tasks/` (top-level) at session start for the current list; as of 2026-08-29 (easy wins first —
 lowest priority-number, then lowest difficulty-number):
 
 - `disable-crush-telemetry.md` (P6/D2, **blocked**) — telemetry (`data.charm.land`) + GitHub
   update-check disabled in the client image (implemented + staged 2026-08-27). **Blocked on** a
   real-machine image-rebuild + runtime egress check (folds into `verify-auto-allow-file-tools.md`);
   `/recheck-blocked` tests it. Last gate before archive.
+- `audit-dependency-network-egress.md` (P4/D7, proposed) — full source-level audit of the **~213
+  vendored Go deps** for their own external egress, with a **flag-driven, one-patch-per-decision**
+  system (KEEP-useful / PATCH-OUT phone-home / REMOVE out-of-design) baked coherently into vendoring
+  (vendor-complete, patch-at-build). Deliverable: a verbose reference doc. **Extends**
+  `disable-crush-telemetry.md`; written self-contained for a cold-start model.
+- `standardize-project-container-template.md` (P5/D5, proposed) — adopt the cross-project
+  container-template standard (the `shell`/`shell-exec` pair + `SHELL_RUN_FLAGS`, mount conventions)
+  in this repo's docs + `client/`; sibling task in runClaudeInContainer.
 - `verify-vendored-airgap-rebuild.md` (P3/D3) — real-machine check that the vendored offline rebuild
   actually works with no network (client image + Mac server). **Gates the Crush bump.**
 - `verify-auto-allow-file-tools.md` (P3/D2) — real-machine check that file tools don't prompt and
@@ -163,4 +175,7 @@ nested-podman support (+ the baked-doc reachability fix), the airgap **source-ve
 **file-tool auto-allow** (crushrc `permissions allow` for file R/W; conservative-ask everything else),
 **multi-quant model vendoring** (`MODEL_FILES` list + opt-in full weights + `check-repo` discovery),
 the **`hf` install dnf-or-pip fallback** (dnf `python3-huggingface-hub`, else pip — for RHEL9-style repos),
-and **Apache-2.0 licensing** of the project (root `LICENSE` + SPDX headers; vendored trees keep theirs).
+**Apache-2.0 licensing** of the project (root `LICENSE` + SPDX headers; vendored trees keep theirs), the
+**`make shell-exec`** target (batch twin of `make shell`, shared `SHELL_RUN_FLAGS`; 2026/08/29), and the
+**Crush-build extraction** into `entrypoint/03-build-crush.sh` (the inline Dockerfile `RUN` → a
+flag-passing script; 2026/08/29).
