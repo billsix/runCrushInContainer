@@ -65,12 +65,20 @@ you go, then squash to one-commit-per-task at the end.)
 
 ## Task documents (`tasks/<slug>.md`)
 
-For non-trivial, multi-step, or resumable work, keep a doc at `tasks/<slug>.md` in the repo root. Header:
-`**Status:** … / **Priority:** N / **Difficulty:** N / **Started:** YYYY-MM-DD`, then Goal / Plan /
-Notes / Open questions. Priority & Difficulty are 1–10 (1 = highest priority / easiest); pick next work
-by lowest-priority-number then lowest-difficulty-number. Update as work progresses. When complete,
-**move** to `tasks/archive/<YYYY>/<MM>/<DD>/<slug>.md`. Don't make a task doc for one-off questions. If
-a task's Open questions are non-empty, surface them as a numbered list when you report making it.
+For non-trivial, multi-step, or resumable work, keep a doc at `tasks/<slug>.md` in the repo root.
+**Write it to be executed COLD** — whoever picks it up (a fresh session, you months later, a colleague)
+has **none** of the conversation that produced it, so everything a fresh reader needs is in the doc or
+files it points to (what to read first, current state, links to related tasks/reference docs, decisions
+**with their rationale**). This is the standing default, so a task never *announces* it's self-contained
+— it just is. Header: `**Status:** … / **Priority:** N / **Difficulty:** N / **Started:** YYYY-MM-DD`,
+then a non-trivial task **leads with two short sections** — **`## BLUF`** (Bottom Line Up Front — 1–4
+sentences: what the task IS and what "done" means, the point first; from US-Army writing, AR 25-50; full
+write-up `~/.config/crush/reference/bluf-bottom-line-up-front.md`) and **`## Context`** (cold-start
+orientation: what to read first, current state, decisions-with-rationale) — then Goal / Plan / Notes /
+Open questions. Priority & Difficulty are 1–10 (1 = highest priority / easiest); pick next work by
+lowest-priority-number then lowest-difficulty-number. Update as work progresses. When complete, **move**
+to `tasks/archive/<YYYY>/<MM>/<DD>/<slug>.md`. Don't make a task doc for one-off questions. If a task's
+Open questions are non-empty, surface them as a numbered list when you report making it.
 
 ## Reference documents (`tasks/reference/<slug>.md`)
 

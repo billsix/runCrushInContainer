@@ -5,10 +5,19 @@
 **Difficulty:** 7
 **Created:** 2026-08-29 (William Emerison Six <billsix@gmail.com>)
 
-## Orientation — START HERE (self-contained; assume no prior conversation context)
+## BLUF
 
-This task is written to be executed cold — the model doing it (likely a fresh session) has **none** of
-the discussion that produced it. Everything you need is here or in the files below; read these first:
+Audit all ~213 vendored Go dependencies (not just Crush's own code) for **external** network / phone-home
+behavior, and neutralize it for the airgap build via a **flag-driven, one-patch-per-decision** system:
+KEEP genuinely-useful online features (web search), PATCH-OUT unsolicited phone-home, REMOVE
+out-of-design networky deps (cloud/GenAI SDKs) — never touching the essential local-model link
+(`127.0.0.1:8080`). Deliverable: a verbose `tasks/reference/dependency-network-audit.md` with every
+decision named. Done = that reference doc + the per-decision patches/flags wired into the vendor+build
+flow.
+
+## Context
+
+Read these first:
 
 - **`tasks/disable-crush-telemetry.md`** — the prior audit of **Crush's OWN code** (four vectors:
   PostHog `data.charm.land`, GitHub update-check `api.github.com`, `catwalk.charm.land` providers,
