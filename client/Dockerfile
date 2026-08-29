@@ -35,18 +35,37 @@ RUN : > /usr/share/containers/mounts.conf
 
 # Build Crush from source at a pinned tag, at IMAGE-BUILD time (self-contained image: the
 # binary is baked into a layer, no runtime fetch). The build LOGIC — why from source, the
-# two patches, the vendored-vs-clone modes, the -ldflags version stamp — lives in
+# patch system, the vendored-vs-clone modes, the -ldflags version stamp — lives in
 # entrypoint/03-build-crush.sh (also runnable on a bare host). Here we only declare the
 # flags and wire them in:
 #   CRUSH_TAG        the tag to build (override: `make image CRUSH_TAG=vX.Y.Z`)
-#   CRUSH_AT_IMPORT  1 = apply the @-import patch; 0 = source build without it
+#   CRUSH_AT_IMPORT  1 = apply the @-import feature patch; 0 = build without it
 #   CRUSH_VENDORED   1 = OFFLINE/airgap build. `make image CRUSH_VENDORED=1` adds
 #                    `--volume ./vendor/crush:/vendor/crush:ro --build-arg CRUSH_VENDORED=1`
 #                    so the script reads the pre-vendored checkout at /vendor/crush; produce
 #                    it ONLINE first with `make vendor` (entrypoint/vendor/, baked in below).
+#   PATCH_OUT_<X>    one flag per egress decision from the dependency network audit
+#                    (tasks/reference/dependency-network-audit.md, D1-D12); each guards one
+#                    patch in /patches, applied by the build script in BOTH modes. Defaults
+#                    here mirror the Makefile's — they are SEMANTIC (encode the audit's
+#                    disposition: 1 = phone-home/out-of-design patched out, 0 = useful
+#                    online feature kept), deliberately unlike the usual lean-bare-build
+#                    ARG=0 convention, so a bare `podman build` gets the audited posture.
 ARG CRUSH_TAG=v0.89.0
 ARG CRUSH_AT_IMPORT=0
 ARG CRUSH_VENDORED=0
+ARG PATCH_OUT_UPDATE_CHECK=1
+ARG PATCH_OUT_TELEMETRY=1
+ARG PATCH_OUT_UPDATE_PROVIDERS_CMD=1
+ARG PATCH_OUT_WEB_TOOLS=0
+ARG PATCH_OUT_SOURCEGRAPH=0
+ARG PATCH_OUT_GOOGLE_PROVIDER=1
+ARG PATCH_OUT_BEDROCK_AWS=1
+ARG PATCH_OUT_AZURE=1
+ARG PATCH_OUT_OPENROUTER=1
+ARG PATCH_OUT_VERCEL=1
+ARG PATCH_OUT_HYPER=1
+ARG PATCH_OUT_COPILOT=1
 # Disable Crush's PostHog usage telemetry (endpoint data.charm.land). Crush has a built-in
 # opt-out (internal/cmd/root.go shouldEnableMetrics), so an env var is enough — no source patch.
 # Both are set belt-and-suspenders: CRUSH_DISABLE_METRICS is Crush's own switch, DO_NOT_TRACK is
@@ -59,9 +78,22 @@ COPY patches/ /patches/
 COPY entrypoint/vendor/ /usr/local/bin/vendor/
 RUN chmod +x /usr/local/bin/vendor/*.sh
 COPY entrypoint/03-build-crush.sh /usr/local/bin/
-# Build Crush from source (vendored, or clone+patch); see entrypoint/03-build-crush.sh.
-# ARGs aren't inherited by a child process, so pass the three flags to the script explicitly.
+# Build Crush from source (vendored or clone+vendor, then flag-guarded patches);
+# see entrypoint/03-build-crush.sh. ARGs aren't inherited by a child process, so
+# every flag is passed to the script explicitly.
 RUN CRUSH_TAG="$CRUSH_TAG" CRUSH_VENDORED="$CRUSH_VENDORED" CRUSH_AT_IMPORT="$CRUSH_AT_IMPORT" \
+    PATCH_OUT_UPDATE_CHECK="$PATCH_OUT_UPDATE_CHECK" \
+    PATCH_OUT_TELEMETRY="$PATCH_OUT_TELEMETRY" \
+    PATCH_OUT_UPDATE_PROVIDERS_CMD="$PATCH_OUT_UPDATE_PROVIDERS_CMD" \
+    PATCH_OUT_WEB_TOOLS="$PATCH_OUT_WEB_TOOLS" \
+    PATCH_OUT_SOURCEGRAPH="$PATCH_OUT_SOURCEGRAPH" \
+    PATCH_OUT_GOOGLE_PROVIDER="$PATCH_OUT_GOOGLE_PROVIDER" \
+    PATCH_OUT_BEDROCK_AWS="$PATCH_OUT_BEDROCK_AWS" \
+    PATCH_OUT_AZURE="$PATCH_OUT_AZURE" \
+    PATCH_OUT_OPENROUTER="$PATCH_OUT_OPENROUTER" \
+    PATCH_OUT_VERCEL="$PATCH_OUT_VERCEL" \
+    PATCH_OUT_HYPER="$PATCH_OUT_HYPER" \
+    PATCH_OUT_COPILOT="$PATCH_OUT_COPILOT" \
     /usr/local/bin/03-build-crush.sh
 
 # Baked dotfiles (prompt, ls alias, GPG_TTY): /root/.extrabashrc, sourced from ~/.bashrc.

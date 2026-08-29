@@ -1,0 +1,33 @@
+Remove the Vercel AI Gateway provider (PATCH_OUT_VERCEL, default 1).
+
+Guards vendored charm.land/fantasy/providers/vercel New() with an error: a
+cloud LLM gateway (https://ai-gateway.vercel.sh/v1, the forced base URL) is
+out-of-design for the local-model-first setup. Minimal reversible guard, no
+SDK weight involved; a configured vercel-typed provider fails with an
+explicit error. See tasks/reference/dependency-network-audit.md D10.
+
+diff --git a/vendor/charm.land/fantasy/providers/vercel/vercel.go b/vendor/charm.land/fantasy/providers/vercel/vercel.go
+index 79f31f1d..c471dab7 100644
+--- a/vendor/charm.land/fantasy/providers/vercel/vercel.go
++++ b/vendor/charm.land/fantasy/providers/vercel/vercel.go
+@@ -2,6 +2,8 @@
+ package vercel
+ 
+ import (
++	"errors"
++
+ 	"charm.land/fantasy"
+ 	"charm.land/fantasy/providers/openai"
+ 	"github.com/openai/openai-go/v3/option"
+@@ -26,6 +28,11 @@ type Option = func(*options)
+ 
+ // New creates a new Vercel AI Gateway provider with the given options.
+ func New(opts ...Option) (fantasy.Provider, error) {
++	// Vercel AI Gateway support is removed by no-vercel.patch
++	// (runCrushInContainer, PATCH_OUT_VERCEL): a cloud LLM gateway
++	// (https://ai-gateway.vercel.sh) is out-of-design for the
++	// local-model-first setup.
++	return nil, errors.New("vercel provider removed by no-vercel.patch (rebuild with PATCH_OUT_VERCEL=0 to restore)")
+ 	providerOptions := options{
+ 		openaiOptions: []openai.Option{
+ 			openai.WithName(Name),

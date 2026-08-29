@@ -1,0 +1,32 @@
+Remove the OpenRouter provider (PATCH_OUT_OPENROUTER, default 1).
+
+Guards vendored charm.land/fantasy/providers/openrouter New() with an error:
+a cloud LLM gateway (https://openrouter.ai/api/v1, the forced base URL) is
+out-of-design for the local-model-first setup. No SDK weight is involved, so
+this is a minimal reversible guard rather than an import cut; a configured
+openrouter-typed provider fails with an explicit error. See
+tasks/reference/dependency-network-audit.md D9.
+
+diff --git a/vendor/charm.land/fantasy/providers/openrouter/openrouter.go b/vendor/charm.land/fantasy/providers/openrouter/openrouter.go
+index fc9c9756..865ac2f9 100644
+--- a/vendor/charm.land/fantasy/providers/openrouter/openrouter.go
++++ b/vendor/charm.land/fantasy/providers/openrouter/openrouter.go
+@@ -3,6 +3,7 @@ package openrouter
+ 
+ import (
+ 	"encoding/json"
++	"errors"
+ 
+ 	"charm.land/fantasy"
+ 	"charm.land/fantasy/providers/openai"
+@@ -27,6 +28,10 @@ type Option = func(*options)
+ 
+ // New creates a new OpenRouter provider with the given options.
+ func New(opts ...Option) (fantasy.Provider, error) {
++	// OpenRouter support is removed by no-openrouter.patch (runCrushInContainer,
++	// PATCH_OUT_OPENROUTER): a cloud LLM gateway (https://openrouter.ai) is
++	// out-of-design for the local-model-first setup.
++	return nil, errors.New("openrouter provider removed by no-openrouter.patch (rebuild with PATCH_OUT_OPENROUTER=0 to restore)")
+ 	providerOptions := options{
+ 		openaiOptions: []openai.Option{
+ 			openai.WithName(Name),

@@ -1,9 +1,12 @@
 # Dependency network audit — every vendored Go module, classified for airgap egress
 
-**Status:** analysis complete (2026-08-29) — all 213 modules triaged, all 66 flagged modules
-deep-audited at source. **All decisions D1–D12 confirmed by the maintainer (William Emerison Six
-<billsix@gmail.com>, 2026-08-29)**, defaults as listed in the flag index (§5). Patches/flags are
-**designed, not yet implemented** — see `tasks/implement-egress-patch-flags.md`.
+**Status:** analysis complete AND **implemented** (2026-08-29) — all 213 modules triaged, all 66
+flagged modules deep-audited at source; all decisions D1–D12 confirmed by the maintainer (William
+Emerison Six <billsix@gmail.com>, 2026-08-29), defaults as in the flag index (§5). The patches
+exist in `client/patches/`, wired through `client/entrypoint/03-build-crush.sh` /
+`client/Dockerfile` / `client/Makefile` (work record: `tasks/implement-egress-patch-flags.md`).
+Where an entry below describes patch *mechanics*, the implemented shape is authoritative — see the
+"implemented as" notes; the audit's `file:line` findings themselves are unchanged.
 **Audited version:** Crush **v0.89.0** (commit `ba531a409ab68f91144c80eafae8b952daa35a0d`), the
 `CRUSH_TAG` pin in `client/Makefile` — 213 vendored modules per `vendor/modules.txt`.
 **Re-audit on any `CRUSH_TAG` bump.** Re-sync check: compare
@@ -24,8 +27,7 @@ unpatched, so the airgap box can build every combination.
 
 ## 1. Network functionality intentionally KEPT (and why)
 
-_The deliberate online surface — what will (harmlessly) reach for the network, and why it stays.
-Patch files are named per the follow-on implementation task; none exist yet._
+_The deliberate online surface — what will (harmlessly) reach for the network, and why it stays._
 
 - **D1 — Web tools · KEEP · `PATCH_OUT_WEB_TOOLS ?= 0` · `client/patches/no-web-tools.patch`.**
   The task doc's "web search" turned out to be a **family of five** default-enabled tools:
@@ -33,9 +35,12 @@ Patch files are named per the follow-on implementation task; none exist yet._
   `fetch` + `download` (arbitrary URL GET, scheme-guarded), and `agentic_fetch` (sub-agent
   wrapping search+fetch, `internal/agent/agentic_fetch_tool.go:165-172`). Kept because they are
   user/model-initiated features genuinely useful on an online network; offline they fail with an
-  ordinary network error, harmlessly. The patch (when flipped to `1`) removes the registrations +
-  tool files, which also unlinks `html-to-markdown`/`goquery`. Interim no-patch mitigation: the
-  crushrc `deny` verb (`options.disabled_tools`) filters the tool list without a rebuild.
+  ordinary network error, harmlessly. Implemented as: the patch (when flipped to `1`) removes the
+  tool *registrations* (`coordinator.go` buildTools + the `allToolNames()` entries) — the tool
+  files stay compiled because the UI layer switches on their name constants, so
+  `html-to-markdown`/`goquery` remain in the binary (they are NO-EGRESS libs, §4.5; the egress
+  belongs to the tools). No-patch alternative: the crushrc `deny` verb
+  (`options.disabled_tools`) filters the tool list without a rebuild.
 - **D2 — Sourcegraph tool · KEEP · `PATCH_OUT_SOURCEGRAPH ?= 0` ·
   `client/patches/no-sourcegraph.patch`.** Public-code search against the hardcoded
   `https://sourcegraph.com/.api/graphql` (`internal/agent/tools/sourcegraph.go:113`). Its own
@@ -61,22 +66,28 @@ Patch files are named per the follow-on implementation task; none exist yet._
   replace — the existing `CRUSH_DISABLE_METRICS=1 DO_NOT_TRACK=1` env and `option metrics false`.
   The gate is proven total (§4.3), so this one patch covers every emitter.
 - **D5 — Google/Vertex providers · REMOVE · `PATCH_OUT_GOOGLE_PROVIDER ?= 1` ·
-  `client/patches/no-google-provider.patch`.** Cut A + Cut B of §4.1 (Crush's google provider
-  wiring + vendored-fantasy edits: the google package's re-imports in openrouter/vercel hooks and
-  the Vertex branch of the anthropic provider). Drops from the binary: `google.golang.org/genai`,
-  `cloud.google.com/go/{auth,civil,compute/metadata}`, `google.golang.org/api`, `grpc`,
-  `s2a-go`, `gax-go`, `x/oauth2/google` subpackages — and orphans the whole OTel tree,
-  `gorilla/websocket`, `httpsnoop`. Out-of-design (maintainer, 2026-08-29); also eliminates the
-  GCE metadata-probe risk class entirely.
+  `client/patches/no-google-provider.patch`.** Implemented as a **vendored-fantasy-only** patch
+  (Crush untouched — cleaner than the §4.1 Crush-side cut lists, because the SDK imports live in
+  fantasy): (a) `providers/google` is gutted to a stub (`google_removed.go` keeps the exported
+  surface — Name, Option, With*, New→error, GetReasoningMetadata — and `provider_options.go`,
+  which has no genai dependency, is kept), so Crush and the openrouter/vercel hooks compile
+  unchanged; (b) `providers/anthropic` loses its Vertex branch (imports replaced by marker
+  comments, block replaced by an erroring guard). Drops from the binary:
+  `google.golang.org/genai`, `cloud.google.com/go/{auth,civil,compute/metadata}`,
+  `google.golang.org/api`, `grpc`, `s2a-go`, `gax-go`, `x/oauth2/google` subpackages — and orphans
+  the OTel tree, `gorilla/websocket`, `httpsnoop`. Out-of-design (maintainer, 2026-08-29); also
+  eliminates the GCE metadata-probe risk class entirely.
 - **D6 — Bedrock/AWS · REMOVE · `PATCH_OUT_BEDROCK_AWS ?= 1` ·
-  `client/patches/no-bedrock-aws.patch`.** Vendored-fantasy patch (strip
-  `providers/anthropic/anthropic.go:288-306` + `providers/anthropic/bedrock.go` + the two AWS
-  imports) plus Crush's bedrock wiring (`coordinator.go:1029-1056,1136-1137`, `agent.go:1488-1490`,
-  delete `internal/agent/aws_sso_refresh.go`). Drops all 9 `aws-sdk-go-v2` modules + `smithy-go`,
-  and the IMDS (`169.254.169.254`) risk class. Same out-of-design rationale as D5.
-- **D7 — Azure · REMOVE · `PATCH_OUT_AZURE ?= 1` · `client/patches/no-azure.patch`.** The clean
-  one-file Crush cut (§4.2; `coordinator.go:46,414,1006-1027,1134-1135` — `:414` edited, not
-  deleted). Drops `azcore` + `sdk/internal` (+ `openai-go/v3/azure`).
+  `client/patches/no-bedrock-aws.patch`.** Implemented as a **vendored-fantasy-only** patch: strip
+  the `useBedrock` branch of `providers/anthropic` (erroring guard), delete
+  `providers/anthropic/bedrock.go`, and replace the two AWS imports with marker comments. Crush is
+  untouched — its `providers/bedrock` wrapper and `aws_sso_refresh.go` (local `exec`, no network)
+  compile but end at the guard. Drops all 9 `aws-sdk-go-v2` modules + `smithy-go`, and the IMDS
+  (`169.254.169.254`) risk class. Same out-of-design rationale as D5.
+- **D7 — Azure · REMOVE · `PATCH_OUT_AZURE ?= 1` · `client/patches/no-azure.patch`.** Implemented
+  as a stub of vendored `fantasy/providers/azure` (New→error, the `openai-go/v3/azure` import
+  dropped; option surface kept), rather than the §4.2 Crush-side cut — zero Crush edits. Drops
+  `azcore` + `sdk/internal` (+ `openai-go/v3/azure`).
 - **D8 — `crush update-providers` · PATCH OUT · `PATCH_OUT_UPDATE_PROVIDERS_CMD ?= 1` ·
   `client/patches/no-update-providers-cmd.patch`.** The one catwalk path the
   `default-providers false` gate does not cover (`internal/config/provider.go:60,67`, via
@@ -85,28 +96,29 @@ Patch files are named per the follow-on implementation task; none exist yet._
   Default confirmed **patch out** by the maintainer (2026-08-29).
 - **D9 — OpenRouter provider · REMOVE · `PATCH_OUT_OPENROUTER ?= 1` ·
   `client/patches/no-openrouter.patch`.** Cloud LLM gateway (`https://openrouter.ai/api/v1`,
-  forced — `fantasy/providers/openrouter/openrouter.go:20,33`). Crush-side cut:
-  `coordinator.go:470-480` (options case), `:861-865`, `:941-952` (constructor), `:1130`
-  (dispatch), `agent.go:1875-1894` + the two imports. Leaves `fantasy/providers/openrouter`
-  unimported → uncompiled (which also drops one of the google/anthropic re-import hooks, §4.1).
+  forced — `fantasy/providers/openrouter/openrouter.go:20,33`). Implemented as an erroring guard
+  at the top of vendored `fantasy/providers/openrouter` `New()` — no SDK weight is involved, so a
+  minimal reversible guard beats an import cut; a configured openrouter-typed provider fails with
+  an explicit error. (The package stays compiled; its egress needs `New()`.)
 - **D10 — Vercel provider · REMOVE · `PATCH_OUT_VERCEL ?= 1` ·
   `client/patches/no-vercel.patch`.** Cloud gateway (`https://ai-gateway.vercel.sh/v1`, forced —
-  `fantasy/providers/vercel/vercel.go:19,32`). Cut: `coordinator.go:483-493`, `:955-966`,
-  `:1132`, `agent.go:1491-1492` + imports. Same hook-drop side effect as D9.
+  `fantasy/providers/vercel/vercel.go:19,32`). Same shape as D9: erroring guard in vendored
+  `fantasy/providers/vercel` `New()`.
 - **D11 — Hyper provider · REMOVE · `PATCH_OUT_HYPER ?= 1` · `client/patches/no-hyper.patch`.**
-  Charm's hosted provider (`https://hyper.charm.land` — `internal/agent/hyper/provider.go:43`),
-  its catalog/credits fetches (`internal/config/hyper.go:143-147`,
-  `internal/config/provider.go:206-230`), its device-flow OAuth (`internal/oauth/hyper/`), and the
-  `x-crush-id` telemetry header (`coordinator.go:1146`). Cut: `coordinator.go:1142-1148` + the
-  hyper cases at `:516,541`, `:322,1447`; delete `internal/agent/hyper/`, `internal/oauth/hyper/`,
-  `internal/config/hyper.go`, `internal/ui/dialog/oauth_hyper.go`. Was already dormant via
-  `default-providers false`; now compiled out.
+  Charm's hosted provider (`https://hyper.charm.land`). Implemented as **guards at every egress
+  chokepoint** rather than package deletion (the hyper wiring spans config/UI/login across many
+  files — the audit's delete-the-packages cut list was incomplete): the device-flow OAuth
+  (`internal/oauth/hyper/device.go`: InitiateDeviceAuth, pollOnce, ExchangeToken,
+  IntrospectToken), the catalog fetch (`internal/config/hyper.go` doGet), the credits fetch
+  (`internal/agent/hyper/provider.go` FetchCredits), and the LLM proxy path + `x-crush-id` header
+  (`coordinator.go` hyper case; the now-unused `internal/event` import goes with it). Was already
+  dormant via `default-providers false`; now no request to hyper.charm.land can be built.
 - **D12 — Copilot OAuth/provider · REMOVE · `PATCH_OUT_COPILOT ?= 1` ·
   `client/patches/no-copilot.patch`.** GitHub device-flow OAuth
   (`internal/oauth/copilot/oauth.go:20-22` — `github.com/login/*`,
-  `api.github.com/copilot_internal/v2/token`). Cut: delete `internal/oauth/copilot/` +
-  `internal/ui/dialog/oauth_copilot.go`, the copilot case at `coordinator.go:978-987`, and the
-  error-message link at `agent.go:1165`. Was reachable only via explicit `crush auth`.
+  `api.github.com/copilot_internal/v2/token`). Implemented as guards on the three request
+  builders (RequestDeviceCode, tryGetToken, getCopilotToken) — which also disables the Copilot
+  provider's token-refresh client. Was reachable only via explicit `crush auth`.
 
 (D9–D12 confirmed patch-out-by-default by the maintainer, 2026-08-29 — overriding the audit's
 initial document-only lean: out-of-design for the local-first setup, same class as D5–D7.)
@@ -450,8 +462,10 @@ From the feature-map reader (verified on key lines). Crush's own external-endpoi
 
 ## 5. Flag index
 
-One row per decision flag (all designed; wiring lands with the follow-on implementation task —
-this table must be kept matching what `client/entrypoint/03-build-crush.sh` actually wires):
+One row per decision flag — implemented and wired (2026-08-29) through
+`client/entrypoint/03-build-crush.sh` (flag-guarded `git apply --unidiff-zero`, both build modes),
+`client/Dockerfile` (ARGs, semantic defaults), and `client/Makefile` (`?=` defaults +
+`--build-arg` threading). Keep this table matching that wiring:
 
 | flag | default | patch file | effect when `1` |
 |---|---|---|---|
@@ -469,9 +483,13 @@ this table must be kept matching what `client/entrypoint/03-build-crush.sh` actu
 | `PATCH_OUT_COPILOT` | `1` (out) | `no-copilot.patch` | GitHub Copilot device-flow OAuth + provider case gone |
 | `CRUSH_AT_IMPORT` | `1` (applied) | `crush-at-import.patch` | (existing feature patch, unchanged semantics) |
 
-Patches sharing files (several touch `coordinator.go` / `agent.go`) must remain **independently
-applicable in any flag combination** — an implementation invariant, see
-`tasks/implement-egress-patch-flags.md`.
+Patches sharing files must remain **independently applicable AND reversible in any flag
+combination** — proven by `tasks/adhoc/implement-egress-patch-flags/sweep_patch_combos.sh`
+(42 combinations, byte-identical restore). Authoring invariants for any future patch: use
+zero-context hunks where patches share a file, and **never bare-delete a line — replace it with a
+unique marker comment** so the hunk is anchored in BOTH directions (a bare deletion's reverse is
+an unanchored insertion, which mis-placed re-added import lines until fixed on 2026-08-29). Apply
+with `git apply --unidiff-zero`, in the canonical order listed in `03-build-crush.sh`.
 
 ## 6. Airgap posture summary
 

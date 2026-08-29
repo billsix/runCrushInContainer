@@ -16,14 +16,15 @@ building/running the *server* there is the operator's own concern — this task 
 *provides*, not a specific serve setup. The core mechanism (`go mod vendor` + `GOPROXY=off go build
 -mod=vendor`) is already proven in isolation; this is the full-system, real-hardware proof.
 
-**Finding (2026-08-29, from the dependency-audit work): the on-disk `client/vendor/crush` tree
-predates `crush-no-update-check.patch` (added 2026-08-27) — only the `@`-import patch is applied
-(`git status` in the tree shows just `internal/agent/prompt/prompt.go` modified).** Under the
-current build model (vendored path applies no patches), a `make image CRUSH_VENDORED=1` from this
-tree builds a Crush **with** the startup update check. Resolution: the patch-model revision decided
-in `tasks/archive/2026/08/29/audit-dependency-network-egress.md` (vendor unpatched, apply ALL patches flag-guarded at
-build time) fixes this class of drift; until that lands, re-run `make vendor` before an airgap
-rebuild, or accept the update-check call (it fails harmlessly offline).
+**Update (2026-08-29): the patch model changed under this task — verify the NEW flow.** The
+vendored tree is now COMPLETE and UNPATCHED (`vendor-crush.sh` applies no patches; the earlier
+stale-tree drift, where the on-disk tree predated `crush-no-update-check.patch`, is resolved — the
+tree was regenerated pristine). ALL thirteen patches apply at build time in
+`entrypoint/03-build-crush.sh`, each behind a `PATCH_OUT_<X>` / `CRUSH_AT_IMPORT` flag (see
+`tasks/reference/dependency-network-audit.md` §5 and `tasks/implement-egress-patch-flags.md`). So
+the offline rebuild this task verifies now also exercises the flag-guarded patch application; a
+default-flag `make image CRUSH_VENDORED=1` plus a live-chat smoke test here also closes the
+remaining gate of `tasks/implement-egress-patch-flags.md`.
 
 ## Steps
 

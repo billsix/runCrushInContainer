@@ -24,10 +24,46 @@ CRUSH_TAG ?= v0.89.0
 # Apply the local `@`-import patch to Crush at build time (client/patches/, see
 # tasks/archive/2026/08/21/patch-crush-for-at-imports.md): makes a `@path` on its own line in a context file
 # (CLAUDE.md/AGENTS.md/CRUSH.md) recursively splice that file's contents in. Default ON here;
-# `make image CRUSH_AT_IMPORT=0` builds stock upstream Crush instead. A patched build compiles
-# Crush from a git checkout rather than `go install …@tag` (which can't be patched); expect a
-# longer build. Re-verify the patch on every CRUSH_TAG bump (see the task doc).
+# `make image CRUSH_AT_IMPORT=0` builds without the feature (the egress patches below still
+# apply per their own flags). Re-verify the patch on every CRUSH_TAG bump (see the task doc).
 CRUSH_AT_IMPORT ?= 1
+
+# ---- Egress patch flags: one per decision, defaults encode the audit's disposition ----
+# From the dependency network audit (../tasks/reference/dependency-network-audit.md, D1-D12).
+# Each PATCH_OUT_<X> guards one patch in client/patches/, applied at BUILD time by
+# entrypoint/03-build-crush.sh identically in both build modes (online clone and
+# CRUSH_VENDORED=1) — the vendored tree stays complete and unpatched, so every flag
+# combination builds, offline included.
+#   1 = patched OUT by default  (unsolicited phone-home + out-of-design cloud providers)
+#   0 = KEPT by default         (useful user-initiated online features)
+# Flip any single decision, e.g.:
+#   make image PATCH_OUT_WEB_TOOLS=1        # hardened build: no web tools
+#   make image PATCH_OUT_GOOGLE_PROVIDER=0  # restore the Gemini/Vertex providers
+PATCH_OUT_UPDATE_CHECK         ?= 1
+PATCH_OUT_TELEMETRY            ?= 1
+PATCH_OUT_UPDATE_PROVIDERS_CMD ?= 1
+PATCH_OUT_WEB_TOOLS            ?= 0
+PATCH_OUT_SOURCEGRAPH          ?= 0
+PATCH_OUT_GOOGLE_PROVIDER      ?= 1
+PATCH_OUT_BEDROCK_AWS          ?= 1
+PATCH_OUT_AZURE                ?= 1
+PATCH_OUT_OPENROUTER           ?= 1
+PATCH_OUT_VERCEL               ?= 1
+PATCH_OUT_HYPER                ?= 1
+PATCH_OUT_COPILOT              ?= 1
+PATCH_FLAGS = \
+	--build-arg PATCH_OUT_UPDATE_CHECK=$(PATCH_OUT_UPDATE_CHECK) \
+	--build-arg PATCH_OUT_TELEMETRY=$(PATCH_OUT_TELEMETRY) \
+	--build-arg PATCH_OUT_UPDATE_PROVIDERS_CMD=$(PATCH_OUT_UPDATE_PROVIDERS_CMD) \
+	--build-arg PATCH_OUT_WEB_TOOLS=$(PATCH_OUT_WEB_TOOLS) \
+	--build-arg PATCH_OUT_SOURCEGRAPH=$(PATCH_OUT_SOURCEGRAPH) \
+	--build-arg PATCH_OUT_GOOGLE_PROVIDER=$(PATCH_OUT_GOOGLE_PROVIDER) \
+	--build-arg PATCH_OUT_BEDROCK_AWS=$(PATCH_OUT_BEDROCK_AWS) \
+	--build-arg PATCH_OUT_AZURE=$(PATCH_OUT_AZURE) \
+	--build-arg PATCH_OUT_OPENROUTER=$(PATCH_OUT_OPENROUTER) \
+	--build-arg PATCH_OUT_VERCEL=$(PATCH_OUT_VERCEL) \
+	--build-arg PATCH_OUT_HYPER=$(PATCH_OUT_HYPER) \
+	--build-arg PATCH_OUT_COPILOT=$(PATCH_OUT_COPILOT)
 
 # Offline/airgap vendoring (see tasks/vendor-build-sources-for-airgap-rebuild.md). `make vendor`
 # (ONLINE) pre-fetches the Crush source + all its Go module deps into $(VENDOR_DIR)/crush; then
@@ -127,11 +163,12 @@ endif
 all: image ## Build the image
 
 .PHONY: image
-image: ## build the client image: full toolchain + Crush built from source (pinned CRUSH_TAG). CRUSH_VENDORED=1 builds offline from ./vendor
+image: ## build the client image: full toolchain + Crush built from source (pinned CRUSH_TAG). CRUSH_VENDORED=1 builds offline from ./vendor; PATCH_OUT_<X>=0/1 flips any egress patch (see the flag block above)
 	$(CONTAINER_CMD) build -t $(CONTAINER_NAME) \
 		--build-arg CRUSH_TAG=$(CRUSH_TAG) \
 		--build-arg CRUSH_AT_IMPORT=$(CRUSH_AT_IMPORT) \
 		--build-arg VENDOR_TOOLS=$(VENDOR_TOOLS) \
+		$(PATCH_FLAGS) \
 		$(CRUSH_VENDOR_FLAGS) .
 
 .PHONY: vendor

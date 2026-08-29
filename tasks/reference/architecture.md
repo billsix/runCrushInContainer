@@ -120,14 +120,34 @@ SSH tunnel:
     for visibility. (Prompts/responses were never sent — usage metadata only — but it's off regardless.)
   - **GitHub update check → `api.github.com/.../releases/latest`** (unconditional `go
     app.checkForUpdates(ctx)` in `internal/app/app.go`) — no built-in off switch, so disabled by
-    `client/patches/crush-no-update-check.patch`, **always applied (no build flag)** in both build
-    paths (Dockerfile RUN + `vendor-crush.sh` for the offline tree). **Consequence:** because a patch
-    needs a source tree, EVERY non-vendored build now clones + builds from source — the old plain
-    `go install …@tag` path is gone, and `CRUSH_AT_IMPORT=0` now means "source build without the
-    `@`-import patch" (the update-check patch is still applied), not "stock upstream".
+    `client/patches/crush-no-update-check.patch`, now behind `PATCH_OUT_UPDATE_CHECK ?= 1` (see the
+    patch/flag system below). **Consequence:** because a patch needs a source tree, EVERY build
+    clones (or copies the vendored checkout) + builds from source — the old plain
+    `go install …@tag` path is gone.
   - Already silent, no action: `catwalk.charm.land` (provider catalog — the catwalk fetch is skipped
-    when `option default-providers false` is set, source-verified `provider.go:176`) and
-    `hyper.charm.land` (unused hosted provider). Re-verify both patches apply on each `CRUSH_TAG` bump.
+    when `option default-providers false` is set, source-verified `provider.go:175,186-188`; the one
+    ungated path, `crush update-providers`, is removed by `PATCH_OUT_UPDATE_PROVIDERS_CMD ?= 1`) and
+    `hyper.charm.land` (guarded out by `PATCH_OUT_HYPER ?= 1`).
+- **The egress patch/flag system (2026-08-29):** the dependency network audit
+  (`tasks/reference/dependency-network-audit.md`, decisions D1–D12) produced **thirteen build-time
+  patches** in `client/patches/`, each behind its own defaulted flag (`PATCH_OUT_<X>`, plus the
+  `CRUSH_AT_IMPORT` feature flag). Defaults encode the audit's disposition: phone-home
+  (telemetry, update check), the ungated catwalk command, and the out-of-design cloud providers
+  (Google/Vertex, Bedrock/AWS, Azure, OpenRouter, Vercel, Hyper, Copilot) are **patched out by
+  default**; the web tools and sourcegraph are **kept by default**. `entrypoint/03-build-crush.sh`
+  applies the flag-selected patches identically in BOTH build modes (online clone+`go mod vendor`,
+  or the pre-vendored tree), then builds `GOPROXY=off go build -mod=vendor`; vendor-dep patches are
+  possible because both modes build from a `vendor/` tree. `vendor-crush.sh` applies **no patches**
+  — the vendored tree is complete and unpatched so any flag combination builds offline. With
+  default flags the binary drops from 131.6 MB to 113.8 MB (the cloud SDK families un-compiled).
+  Patch-authoring invariant: patches sharing files use zero-context hunks
+  (`git apply --unidiff-zero`) and **never bare-delete a line another patch's hunks sit next to —
+  deleted import lines are replaced by unique marker comments** so every hunk is anchored in both
+  directions (a bare-deletion's reverse is an unanchored insertion; that mis-ordered re-added
+  imports until fixed, 2026-08-29). Verified by
+  `tasks/adhoc/implement-egress-patch-flags/sweep_patch_combos.sh`: 42 flag combinations applied,
+  reversed, byte-identical, and the interacting-group combinations compiled. Re-verify all patches
+  on each `CRUSH_TAG` bump.
 
 ## Offline / airgap rebuild — vendoring (2026-08-22)
 
@@ -156,11 +176,12 @@ vendoring only guarantees the sources are present and offline-buildable. `server
     `FULL_MODEL_REPO` (set explicitly, or preset by `FULL=1`) to the server `make vendor` → `pull` (see
     the multi-quant record: `tasks/archive/2026/08/22/vendor-multiple-glimmer-quants.md`).
 - **Client (Crush):** `make vendor` (ONLINE) runs `client/entrypoint/vendor/vendor-crush.sh` inside
-  the built image — full clone of Crush @ `CRUSH_TAG`, `git apply` the patches (crush-no-update-check
-  always, crush-at-import when `CRUSH_AT_IMPORT=1`), `go mod vendor` — landing a build-ready checkout
-  at `client/vendor/crush` (host). Then, on the airgap box,
-  `make image CRUSH_VENDORED=1` bind-mounts it (`podman build --volume …:/vendor/crush:ro`) and builds
-  `GOPROXY=off go build -mod=vendor` — no network. `client/vendor/` is gitignored and kept out of the
+  the built image — full clone of Crush @ `CRUSH_TAG` + `go mod vendor`, **no patches** (the tree is
+  the complete unpatched source of truth; all patches apply at build time, flag-guarded — see the
+  patch/flag system above) — landing the checkout at `client/vendor/crush` (host). Then, on the
+  airgap box, `make image CRUSH_VENDORED=1` bind-mounts it (`podman build --volume
+  …:/vendor/crush:ro`), applies the flag-selected patches, and builds
+  `GOPROXY=off go build -mod=vendor` — no network, any flag combination. `client/vendor/` is gitignored and kept out of the
   online build context by `client/.dockerignore` (the offline build mounts it instead).
 - **`hf` is vendoring-only, flag-gated:** the `hf` CLI (for the GGUF download) is installed by
   `client/entrypoint/02-install-vendor-tools.sh` (which prefers the `python3-huggingface-hub` dnf package

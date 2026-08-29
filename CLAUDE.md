@@ -95,10 +95,15 @@ The full working-method machinery is now **ported and in use** (Phases 0–4, 20
   bash "$@"`. Cross-project fan-out + design: `github.com/billsix/runClaudeInContainer`
   `tasks/add-shell-exec-target.md` and `.../fan-out-shell-exec-to-projects.md`. The general template
   contract for this lives in the personal overlay (`ai-coding-conventions.personal.md`), not here.
-- **two local Crush patches** (`client/patches/`): `crush-at-import.patch` (gated on
-  `CRUSH_AT_IMPORT`) and `crush-no-update-check.patch` (**always applied** — disables the startup
-  GitHub update check; see below). Because a patch needs a source tree, every non-vendored build now
-  clones + builds Crush from source (no plain `go install …@tag`).
+- **thirteen local Crush patches** (`client/patches/`), each behind its own defaulted build flag:
+  `crush-at-import.patch` (`CRUSH_AT_IMPORT ?= 1`) plus twelve `PATCH_OUT_<X>` egress patches from
+  the dependency network audit (update check, telemetry, `update-providers`, web tools, sourcegraph,
+  Google/Vertex, Bedrock/AWS, Azure, OpenRouter, Vercel, Hyper, Copilot — defaults per
+  `tasks/reference/dependency-network-audit.md` §5). ALL patches apply at **build time** in
+  `client/entrypoint/03-build-crush.sh`, identically in both build modes; `vendor-crush.sh` vendors
+  the **complete unpatched** tree so any flag combination builds offline. Every build clones (or
+  copies the vendored tree) + builds from source (no plain `go install …@tag`). Combination-tested by
+  `tasks/adhoc/implement-egress-patch-flags/sweep_patch_combos.sh`.
 - **no telemetry / no phone-home** — PostHog telemetry (`data.charm.land`) off via Dockerfile
   `ENV CRUSH_DISABLE_METRICS=1 DO_NOT_TRACK=1` + `option metrics false`; the GitHub update check off
   via `crush-no-update-check.patch`. See `tasks/disable-crush-telemetry.md`. That covers **Crush's own
@@ -148,10 +153,11 @@ lowest priority-number, then lowest difficulty-number):
   update-check disabled in the client image (implemented + staged 2026-08-27). **Blocked on** a
   real-machine image-rebuild + runtime egress check (folds into `verify-auto-allow-file-tools.md`);
   `/recheck-blocked` tests it. Last gate before archive.
-- `implement-egress-patch-flags.md` (P3/D6, proposed) — implement the dependency-network audit's
-  twelve confirmed decisions: rewrite `vendor-crush.sh` (vendor complete + unpatched) +
-  `03-build-crush.sh` (ALL patches flag-guarded at build time, both paths), author the eleven new
-  per-concern patches, thread the `PATCH_OUT_<X>` build-args. Findings + flag index:
+- `implement-egress-patch-flags.md` (P3/D6, **implemented 2026-08-29**) — the audit's thirteen
+  flag-guarded build-time patches are authored, combination-tested (42-combo sweep), and wired
+  through `03-build-crush.sh`/Dockerfile/Makefile; `vendor-crush.sh` now vendors complete +
+  unpatched. Remaining gate: one real-machine default-flag `make image` (rides with
+  `verify-vendored-airgap-rebuild.md`). Findings + flag index:
   `tasks/reference/dependency-network-audit.md`.
 - `decide-egress-verification.md` (P6/D3, proposed) — decide whether the audit needs an enforced
   runtime egress check (strace/tcpdump or firewall permitting only the local model endpoint), or

@@ -1,0 +1,54 @@
+Strip the sourcegraph code-search tool (PATCH_OUT_SOURCEGRAPH, default 0 = kept).
+
+Removes every registration of the sourcegraph tool — the Coder tool list
+(internal/agent/coordinator.go), the agentic_fetch sub-agent tool list
+(internal/agent/agentic_fetch_tool.go), and the config name lists
+(internal/config/config.go) — so nothing can invoke its hardcoded
+https://sourcegraph.com/.api/graphql endpoint. The tool file stays compiled
+(UI code switches on its name constant); only construction is removed.
+
+diff --git a/internal/agent/agentic_fetch_tool.go b/internal/agent/agentic_fetch_tool.go
+index 72e61705..333e309c 100644
+--- a/internal/agent/agentic_fetch_tool.go
++++ b/internal/agent/agentic_fetch_tool.go
+@@ -169,7 +169,6 @@ func (c *coordinator) agenticFetchTool(_ context.Context, client *http.Client) (
+ 				webSearchTool,
+ 				tools.NewGlobTool(tmpDir, c.cfg.Config().Tools.Glob),
+ 				tools.NewGrepTool(tmpDir, c.cfg.Config().Tools.Grep),
+-				tools.NewSourcegraphTool(client),
+ 				tools.NewViewTool(c.lspManager, c.permissions, c.filetracker, nil, tmpDir),
+ 			}
+ 
+diff --git a/internal/agent/coordinator.go b/internal/agent/coordinator.go
+index 5a7b3f8f..463b8512 100644
+--- a/internal/agent/coordinator.go
++++ b/internal/agent/coordinator.go
+@@ -724,7 +724,6 @@ func (c *coordinator) buildTools(ctx context.Context, agent config.Agent, isSubA
+ 		tools.NewGlobTool(c.cfg.WorkingDir(), c.cfg.Config().Tools.Glob),
+ 		tools.NewGrepTool(c.cfg.WorkingDir(), c.cfg.Config().Tools.Grep),
+ 		tools.NewLsTool(c.permissions, c.cfg.WorkingDir(), c.cfg.Config().Tools.Ls),
+-		tools.NewSourcegraphTool(nil),
+ 		tools.NewTodosTool(c.sessions),
+ 		tools.NewViewTool(c.lspManager, c.permissions, c.filetracker, c.skillTracker, c.cfg.WorkingDir(), c.cfg.Config().Options.SkillsPaths...),
+ 		tools.NewWriteTool(c.lspManager, c.permissions, c.history, c.filetracker, c.cfg.WorkingDir()),
+diff --git a/internal/config/config.go b/internal/config/config.go
+index 61bac6fc..7bc8ce84 100644
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -809,7 +809,6 @@ func allToolNames() []string {
+ 		"grep",
+ 		"ls",
+ 		"question",
+-		"sourcegraph",
+ 		"todos",
+ 		"view",
+ 		"write",
+@@ -827,7 +826,7 @@ func resolveAllowedTools(allTools []string, disabledTools []string) []string {
+ }
+ 
+ func resolveReadOnlyTools(tools []string) []string {
+-	readOnlyTools := []string{"glob", "grep", "ls", "lsp_call_hierarchy", "lsp_definition", "lsp_symbols", "sourcegraph", "view"}
++	readOnlyTools := []string{"glob", "grep", "ls", "lsp_call_hierarchy", "lsp_definition", "lsp_symbols", "view"}
+ 	// filter to only include tools that are in allowedtools (include mode)
+ 	return filterSlice(tools, readOnlyTools, true)
+ }

@@ -1,7 +1,10 @@
 # Implement the egress patch/flag system from the dependency network audit
 
-**Status:** proposed — needs go-ahead. (The audit's open questions were all answered 2026-08-29:
-D2 keep-by-default; D8 and D9–D12 patch-out-by-default — nothing else blocks this task.)
+**Status:** IMPLEMENTED (2026-08-29) — all thirteen patches authored and combination-tested, both
+scripts rewritten, flags wired through Dockerfile + Makefile, docs reconciled. **Remaining before
+archive:** one real-machine `make image` with default flags (the ~22 GB image exceeds the sandbox's
+nested-podman RAM store) — same machine visit as `tasks/verify-vendored-airgap-rebuild.md`, which
+now exercises exactly this build path; a live-chat smoke test rides along there too.
 **Priority:** 3
 **Difficulty:** 6
 **Created:** 2026-08-29 (William Emerison Six <billsix@gmail.com>)
@@ -51,23 +54,44 @@ Key mechanics established by the audit (do not re-derive):
 
 ## Plan
 
-- [ ] Rewrite `vendor-crush.sh`: clone + `go mod vendor` only, no patches; regenerate
-      `client/vendor/crush`.
-- [ ] Author the eleven new patch files (D1, D2, D4–D12 per the reference doc's file:line lists);
-      keep the two existing ones. **Invariant: patches sharing files (`coordinator.go`,
-      `agent.go` are touched by several) must apply cleanly in EVERY flag combination and in a
-      fixed order** — verify with `git apply --check` sweeps over representative combinations,
-      not just all-on/all-off.
-- [ ] Move ALL patch application into `03-build-crush.sh`, flag-guarded, identical in both paths;
-      thread ARGs/defaults through Dockerfile and Makefile (defaults per the flag index).
-- [ ] Verify: default-flag build succeeds (nested, `--cgroups=disabled --network=host`); at least
-      one non-default combination builds (e.g. `PATCH_OUT_WEB_TOOLS=1`); binary smoke-checks
-      against a stub OpenAI endpoint; `git apply --check` passes for every patch against the fresh
-      unpatched tree.
-- [ ] Update the reference doc's flag index if any name/default shifted during implementation, and
-      `CLAUDE.md`'s patches bullet (it currently documents the old vendor-time model).
+- [x] Rewrite `vendor-crush.sh`: clone + `go mod vendor` only, no patches. The on-disk
+      `client/vendor/crush` was restored to pristine by reverting the old baked-in patches and
+      then regenerated via `go mod vendor` from the hash-verified module cache (gitignored, so
+      nothing to commit).
+- [x] Author the eleven new patch files; keep the two existing ones. Each was authored by editing
+      the pristine tree, compiling (`GOPROXY=off go build -mod=vendor`), capturing `git diff`, and
+      reverting — so every patch alone is compile-proven.
+- [x] Move ALL patch application into `03-build-crush.sh`, flag-guarded, identical in both modes
+      (the online mode now runs `go mod vendor` after clone so vendored-dep patches apply there
+      too); ARGs/defaults threaded through Dockerfile + Makefile per the flag index.
+- [x] Verify: `tasks/adhoc/implement-egress-patch-flags/sweep_patch_combos.sh` — 42 flag
+      combinations applied + reversed + byte-identical (all singles; none/default/all compiled;
+      the full power sets of the three file-sharing patch groups compiled; 10 random mixes).
+      `03-build-crush.sh` run end-to-end in vendored mode with default flags: builds offline,
+      `crush --version` reports v0.89.0, `--help` runs; default binary 113.8 MB vs 131.6 MB
+      pristine (the cloud SDK families un-compiled). Both scripts shellcheck-clean.
+- [x] Docs reconciled: reference doc §§1–2/5 ("implemented as" notes + invariants), CLAUDE.md
+      patches bullet, `architecture.md` (patch/flag system section), `crush-capabilities.md`.
+- [ ] Real-machine `make image` with default flags + a live-chat smoke test (with
+      `tasks/verify-vendored-airgap-rebuild.md`).
 
 ## Notes / decisions
+
+- **Patch shapes deviate from the audit's cut lists, deliberately** (recorded per-decision in the
+  reference doc §2): D5/D6/D7 patch **vendored fantasy only** (stub/guard; Crush untouched) —
+  the SDK imports live there, and the audit's Crush-side lists missed that the tool files/name
+  constants and hyper/copilot wiring are load-bearing for the UI. D1/D2 cut registrations, not
+  files. D9/D10 are `New()` guards (no SDK weight to shed). D11/D12 guard the egress chokepoint
+  functions.
+- **Patch-authoring invariant learned the hard way:** a bare-deletion hunk's REVERSE is an
+  unanchored insertion — with zero-context hunks, `git apply -R` mis-ordered re-added adjacent
+  import lines, silently corrupting the tree (caught by the sweep's byte-identity check; the
+  first sweep runs failed nondeterministically because their baselines had captured the corrupted
+  state). Fix: never bare-delete a line in a shared file — replace it with a unique marker
+  comment, so both directions anchor. The vendor tree was then regenerated from the module cache
+  to guarantee pristine.
+- The `crush --version` output carries a `+dirty` suffix (Go VCS stamping sees the patched
+  worktree). The old model had the same behavior (patches were applied before vendoring); cosmetic.
 
 ## Open questions
 

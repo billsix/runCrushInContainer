@@ -1,0 +1,61 @@
+Strip the web egress tools (PATCH_OUT_WEB_TOOLS, default 0 = kept).
+
+Removes the registrations of web_search, web_fetch, agentic_fetch, fetch, and
+download — the DuckDuckGo search (internal/agent/tools/search.go) and the
+arbitrary-URL GET tools. Cutting the agentic_fetch block in buildTools
+(internal/agent/coordinator.go) also makes the sub-agent-only web_search and
+web_fetch unreachable. Tool files stay compiled (UI switches on their name
+constants); only construction/registration is removed. See
+tasks/reference/dependency-network-audit.md D1.
+
+diff --git a/internal/agent/coordinator.go b/internal/agent/coordinator.go
+index 5a7b3f8f..169efe34 100644
+--- a/internal/agent/coordinator.go
++++ b/internal/agent/coordinator.go
+@@ -686,14 +686,6 @@ func (c *coordinator) buildTools(ctx context.Context, agent config.Agent, isSubA
+ 		allTools = append(allTools, agentTool)
+ 	}
+ 
+-	if slices.Contains(agent.AllowedTools, tools.AgenticFetchToolName) {
+-		agenticFetchTool, err := c.agenticFetchTool(ctx, nil)
+-		if err != nil {
+-			return nil, err
+-		}
+-		allTools = append(allTools, agenticFetchTool)
+-	}
+-
+ 	// Get the model name for the agent
+ 	modelID := ""
+ 	if modelCfg, ok := c.cfg.Config().Models[agent.Model]; ok {
+@@ -717,10 +709,8 @@ func (c *coordinator) buildTools(ctx context.Context, agent config.Agent, isSubA
+ 		tools.NewCrushLogsTool(logFile),
+ 		tools.NewJobOutputTool(),
+ 		tools.NewJobKillTool(),
+-		tools.NewDownloadTool(c.permissions, c.cfg.WorkingDir(), nil),
+ 		tools.NewEditTool(c.lspManager, c.permissions, c.history, c.filetracker, c.cfg.WorkingDir()),
+ 		tools.NewMultiEditTool(c.lspManager, c.permissions, c.history, c.filetracker, c.cfg.WorkingDir()),
+-		tools.NewFetchTool(c.permissions, c.cfg.WorkingDir(), nil),
+ 		tools.NewGlobTool(c.cfg.WorkingDir(), c.cfg.Config().Tools.Glob),
+ 		tools.NewGrepTool(c.cfg.WorkingDir(), c.cfg.Config().Tools.Grep),
+ 		tools.NewLsTool(c.permissions, c.cfg.WorkingDir(), c.cfg.Config().Tools.Ls),
+diff --git a/internal/config/config.go b/internal/config/config.go
+index 61bac6fc..37a877b2 100644
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -792,7 +792,6 @@ func allToolNames() []string {
+ 		"crush_logs",
+ 		"job_output",
+ 		"job_kill",
+-		"download",
+ 		"edit",
+ 		"multiedit",
+ 		"lsp_diagnostics",
+@@ -803,8 +802,6 @@ func allToolNames() []string {
+ 		"lsp_call_hierarchy",
+ 		"lsp_rename",
+ 		"lsp_replace_symbol",
+-		"fetch",
+-		"agentic_fetch",
+ 		"glob",
+ 		"grep",
+ 		"ls",

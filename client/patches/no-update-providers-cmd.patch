@@ -1,0 +1,20 @@
+Remove the crush update-providers command (PATCH_OUT_UPDATE_PROVIDERS_CMD, default 1).
+
+This user-initiated command is the one path to catwalk.charm.land that the
+default-providers-false gate does not cover (internal/config/provider.go:60,67).
+In the local-first runCrush setup the provider catalog is suppressed by design,
+so the command has nothing useful to fetch. Deregistering it makes it
+unreachable; updateProvidersCmd stays defined (unused package var is legal Go).
+
+diff --git a/internal/cmd/root.go b/internal/cmd/root.go
+index f25de84d..c7e31ff9 100644
+--- a/internal/cmd/root.go
++++ b/internal/cmd/root.go
+@@ -70,7 +70,6 @@ func init() {
+ 		runCmd,
+ 		dirsCmd,
+ 		projectsCmd,
+-		updateProvidersCmd,
+ 		logsCmd,
+ 		logoutCmd,
+ 		schemaCmd,
