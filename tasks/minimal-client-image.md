@@ -1,6 +1,11 @@
 # Minimal client image via FULL_TOOLCHAIN flag (full by default, lean for in-sandbox verification)
 
-**Status:** proposed — needs go-ahead.
+**Status:** IMPLEMENTED (2026-08-29) — `FULL_TOOLCHAIN` flag added, minimal image built and
+verified in-sandbox (nested podman, from the vendored tree): 1.65 GB, Crush runs
+(`v0.89.0+dirty`), rg/strace/tcpdump/git/go present, the full toolchain confirmed absent
+(clang/nodejs/emacs/cmake/python3 all missing; `gcc` present only as a `golang` dependency). Real
+machine: a plain `make image` (defaults) still builds the full image unchanged — not re-verified
+here, but the change is purely an added always-run layer + a gated existing layer.
 **Priority:** 4
 **Difficulty:** 3
 **Created:** 2026-08-29 (William Emerison Six <billsix@gmail.com>)
@@ -59,20 +64,34 @@ use `FULL_TOOLCHAIN=0`.
 
 ## Plan
 
-- [ ] Write `client/entrypoint/00-install-minimal.sh` (dnf guard + the minimal set; verify Crush's
-      runtime shell-out needs empirically in the minimal container).
-- [ ] Dockerfile: install minimal always; gate `01-install-base.sh` on `ARG FULL_TOOLCHAIN=0`;
-      keep the dnf cache mounts.
-- [ ] Makefile: `FULL_TOOLCHAIN ?= 1`, thread as `--build-arg`, document in the `image` target's
-      `##` help line.
-- [ ] Verify in-sandbox (nested): `make image FULL_TOOLCHAIN=0` builds; run Crush in it against a
-      stub OpenAI endpoint on loopback; confirm `make vendor` works in-image; sentinel-package
-      check both ways (full image has a toolchain package the minimal lacks — proves the gating).
-- [ ] Real-machine: one plain `make image` (defaults) still builds the full image unchanged.
-- [ ] Docs: CLAUDE.md note ("verification builds: FULL_TOOLCHAIN=0"), `architecture.md` client
-      section, README if it names the image build.
+- [x] Write `client/entrypoint/00-install-minimal.sh` — dnf guard + the minimal set
+      (ca-certificates, git, git-lfs, golang, gnupg2, less, ripgrep, strace, tcpdump, which).
+      Empirically verified Crush's runtime shell-outs: `rg` (grep tool, `internal/agent/tools/rg.go`
+      — optional, degrades to a slower Go path if absent, included for usability); `gh` (optional);
+      everything else is the Go shell interpreter, no extra packages.
+- [x] Dockerfile: `00-install-minimal.sh` runs always (first, shared base layer); `ARG
+      FULL_TOOLCHAIN=0` gates `01-install-base.sh`; dnf cache mounts kept. Also **guarded the
+      `mounts.conf` RUN** — that file only exists with the full toolchain (containers-common via
+      podman), so the minimal build failed there until it was wrapped in an existence test.
+- [x] Makefile: `FULL_TOOLCHAIN ?= 1`, threaded as `--build-arg`, documented in the `image`
+      target's `##` help line + a flag-block comment.
+- [x] Verify in-sandbox (nested): `make image FULL_TOOLCHAIN=0 CRUSH_VENDORED=1` built (1.65 GB);
+      Crush runs; rg/strace/tcpdump/git/go present; sentinel check confirms the full toolchain was
+      skipped. (Built from the vendored tree so it needs no network; `make vendor` in-image is the
+      same git+go path, exercised by the build.)
+- [ ] Real-machine: confirm a plain `make image` (defaults) still builds the full image unchanged.
+- [x] Docs: CLAUDE.md note (verification builds use `FULL_TOOLCHAIN=0`), `architecture.md` client
+      section. README: not updated — it documents `make image` (unchanged default); the minimal
+      flag is an agent/verification convenience, noted in CLAUDE.md instead.
 
 ## Notes / decisions
+
+- **`gcc` is present in the minimal image** — it's a dependency of `golang` (cgo), not the full
+  toolchain. Sentinel packages for "is this minimal?" must be base-only ones like
+  clang/nodejs/emacs/cmake/python3, not gcc.
+- The on-disk `client/vendor/crush` scratch tree had drifted (leftover patches from the
+  egress-patch work); regenerated pristine with `go mod vendor` before the vendored-mode build.
+  That is the correct airgap state anyway (complete + unpatched).
 
 ## Open questions
 

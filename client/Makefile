@@ -21,6 +21,15 @@ CONTAINER_NAME = crushcontainer
 # Latest stable Crush release (decision 2026-08-18). Override: make image CRUSH_TAG=vX.Y.Z
 CRUSH_TAG ?= v0.89.0
 
+# Full ~430-package dev toolchain vs a minimal image. Default 1 = the batteries-included image
+# (Dockerfile ARG defaults to 0, so a bare `podman build` is lean — the usual convention).
+# `make image FULL_TOOLCHAIN=0` builds a ~2 GB minimal image (golang/git/ripgrep + strace/tcpdump)
+# that still builds Crush at any flag combination, runs it against the model, vendors, and hosts a
+# runtime egress check — and fits the dev sandbox's nested-podman store for in-sandbox verification.
+# Same CONTAINER_NAME for both (a minimal HOST build replaces the full image until the next full
+# rebuild — accepted). See tasks/minimal-client-image.md.
+FULL_TOOLCHAIN ?= 1
+
 # Apply the local `@`-import patch to Crush at build time (client/patches/, see
 # tasks/archive/2026/08/21/patch-crush-for-at-imports.md): makes a `@path` on its own line in a context file
 # (CLAUDE.md/AGENTS.md/CRUSH.md) recursively splice that file's contents in. Default ON here;
@@ -163,10 +172,11 @@ endif
 all: image ## Build the image
 
 .PHONY: image
-image: ## build the client image: full toolchain + Crush built from source (pinned CRUSH_TAG). CRUSH_VENDORED=1 builds offline from ./vendor; PATCH_OUT_<X>=0/1 flips any egress patch (see the flag block above)
+image: ## build the client image: full toolchain + Crush built from source (pinned CRUSH_TAG). FULL_TOOLCHAIN=0 builds a minimal image; CRUSH_VENDORED=1 builds offline from ./vendor; PATCH_OUT_<X>=0/1 flips any egress patch (see the flag block above)
 	$(CONTAINER_CMD) build -t $(CONTAINER_NAME) \
 		--build-arg CRUSH_TAG=$(CRUSH_TAG) \
 		--build-arg CRUSH_AT_IMPORT=$(CRUSH_AT_IMPORT) \
+		--build-arg FULL_TOOLCHAIN=$(FULL_TOOLCHAIN) \
 		--build-arg VENDOR_TOOLS=$(VENDOR_TOOLS) \
 		$(PATCH_FLAGS) \
 		$(CRUSH_VENDOR_FLAGS) .

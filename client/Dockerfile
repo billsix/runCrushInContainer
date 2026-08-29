@@ -7,13 +7,26 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
     echo "keepcache=True" >> /etc/dnf/dnf.conf && \
     dnf upgrade -y
 
+# The MINIMAL package set — ALWAYS installed (first, so it's a shared base layer): just
+# what's needed to build Crush from source, run it against the local model, run
+# `make vendor`, and host a runtime egress check (golang, git, ripgrep, strace, tcpdump …).
+# See entrypoint/00-install-minimal.sh and tasks/minimal-client-image.md.
+COPY entrypoint/00-install-minimal.sh /usr/local/bin/
+RUN --mount=type=cache,target=/var/cache/libdnf5 \
+    --mount=type=cache,target=/var/lib/dnf \
+    /usr/local/bin/00-install-minimal.sh
+
 # The full runClaudeInContainer toolchain (~430 packages) — same host-runnable install
-# script, copied verbatim from the sibling repo. Provides the Go toolchain that builds
-# Crush below, plus git + openssh-clients for the SSH tunnel to the Mac.
+# script, copied verbatim from the sibling repo. Gated behind FULL_TOOLCHAIN: it is a
+# SUPERSET of the minimal set above, so with FULL_TOOLCHAIN=1 the two RUNs together give
+# the batteries-included dev image; with =0 the image stays minimal (~2 GB) and fits the
+# dev sandbox's nested-podman store for in-sandbox verification. The minimal set already
+# provides the Go toolchain + git that build Crush below, so the build works either way.
+ARG FULL_TOOLCHAIN=0
 COPY entrypoint/01-install-base.sh /usr/local/bin/
 RUN --mount=type=cache,target=/var/cache/libdnf5 \
     --mount=type=cache,target=/var/lib/dnf \
-    /usr/local/bin/01-install-base.sh
+    if [ "$FULL_TOOLCHAIN" = "1" ]; then /usr/local/bin/01-install-base.sh; fi
 
 # Vendoring-only tools (the `hf` CLI), gated behind VENDOR_TOOLS (default 0 — Makefile turns it
 # ON only for `make vendor`). These are needed ONLY to run `make vendor` inside this image while
@@ -31,7 +44,9 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
 # inject into EVERY container it runs. That path is empty on Fedora and the mount fails under the
 # nested/label-disabled setup, so every INNER `podman run` prints a harmless "Failed to mount
 # subscriptions" WARN and skips it. Emptying the file removes the noise (we do no subscription builds).
-RUN : > /usr/share/containers/mounts.conf
+# Guarded: the file only exists when containers-common is present (the full toolchain, which pulls
+# podman). The minimal image (FULL_TOOLCHAIN=0) has neither the file nor a nested-podman use case.
+RUN if [ -e /usr/share/containers/mounts.conf ]; then : > /usr/share/containers/mounts.conf; fi
 
 # Build Crush from source at a pinned tag, at IMAGE-BUILD time (self-contained image: the
 # binary is baked into a layer, no runtime fetch). The build LOGIC — why from source, the
