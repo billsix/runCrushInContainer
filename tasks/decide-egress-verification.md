@@ -1,6 +1,12 @@
 # Decide whether the dependency-egress audit needs an enforced verification check
 
-**Status:** proposed — decide after the audit lands (William Emerison Six <billsix@gmail.com>, 2026-08-29: "no verification needed for now … a follow up task, to decide if we even need to")
+**Status:** proposed — **askable now**: the audit landed and was implemented 2026-08-29
+(`tasks/reference/dependency-network-audit.md` — findings, D1–D12, flag index), so the decision has
+its numbers. Deferred originally by the maintainer (William Emerison Six <billsix@gmail.com>,
+2026-08-29: "no verification needed for now … a follow up task, to decide if we even need to").
+Note: `tasks/minimal-client-image.md` (proposed) would bake strace+tcpdump into a sandbox-buildable
+minimal image — exactly the environment a runtime egress check would run in; if a check is wanted,
+consider sequencing after that task.
 **Priority:** 6
 **Difficulty:** 3
 **Started:** 2026-08-29
@@ -34,8 +40,11 @@ Decisions already made, with rationale:
      loopback/the local model.
   2. **Enforce:** an `nftables`/`iptables` rule set allowing only the local model endpoint, DROP the
      rest; confirm Crush still works and blocked attempts fail gracefully.
-- Either way it is **real-machine** (the ~22 GB client image + a live local model on the Mac) — not
-  an in-sandbox check.
+- Originally judged **real-machine only** (the ~22 GB client image + a live local model). Partly
+  superseded 2026-08-29: if `tasks/minimal-client-image.md` lands (a sandbox-buildable minimal
+  image with strace+tcpdump baked in), the observe-mode check can run **in-sandbox** against a
+  stub OpenAI endpoint on loopback; only a check against the real Mac-served model stays
+  real-machine.
 - The alternative to a runtime check is relying on the audit's source-level findings alone (every
   network-capable dep documented `file:line`, phone-home patched out by default) — a legitimate
   outcome; that is exactly the "do we even need it" question this task exists to answer.
@@ -48,10 +57,13 @@ want a runtime egress check as a standing gate? If wanted: pick observe-vs-enfor
 
 ## Plan
 
-- [ ] Wait for the audit reference doc (`tasks/reference/dependency-network-audit.md`) to exist —
-      the decision needs its findings (how much network-capable surface actually remains).
+- [x] Wait for the audit reference doc (`tasks/reference/dependency-network-audit.md`) — landed
+      and implemented 2026-08-29. The numbers: zero unsolicited egress with default flags; the
+      remaining intentional surface is the web tools (D1), sourcegraph (D2), and operator-
+      configured MCP servers.
 - [ ] Put the yes/no to the maintainer with the audit's numbers in hand.
-- [ ] If yes: pick mechanism (observe vs enforce), write the procedure/target, run on real machine.
+- [ ] If yes: pick mechanism (observe vs enforce) and environment (in-sandbox minimal image with a
+      stub endpoint, vs real machine against the live model), write the procedure/target, run it.
 
 ## Notes / decisions
 

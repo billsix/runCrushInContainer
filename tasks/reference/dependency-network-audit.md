@@ -4,7 +4,7 @@
 flagged modules deep-audited at source; all decisions D1–D12 confirmed by the maintainer (William
 Emerison Six <billsix@gmail.com>, 2026-08-29), defaults as in the flag index (§5). The patches
 exist in `client/patches/`, wired through `client/entrypoint/03-build-crush.sh` /
-`client/Dockerfile` / `client/Makefile` (work record: `tasks/implement-egress-patch-flags.md`).
+`client/Dockerfile` / `client/Makefile` (work record: `tasks/archive/2026/08/29/implement-egress-patch-flags.md`).
 Where an entry below describes patch *mechanics*, the implemented shape is authoritative — see the
 "implemented as" notes; the audit's `file:line` findings themselves are unchanged.
 **Audited version:** Crush **v0.89.0** (commit `ba531a409ab68f91144c80eafae8b952daa35a0d`), the
@@ -484,7 +484,7 @@ One row per decision flag — implemented and wired (2026-08-29) through
 | `CRUSH_AT_IMPORT` | `1` (applied) | `crush-at-import.patch` | (existing feature patch, unchanged semantics) |
 
 Patches sharing files must remain **independently applicable AND reversible in any flag
-combination** — proven by `tasks/adhoc/implement-egress-patch-flags/sweep_patch_combos.sh`
+combination** — proven by `tools/sweep_egress_patch_combos.sh`
 (42 combinations, byte-identical restore). Authoring invariants for any future patch: use
 zero-context hunks where patches share a file, and **never bare-delete a line — replace it with a
 unique marker comment** so the hunk is anchored in BOTH directions (a bare deletion's reverse is

@@ -3,9 +3,15 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Verification harness for the egress patch/flag system
-# (tasks/implement-egress-patch-flags.md): proves that the patches in
+# (tasks/archive/2026/08/29/implement-egress-patch-flags.md): proves that the patches in
 # client/patches/ apply cleanly in ANY flag combination, reverse cleanly, and
 # that the key combinations compile.
+#
+# WHEN TO RUN: on every CRUSH_TAG bump — after regenerating the vendored tree
+# (./vendor.sh or client/entrypoint/vendor/vendor-crush.sh) and re-porting the
+# patches to the new tag — and after adding or editing any patch in
+# client/patches/. Keep the ALL list below in the same canonical order as
+# entrypoint/03-build-crush.sh.
 #
 # Method, per combination:
 #   1. forward-apply the selected patches in the canonical order (the same

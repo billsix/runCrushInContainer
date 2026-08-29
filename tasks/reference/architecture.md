@@ -1,7 +1,7 @@
 # runCrushInContainer — architecture & operations
 
 **Reference document** — how the two halves fit together, the pins, and the gotchas learned
-during bring-up. Not a task; update in place. Last updated 2026-08-19.
+during bring-up. Not a task; update in place. Last updated 2026-08-29.
 
 ## What this is
 
@@ -58,7 +58,10 @@ SSH tunnel:
 
 - Full runClaudeInContainer toolchain (`entrypoint/01-install-base.sh`, verbatim copy) +
   **Crush built from source at image-build time**, pinned `CRUSH_TAG` (default **`v0.89.0`**,
-  the latest stable at bring-up; module path `github.com/charmbracelet/crush`, `go install`).
+  the latest stable at bring-up; `github.com/charmbracelet/crush`). The build is
+  `entrypoint/03-build-crush.sh`: a clone (or the pre-vendored tree) + `go mod vendor` +
+  flag-guarded patches + offline `go build -mod=vendor` — see "The egress patch/flag system"
+  below; plain `go install …@tag` is not used.
 - **Crush config is `crushrc`, NOT `crush.json`** (`client/entrypoint/crushrc`; global path
   `~/.config/crush/crushrc`). `crush.json` is deprecated. The baked config declares a single
   **`llamacpp`**-type provider. **`base_url` is the bare root** (`http://127.0.0.1:8080`, no `/v1`) —
@@ -145,7 +148,7 @@ SSH tunnel:
   deleted import lines are replaced by unique marker comments** so every hunk is anchored in both
   directions (a bare-deletion's reverse is an unanchored insertion; that mis-ordered re-added
   imports until fixed, 2026-08-29). Verified by
-  `tasks/adhoc/implement-egress-patch-flags/sweep_patch_combos.sh`: 42 flag combinations applied,
+  `tools/sweep_egress_patch_combos.sh`: 42 flag combinations applied,
   reversed, byte-identical, and the interacting-group combinations compiled. Re-verify all patches
   on each `CRUSH_TAG` bump.
 

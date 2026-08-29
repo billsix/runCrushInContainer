@@ -14,7 +14,7 @@
 # That way the airgap box can build ANY flag combination, and revert any
 # decision, from this one tree. (Decided 2026-08-29 — see
 # tasks/reference/dependency-network-audit.md and
-# tasks/implement-egress-patch-flags.md. Before that date this script baked the
+# tasks/archive/2026/08/29/implement-egress-patch-flags.md. Before that date this script baked the
 # patches in at vendor time; if you have an old vendored tree, regenerate it.)
 #
 # The result (an unpatched checkout at the tag, its own vendor/ dir populated)

@@ -21,10 +21,11 @@ vendored tree is now COMPLETE and UNPATCHED (`vendor-crush.sh` applies no patche
 stale-tree drift, where the on-disk tree predated `crush-no-update-check.patch`, is resolved — the
 tree was regenerated pristine). ALL thirteen patches apply at build time in
 `entrypoint/03-build-crush.sh`, each behind a `PATCH_OUT_<X>` / `CRUSH_AT_IMPORT` flag (see
-`tasks/reference/dependency-network-audit.md` §5 and `tasks/implement-egress-patch-flags.md`). So
-the offline rebuild this task verifies now also exercises the flag-guarded patch application; a
-default-flag `make image CRUSH_VENDORED=1` plus a live-chat smoke test here also closes the
-remaining gate of `tasks/implement-egress-patch-flags.md`.
+`tasks/reference/dependency-network-audit.md` §5 and `tasks/archive/2026/08/29/implement-egress-patch-flags.md`). So
+the offline rebuild this task verifies now also exercises the flag-guarded patch application. (The
+ONLINE default-flag build + smoke test was already verified on the real machine 2026-08-29 —
+`tasks/archive/2026/08/29/implement-egress-patch-flags.md`; this task's remaining novelty is the
+OFFLINE/vendored path with no network.)
 
 ## Steps
 

@@ -4,7 +4,7 @@
 `tasks/reference/dependency-network-audit.md` (all 213 modules triaged, 66 deep-audited, decisions
 D1–D12 named with flags/defaults, **all confirmed by the maintainer 2026-08-29**: D2 sourcegraph
 keep-by-default; D8 update-providers patch-out; D9–D12 openrouter/vercel/hyper/copilot
-patch-out-by-default, one flag each). Implementation: `tasks/implement-egress-patch-flags.md`.
+patch-out-by-default, one flag each). Implementation: `tasks/archive/2026/08/29/implement-egress-patch-flags.md`.
 Verification decision: `tasks/decide-egress-verification.md`.
 **Priority:** 4
 **Difficulty:** 7
