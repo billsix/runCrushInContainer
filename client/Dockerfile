@@ -33,33 +33,17 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
 # subscriptions" WARN and skips it. Emptying the file removes the noise (we do no subscription builds).
 RUN : > /usr/share/containers/mounts.conf
 
-# Build Crush from source at a pinned tag, AT IMAGE-BUILD TIME (self-contained image:
-# the compiled binary is baked into a layer, no runtime fetch). CRUSH_TAG defaults to the
-# latest stable release; override with `make image CRUSH_TAG=vX.Y.Z`. `crush --version`
-# fails the build if the install didn't produce a working binary.
-#
-# Two local patches live in client/patches/ (applied by `git apply` to the cloned source):
-#   - crush-no-update-check.patch — ALWAYS applied (no build flag). Removes the unconditional
-#     `go app.checkForUpdates(ctx)` launch so Crush never GETs api.github.com on startup. A
-#     runCrush client never wants that unsolicited egress (privacy + airgap). See
-#     tasks/disable-crush-telemetry.md. (Telemetry to data.charm.land is disabled separately,
-#     via the CRUSH_DISABLE_METRICS/DO_NOT_TRACK env below — it has a built-in opt-out.)
-#   - crush-at-import.patch — toggled by CRUSH_AT_IMPORT (see
-#     tasks/archive/2026/08/21/patch-crush-for-at-imports.md): with a `@path` on its own line in a context file
-#     (CLAUDE.md/AGENTS.md/CRUSH.md), the patched Crush recursively splices that file's contents
-#     in — a feature Crush lacks upstream.
-# Because a patch needs a source tree, EVERY non-vendored build clones the tag and builds from
-# source (`go install .`), stamping internal/version.Version so `crush --version` still reports
-# the tag — we can't `go install …@tag` (the module proxy is read-only, can't be patched).
-# CRUSH_AT_IMPORT=0 therefore means "source build WITHOUT the @-import patch" (the update-check
-# patch is still applied), not a plain upstream `go install`.
-#
-# CRUSH_VENDORED toggles the OFFLINE/airgap build (see tasks/vendor-build-sources-for-airgap-rebuild.md).
-# When 1, Crush is NOT fetched from the network: the build reads a pre-vendored, patch-applied,
-# `go mod vendor`-ed checkout bind-mounted at /vendor/crush (via `podman build --volume …`, added by
-# `make image CRUSH_VENDORED=1`) and builds it with `GOPROXY=off go build -mod=vendor`. Produce that
-# checkout ONLINE first with `make vendor`. `entrypoint/vendor/` is baked in so `make vendor` can run
-# the vendoring script inside this image.
+# Build Crush from source at a pinned tag, at IMAGE-BUILD time (self-contained image: the
+# binary is baked into a layer, no runtime fetch). The build LOGIC — why from source, the
+# two patches, the vendored-vs-clone modes, the -ldflags version stamp — lives in
+# entrypoint/03-build-crush.sh (also runnable on a bare host). Here we only declare the
+# flags and wire them in:
+#   CRUSH_TAG        the tag to build (override: `make image CRUSH_TAG=vX.Y.Z`)
+#   CRUSH_AT_IMPORT  1 = apply the @-import patch; 0 = source build without it
+#   CRUSH_VENDORED   1 = OFFLINE/airgap build. `make image CRUSH_VENDORED=1` adds
+#                    `--volume ./vendor/crush:/vendor/crush:ro --build-arg CRUSH_VENDORED=1`
+#                    so the script reads the pre-vendored checkout at /vendor/crush; produce
+#                    it ONLINE first with `make vendor` (entrypoint/vendor/, baked in below).
 ARG CRUSH_TAG=v0.89.0
 ARG CRUSH_AT_IMPORT=0
 ARG CRUSH_VENDORED=0
@@ -74,18 +58,11 @@ ENV GOBIN=/usr/local/bin GOFLAGS=-trimpath
 COPY patches/ /patches/
 COPY entrypoint/vendor/ /usr/local/bin/vendor/
 RUN chmod +x /usr/local/bin/vendor/*.sh
-RUN set -eux; \
-    if [ "$CRUSH_VENDORED" = "1" ]; then \
-        cp -r /vendor/crush /tmp/crush; \
-        ( cd /tmp/crush && GOPROXY=off go build -mod=vendor -ldflags "-X github.com/charmbracelet/crush/internal/version.Version=${CRUSH_TAG}" -o /usr/local/bin/crush . ); \
-    else \
-        git clone --depth 1 --branch "$CRUSH_TAG" https://github.com/charmbracelet/crush /tmp/crush; \
-        git -C /tmp/crush apply /patches/crush-no-update-check.patch; \
-        if [ "$CRUSH_AT_IMPORT" = "1" ]; then git -C /tmp/crush apply /patches/crush-at-import.patch; fi; \
-        ( cd /tmp/crush && go install -ldflags "-X github.com/charmbracelet/crush/internal/version.Version=${CRUSH_TAG}" . ); \
-    fi; \
-    rm -rf /tmp/crush; \
-    crush --version
+COPY entrypoint/03-build-crush.sh /usr/local/bin/
+# Build Crush from source (vendored, or clone+patch); see entrypoint/03-build-crush.sh.
+# ARGs aren't inherited by a child process, so pass the three flags to the script explicitly.
+RUN CRUSH_TAG="$CRUSH_TAG" CRUSH_VENDORED="$CRUSH_VENDORED" CRUSH_AT_IMPORT="$CRUSH_AT_IMPORT" \
+    /usr/local/bin/03-build-crush.sh
 
 # Baked dotfiles (prompt, ls alias, GPG_TTY): /root/.extrabashrc, sourced from ~/.bashrc.
 # Host ~/.tmux.conf / ~/.gitconfig / ~/.gnupg are mounted conditionally by the Makefile.
