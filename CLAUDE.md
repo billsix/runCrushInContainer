@@ -74,6 +74,13 @@ The full working-method machinery is now **ported and in use** (Phases 0–4, 20
 - **personal-overlay layering** (blank baked default + host `~/.ai-coding-conventions.personal.md` mount);
 - **7 slash commands** (`/new-task`, `/stack-*`, … — in Crush's `/` dialog under the **User** tab);
 - **nested-podman** (`make shell NESTED_PODMAN=1`; inner runs need `--cgroups=disabled --network=host`);
+- **`make shell-exec`** (`client/Makefile`) — the batch twin of `make shell`: `make shell-exec
+  SCRIPT=<path under the mounted PROJECT at /work> | CMD='...'` runs a script/command in the same
+  container env and exits (no TTY) — for ad-hoc/CI use. `shell` + `shell-exec` share one
+  `SHELL_RUN_FLAGS` variable so they can't drift; `client/entrypoint/shell.sh` ends `set -e … exec
+  bash "$@"`. Cross-project fan-out + design: `github.com/billsix/runClaudeInContainer`
+  `tasks/add-shell-exec-target.md` and `.../fan-out-shell-exec-to-projects.md`. The general template
+  contract for this lives in the personal `.ai` overlay, not here.
 - **two local Crush patches** (`client/patches/`): `crush-at-import.patch` (gated on
   `CRUSH_AT_IMPORT`) and `crush-no-update-check.patch` (**always applied** — disables the startup
   GitHub update check; see below). Because a patch needs a source tree, every non-vendored build now

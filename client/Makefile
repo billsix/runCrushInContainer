@@ -146,9 +146,10 @@ vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/cr
 		-c '/usr/local/bin/vendor/vendor-crush.sh /vendor/crush'
 	@echo "vendored Crush into $(VENDOR_DIR)/crush — carry the repo (with ./vendor and server/) to the airgap box, then: make image CRUSH_VENDORED=1"
 
-.PHONY: shell
-shell: image ## run Crush in an ephemeral container; mounts PROJECT at /work (NESTED_PODMAN=1 for podman-in-podman)
-	$(CONTAINER_CMD) run -it --rm \
+# --- shell / shell-exec share ONE container invocation, defined here so the two
+# targets can never drift. Scoped to this pair ONLY. See runClaudeInContainer
+# tasks/add-shell-exec-target.md for the design.
+SHELL_RUN_FLAGS = \
 		--entrypoint /bin/bash \
 		-e NESTED_PODMAN=$(NESTED_PODMAN) \
 		$(SELINUX_OPT) \
@@ -160,9 +161,23 @@ shell: image ## run Crush in an ephemeral container; mounts PROJECT at /work (NE
 		$(PERSONAL_MOUNT) \
 		$(STACK_MOUNT) \
 		$(NESTED_PODMAN_FLAGS) \
-		$(EXTRA_MOUNTS) \
-		$(CONTAINER_NAME) \
-		/shell.sh
+		$(EXTRA_MOUNTS)
+
+# In-container mount path of the driven PROJECT (matches -v $(PROJECT):/work).
+REPO_MOUNT = /work
+
+# shell-exec payload: cd to the project root (independent of shell.sh's own cd),
+# then run the inline CMD, else the project-relative SCRIPT. Prefers CMD if both set.
+SHELL_EXEC_ARGS = -c 'cd $(REPO_MOUNT) && $(if $(CMD),$(CMD),exec bash $(SCRIPT))'
+
+.PHONY: shell
+shell: image ## run Crush in an ephemeral container; mounts PROJECT at /work (NESTED_PODMAN=1 for podman-in-podman)
+	$(CONTAINER_CMD) run -it --rm $(SHELL_RUN_FLAGS) $(CONTAINER_NAME) /shell.sh
+
+.PHONY: shell-exec
+shell-exec: image ## run a script/command in the container env (no TTY): make shell-exec SCRIPT=path | CMD='...'
+	@[ -n "$(SCRIPT)$(CMD)" ] || { echo 'usage: make shell-exec SCRIPT=<path under PROJECT> | CMD="..."'; exit 2; }
+	$(CONTAINER_CMD) run --rm $(SHELL_RUN_FLAGS) $(CONTAINER_NAME) /shell.sh $(SHELL_EXEC_ARGS)
 
 .PHONY: format
 format: image ## format the client shell scripts with shfmt (runs in the built image)

@@ -120,7 +120,13 @@ Now `localhost:8080` on the Linux host reaches the model on the Mac. (Replace
 cd client
 make image     # build the image: full toolchain + Crush compiled from source (pinned)
 make shell     # podman run --rm --network=host … then launch `crush`
+make shell-exec SCRIPT=path/to/script.sh   # run a script in that same env (no TTY), then exit
+make shell-exec CMD='some command'         # ^ or an inline command
 ```
+
+`make shell-exec` is the batch twin of `make shell`: same container and mounts, but it runs a
+script (`SCRIPT=`, relative to the mounted PROJECT at `/work`) or an inline `CMD=` and exits,
+instead of dropping you into an interactive shell — for ad-hoc/CI use.
 
 `--network=host` makes the container share the host's network, so Crush talking to
 `127.0.0.1:8080` hits the SSH-forwarded port and, through it, the Mac. The baked `crushrc`
