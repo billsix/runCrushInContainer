@@ -95,17 +95,25 @@ The full working-method machinery is now **ported and in use** (Phases 0–4, 20
   bash "$@"`. Cross-project fan-out + design: `github.com/billsix/runClaudeInContainer`
   `tasks/add-shell-exec-target.md` and `.../fan-out-shell-exec-to-projects.md`. The general template
   contract for this lives in the personal overlay (`ai-coding-conventions.personal.md`), not here.
-- **two local Crush patches** (`client/patches/`): `crush-at-import.patch` (gated on
-  `CRUSH_AT_IMPORT`) and `crush-no-update-check.patch` (**always applied** — disables the startup
-  GitHub update check; see below). Because a patch needs a source tree, every non-vendored build now
-  clones + builds Crush from source (no plain `go install …@tag`).
-- **no telemetry / no phone-home** — PostHog telemetry (`data.charm.land`) off via Dockerfile
-  `ENV CRUSH_DISABLE_METRICS=1 DO_NOT_TRACK=1` + `option metrics false`; the GitHub update check off
-  via `crush-no-update-check.patch`. See `tasks/disable-crush-telemetry.md`. That covers **Crush's own
-  code**; a full audit of the **~213 vendored Go deps** for their own egress (+ a flag-driven per-decision
-  patch system for the airgap build) is tracked in `tasks/audit-dependency-network-egress.md`. Note the
-  invariant either way: **local/loopback to the model (`127.0.0.1:8080`) is essential — only external
-  egress is ever a target.**
+- **thirteen local Crush patches** (`client/patches/`), each behind its own defaulted build flag:
+  `crush-at-import.patch` (`CRUSH_AT_IMPORT ?= 1`) plus twelve `PATCH_OUT_<X>` egress patches from
+  the dependency network audit (update check, telemetry, `update-providers`, web tools, sourcegraph,
+  Google/Vertex, Bedrock/AWS, Azure, OpenRouter, Vercel, Hyper, Copilot — defaults per
+  `tasks/reference/dependency-network-audit.md` §5). ALL patches apply at **build time** in
+  `client/entrypoint/03-build-crush.sh`, identically in both build modes; `vendor-crush.sh` vendors
+  the **complete unpatched** tree so any flag combination builds offline. Every build clones (or
+  copies the vendored tree) + builds from source (no plain `go install …@tag`). Combination-tested by
+  `tools/sweep_egress_patch_combos.sh`.
+- **no telemetry / no phone-home** — PostHog telemetry (`data.charm.land`) off three ways:
+  Dockerfile `ENV CRUSH_DISABLE_METRICS=1 DO_NOT_TRACK=1`, crushrc `option metrics false`, and the
+  build-level `no-telemetry.patch` (`PATCH_OUT_TELEMETRY ?= 1`); the GitHub update check off via
+  `crush-no-update-check.patch` (`PATCH_OUT_UPDATE_CHECK ?= 1`). The full audit of the **213
+  vendored Go deps** is DONE (2026-08-29): `tasks/reference/dependency-network-audit.md` holds the
+  findings and the twelve confirmed `PATCH_OUT_<X>` decisions (work records in
+  `tasks/archive/2026/08/29/`; triage scanner `tools/triage_dependency_egress.py` + patch sweep
+  `tools/sweep_egress_patch_combos.sh`, both re-run on every `CRUSH_TAG` bump). The invariant
+  either way: **local/loopback to the model (`127.0.0.1:8080`) is essential — only external egress
+  is ever a target.**
 
 **Deliberately NOT ported:** auth plumbing (local keyless llama-server behind SSH — nothing to sign
 into), interactive GUI/Wayland + gamepad passthrough (headless Xvfb still works), and a dedicated
@@ -142,15 +150,14 @@ is copied from `tasks/reference/` must keep both copies in sync).
 Scan `tasks/` (top-level) at session start for the current list; as of 2026-08-29 (easy wins first —
 lowest priority-number, then lowest difficulty-number):
 
-- `disable-crush-telemetry.md` (P6/D2, **blocked**) — telemetry (`data.charm.land`) + GitHub
-  update-check disabled in the client image (implemented + staged 2026-08-27). **Blocked on** a
-  real-machine image-rebuild + runtime egress check (folds into `verify-auto-allow-file-tools.md`);
-  `/recheck-blocked` tests it. Last gate before archive.
-- `audit-dependency-network-egress.md` (P4/D7, proposed) — full source-level audit of the **~213
-  vendored Go deps** for their own external egress, with a **flag-driven, one-patch-per-decision**
-  system (KEEP-useful / PATCH-OUT phone-home / REMOVE out-of-design) baked coherently into vendoring
-  (vendor-complete, patch-at-build). Deliverable: a verbose reference doc. **Extends**
-  `disable-crush-telemetry.md`; written self-contained for a cold-start model.
+- `disable-crush-telemetry.md` (P6/D2, **blocked**) — telemetry + GitHub update-check disabled
+  (2026-08-27; superseded into the flag-guarded patch model 2026-08-29). The rebuild half of its
+  gate cleared 2026-08-29 (real-machine default-flag image built, Crush connected); **blocked on**
+  the remaining runtime egress watch (no traffic to `data.charm.land`/`api.github.com`) —
+  overlaps `decide-egress-verification.md`; `/recheck-blocked` tests it. Last gate before archive.
+- `decide-egress-verification.md` (P6/D3, proposed) — decide whether the audit needs an enforced
+  runtime egress check (strace/tcpdump or firewall permitting only the local model endpoint), or
+  whether the source-level audit suffices; real-machine if built.
 - `standardize-project-container-template.md` (P5/D5, proposed) — adopt the cross-project
   container-template standard (the `shell`/`shell-exec` pair + `SHELL_RUN_FLAGS`, mount conventions)
   in this repo's docs + `client/`; sibling task in runClaudeInContainer.
@@ -179,4 +186,9 @@ the **`hf` install dnf-or-pip fallback** (dnf `python3-huggingface-hub`, else pi
 **Apache-2.0 licensing** of the project (root `LICENSE` + SPDX headers; vendored trees keep theirs), the
 **`make shell-exec`** target (batch twin of `make shell`, shared `SHELL_RUN_FLAGS`; 2026/08/29), and the
 **Crush-build extraction** into `entrypoint/03-build-crush.sh` (the inline Dockerfile `RUN` → a
-flag-passing script; 2026/08/29).
+flag-passing script; 2026/08/29), the **dependency network audit** (all 213 vendored Go modules
+triaged, 66 deep-audited at source, twelve `PATCH_OUT_<X>` decisions confirmed — findings in
+`tasks/reference/dependency-network-audit.md`; 2026/08/29), and the **egress patch/flag
+implementation** (thirteen flag-guarded build-time patches, combination-tested by
+`tools/sweep_egress_patch_combos.sh`; vendor-complete-unpatched + patch-at-build model; verified on
+the real machine — default-flag image built, Crush connected to the local model; 2026/08/29).

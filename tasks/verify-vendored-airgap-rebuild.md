@@ -16,6 +16,17 @@ building/running the *server* there is the operator's own concern — this task 
 *provides*, not a specific serve setup. The core mechanism (`go mod vendor` + `GOPROXY=off go build
 -mod=vendor`) is already proven in isolation; this is the full-system, real-hardware proof.
 
+**Update (2026-08-29): the patch model changed under this task — verify the NEW flow.** The
+vendored tree is now COMPLETE and UNPATCHED (`vendor-crush.sh` applies no patches; the earlier
+stale-tree drift, where the on-disk tree predated `crush-no-update-check.patch`, is resolved — the
+tree was regenerated pristine). ALL thirteen patches apply at build time in
+`entrypoint/03-build-crush.sh`, each behind a `PATCH_OUT_<X>` / `CRUSH_AT_IMPORT` flag (see
+`tasks/reference/dependency-network-audit.md` §5 and `tasks/archive/2026/08/29/implement-egress-patch-flags.md`). So
+the offline rebuild this task verifies now also exercises the flag-guarded patch application. (The
+ONLINE default-flag build + smoke test was already verified on the real machine 2026-08-29 —
+`tasks/archive/2026/08/29/implement-egress-patch-flags.md`; this task's remaining novelty is the
+OFFLINE/vendored path with no network.)
+
 ## Steps
 
 1. **[ONLINE] Vendor.** From the repo root: `./vendor.sh` — runs the vendoring **inside the client

@@ -1,0 +1,43 @@
+Neutralize GitHub Copilot egress (PATCH_OUT_COPILOT, default 1).
+
+Guards the three request builders in internal/oauth/copilot/oauth.go
+(RequestDeviceCode, tryGetToken, getCopilotToken), so the github.com/login
+device flow and the api.github.com/copilot_internal/v2/token exchange can
+never fire — which also makes the Copilot provider unusable (its token
+refresh client goes through getCopilotToken). Reachable only via explicit
+crush auth before this patch; now an explicit error. See
+tasks/reference/dependency-network-audit.md D12.
+
+diff --git a/internal/oauth/copilot/oauth.go b/internal/oauth/copilot/oauth.go
+index 40ec7b1b..b27606dc 100644
+--- a/internal/oauth/copilot/oauth.go
++++ b/internal/oauth/copilot/oauth.go
+@@ -34,6 +34,10 @@ type DeviceCode struct {
+ 
+ // RequestDeviceCode initiates the device code flow with GitHub.
+ func RequestDeviceCode(ctx context.Context) (*DeviceCode, error) {
++	// Copilot support removed by no-copilot.patch (runCrushInContainer,
++	// PATCH_OUT_COPILOT): no request to github.com/login or
++	// api.github.com/copilot_internal is ever built.
++	return nil, errors.New("copilot support removed by no-copilot.patch (rebuild with PATCH_OUT_COPILOT=0 to restore)")
+ 	data := url.Values{}
+ 	data.Set("client_id", clientID)
+ 	data.Set("scope", "read:user")
+@@ -103,6 +107,8 @@ var (
+ )
+ 
+ func tryGetToken(ctx context.Context, deviceCode string) (*oauth.Token, error) {
++	// Copilot support removed by no-copilot.patch (see RequestDeviceCode).
++	return nil, errors.New("copilot support removed by no-copilot.patch (rebuild with PATCH_OUT_COPILOT=0 to restore)")
+ 	data := url.Values{}
+ 	data.Set("client_id", clientID)
+ 	data.Set("device_code", deviceCode)
+@@ -147,6 +153,8 @@ func tryGetToken(ctx context.Context, deviceCode string) (*oauth.Token, error) {
+ }
+ 
+ func getCopilotToken(ctx context.Context, githubToken string) (*oauth.Token, error) {
++	// Copilot support removed by no-copilot.patch (see RequestDeviceCode).
++	return nil, errors.New("copilot support removed by no-copilot.patch (rebuild with PATCH_OUT_COPILOT=0 to restore)")
+ 	req, err := http.NewRequestWithContext(ctx, "GET", copilotTokenURL, nil)
+ 	if err != nil {
+ 		return nil, err

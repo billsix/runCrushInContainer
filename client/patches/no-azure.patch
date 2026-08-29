@@ -1,0 +1,58 @@
+Remove the Azure OpenAI provider (PATCH_OUT_AZURE, default 1).
+
+Stubs vendored charm.land/fantasy/providers/azure: New() returns an error and
+the github.com/openai/openai-go/v3/azure import is dropped, un-compiling the
+entire Azure/azure-sdk-for-go family (azcore + sdk/internal) from the binary.
+The option/type surface stays so Crush compiles untouched; a configured
+azure-typed provider fails with an explicit error. See
+tasks/reference/dependency-network-audit.md D7.
+
+diff --git a/vendor/charm.land/fantasy/providers/azure/azure.go b/vendor/charm.land/fantasy/providers/azure/azure.go
+index 7435198d..243cca35 100644
+--- a/vendor/charm.land/fantasy/providers/azure/azure.go
++++ b/vendor/charm.land/fantasy/providers/azure/azure.go
+@@ -2,13 +2,13 @@
+ package azure
+ 
+ import (
++	"errors"
+ 	"fmt"
+ 	"regexp"
+ 	"strings"
+ 
+ 	"charm.land/fantasy"
+ 	"charm.land/fantasy/providers/openai"
+-	"github.com/openai/openai-go/v3/azure"
+ 	"github.com/openai/openai-go/v3/option"
+ )
+ 
+@@ -39,6 +39,11 @@ var azureURLPattern = regexp.MustCompile(`^(?:https?://)?([a-zA-Z0-9-]+)\.(?:ope
+ type Option = func(*options)
+ 
+ // New creates a new Azure provider with the given options.
++//
++// Azure support is removed by no-azure.patch (runCrushInContainer,
++// PATCH_OUT_AZURE): the github.com/openai/openai-go/v3/azure import is
++// dropped, which un-compiles the whole Azure/azure-sdk-for-go family
++// (azcore + sdk/internal). The option surface stays so importers compile.
+ func New(opts ...Option) (fantasy.Provider, error) {
+ 	o := options{
+ 		apiVersion: defaultAPIVersion,
+@@ -46,16 +51,7 @@ func New(opts ...Option) (fantasy.Provider, error) {
+ 	for _, opt := range opts {
+ 		opt(&o)
+ 	}
+-	return openai.New(
+-		append(
+-			o.openaiOptions,
+-			openai.WithName(Name),
+-			openai.WithBaseURL(o.baseURL),
+-			openai.WithSDKOptions(
+-				azure.WithAPIKey(o.apiKey),
+-			),
+-		)...,
+-	)
++	return nil, errors.New("azure provider removed by no-azure.patch (rebuild with PATCH_OUT_AZURE=0 to restore)")
+ }
+ 
+ // WithBaseURL sets the base URL for the Azure provider.

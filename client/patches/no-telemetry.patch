@@ -1,0 +1,24 @@
+Hard-disable telemetry at build time (PATCH_OUT_TELEMETRY, default 1).
+
+Forces shouldEnableMetrics to false so event.Init never runs and the PostHog
+client (endpoint https://data.charm.land, internal/event/event.go) is never
+constructed. Complements the CRUSH_DISABLE_METRICS/DO_NOT_TRACK env and the
+crushrc metrics option with a build-level guarantee. The gate is proven total:
+every emitter early-returns while the client is nil (see
+tasks/reference/dependency-network-audit.md section 4.3).
+
+diff --git a/internal/cmd/root.go b/internal/cmd/root.go
+index f25de84d..c9bc0c7f 100644
+--- a/internal/cmd/root.go
++++ b/internal/cmd/root.go
+@@ -964,6 +964,10 @@ func startDetachedServer(cmd *cobra.Command, hostURL *url.URL) error {
+ }
+ 
+ func shouldEnableMetrics(cfg *config.Config) bool {
++	// Hard-disabled at build time by no-telemetry.patch (runCrushInContainer):
++	// event.Init is never called, so the PostHog client is never constructed and
++	// https://data.charm.land is unreachable regardless of env or config.
++	return false
+ 	if v, _ := strconv.ParseBool(os.Getenv("CRUSH_DISABLE_METRICS")); v {
+ 		return false
+ 	}

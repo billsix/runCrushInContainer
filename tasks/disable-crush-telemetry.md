@@ -4,14 +4,15 @@
 **Priority:** 6
 **Difficulty:** 2
 **Started:** 2026-08-27
-**Blocked on:** a real-machine client-image rebuild + runtime egress check — only the maintainer can
-run it on the target host (the image is ~22 GB; not done in-sandbox). Implementation is complete and
-staged; this is the last gate before archive.
-**Recheck:** on the host, `make -C client image` (green build proves the restructured RUN + both
-patches apply), then start Crush with egress watched (e.g. `strace -f -e trace=network` or a tcpdump
-on the bridge) and confirm **no** connection to `data.charm.land` or `api.github.com` and that the
-model still answers. Cleared = build green + zero egress to those two hosts. (Folds into
-`verify-auto-allow-file-tools.md`, which also needs a rebuild.)
+**Blocked on:** a runtime egress watch — the **rebuild half of the original gate cleared
+2026-08-29** (the maintainer built a default-flag `make -C client image` on the real machine and
+Crush connected to the local model), leaving only the observation that no traffic reaches
+`data.charm.land` / `api.github.com` at runtime.
+**Recheck:** start Crush with egress watched (`strace -f -e trace=connect,sendto` or a tcpdump) and
+confirm **no** connection to `data.charm.land` or `api.github.com` while the model still answers.
+Cleared = zero egress to those two hosts. Overlaps `tasks/decide-egress-verification.md` (which
+decides whether a standing check is wanted at all — resolving that may clear or absorb this gate);
+`tasks/minimal-client-image.md` would make the watch runnable in-sandbox.
 
 ## Goal
 
@@ -22,10 +23,19 @@ the image/config level so the throwaway client never phones home — matching th
 privacy-conscious, airgap-oriented posture. The telemetry half has built-in opt-outs (easy); the
 update check has none and needs a source patch or an accepted-and-documented exception.
 
-**Scope note:** this task audits **Crush's OWN code** only. A full audit of the **~213 vendored Go
-dependencies** for their own network/phone-home behavior (and a per-decision, flag-driven patch system
-for the airgap build) is tracked separately in **`audit-dependency-network-egress.md`**, which extends
-this work.
+**Scope note:** this task audits **Crush's OWN code** only. The full audit of the **213 vendored Go
+dependencies** (and the per-decision, flag-driven patch system) that extends this work is DONE —
+findings in `tasks/reference/dependency-network-audit.md`, work records in
+`tasks/archive/2026/08/29/{audit-dependency-network-egress,implement-egress-patch-flags}.md`.
+
+**Update 2026-08-29 — the patch model this doc describes was superseded** by that implementation
+(the findings below remain accurate): `crush-no-update-check.patch` is no longer "always applied,
+no flag" — it sits behind **`PATCH_OUT_UPDATE_CHECK ?= 1`**, applied at BUILD time by
+`entrypoint/03-build-crush.sh` in both build modes; `vendor-crush.sh` no longer patches (the
+vendored tree is complete + unpatched); and telemetry is now ALSO hard-disabled at build level by
+`no-telemetry.patch` (`PATCH_OUT_TELEMETRY ?= 1`, forcing `shouldEnableMetrics` false) on top of
+this task's env + crushrc opt-outs. The Plan section below is the 2026-08-27 work record — read it
+as history.
 
 ## Findings (source-verified against v0.89.0, commit `ba531a4`, 2026-08-27)
 
@@ -97,9 +107,9 @@ this work.
       `verify-vendored-airgap-rebuild.md` (exercises the vendored patch path). Not attempted here:
       the client image is ~22 GB and nested three-deep — real-machine territory per this repo's
       workflow.
-- [ ] Update `tasks/reference/architecture.md` (a "Telemetry / phone-home" note) and
-      `crush-capabilities.md` + the `CLAUDE.md` patch list (for the new update-check patch). *(Do at
-      session-end doc sweep or when the rebuild verification lands.)*
+- [x] Update `tasks/reference/architecture.md`, `crush-capabilities.md` + the `CLAUDE.md` patch
+      list — done 2026-08-29 as part of the egress patch/flag implementation (all three now
+      document the flag-guarded build-time model).
 
 ## Notes / decisions
 

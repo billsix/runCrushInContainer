@@ -1,9 +1,35 @@
 # Audit ALL vendored Go dependencies for network / phone-home (airgap hardening)
 
-**Status:** proposed — needs go-ahead.
+**Status:** COMPLETE & ARCHIVED (2026-08-29) — deliverable:
+`tasks/reference/dependency-network-audit.md` (all 213 modules triaged, 66 deep-audited, decisions
+D1–D12 named with flags/defaults, **all confirmed by the maintainer 2026-08-29**: D2 sourcegraph
+keep-by-default; D8 update-providers patch-out; D9–D12 openrouter/vercel/hyper/copilot
+patch-out-by-default, one flag each). Implementation: `tasks/archive/2026/08/29/implement-egress-patch-flags.md`.
+Verification decision: `tasks/decide-egress-verification.md`.
 **Priority:** 4
 **Difficulty:** 7
 **Created:** 2026-08-29 (William Emerison Six <billsix@gmail.com>)
+
+**Decisions confirmed 2026-08-29 (William Emerison Six <billsix@gmail.com>)** — every open question
+was put to the maintainer explicitly, including the "settled" ones; all four answered:
+
+1. **Web search: KEEP by default** — `PATCH_OUT_WEB_SEARCH ?= 0`, patch present but off.
+2. **Cloud/GenAI SDKs: REMOVE by default** — `PATCH_OUT_CLOUD_SDKS ?= 1`, import-dropping Crush patch.
+3. **Dep phone-home: PATCH OUT by default** — one patch + one `PATCH_OUT_<concern> ?= 1` flag per
+   finding. Provably-inert deps (exporter-less OTel): DOCUMENT only, no flag (nothing to toggle).
+4. **Patch model: full revision confirmed** — vendor the complete UNPATCHED tree; ALL patches
+   (including the two existing ones) applied at build time in `03-build-crush.sh`, flag-guarded, both
+   paths. `crush-no-update-check` gets `PATCH_OUT_UPDATE_CHECK ?= 1`; `crush-at-import` keeps
+   `CRUSH_AT_IMPORT ?= 1`.
+
+**Standing principle behind all four (maintainer, 2026-08-29): every decision is a flag with a
+default — nothing is irreversible, so defaults are starting points, not commitments.** Borderline
+cases default to KEEP + FLAG and are called out in the reference doc for later review.
+
+**Verification: split out** — deferred to `tasks/decide-egress-verification.md` (decide *whether* a
+runtime egress check is needed at all, after the audit's findings exist). The "Verification /
+hardening idea" section below is the design discussion that task inherits; open question 3 is
+thereby answered.
 
 ## BLUF
 
@@ -236,19 +262,12 @@ the local model and block only external** egress (the local link is the point of
 
 ## Open questions
 
-1. **The keep-vs-remove boundary** (mostly settled by the policy above): KEEP + FLAG genuinely-useful
-   online features (**web search** — settled keep); REMOVE phone-home and out-of-design networky deps
-   (**cloud/GenAI SDKs** — settled remove, Bill's call). The remaining discretion is the *borderline*
-   features — the audit will **use discretion and flag each borderline one in the reference doc for Bill
-   to confirm**, defaulting to KEEP + FLAG when unsure. (Provably-inert transitive deps like exporter-less
-   OTel: document-but-leave, unless removing the feature that pulls them drops them for free.)
-2. **Confirm the flag/patch shape** — one `client/patches/<concern>.patch` + one `PATCH_OUT_<X>` build-arg
-   per decision, applied at **build time** in `03-build-crush.sh` (NOT `vendor-crush.sh`, which now just
-   vendors the complete unpatched tree), flag-guarded, both build paths. (This is the recommended
-   design in "Patch system"; confirm before implementing, since it rewrites both scripts.)
-3. **Add the egress check** (`strace`/`tcpdump` for any **non-local** destination, or a firewall that
-   permits only the local model endpoint — NOT `--network=none`, which would sever the model) as part of
-   this task, or a separate follow-on? It's real-machine either way.
+None. The original questions 1–3 were answered 2026-08-29 (decisions block under the header; Q3 →
+`tasks/decide-egress-verification.md`). The audit's three follow-up borderline calls were answered
+by the maintainer the same day: **(1) sourcegraph KEEP by default** (`PATCH_OUT_SOURCEGRAPH ?= 0`);
+**(2) `crush update-providers` PATCH OUT by default** (`PATCH_OUT_UPDATE_PROVIDERS_CMD ?= 1`);
+**(3) openrouter/vercel/hyper/copilot PATCH OUT by default** (D9–D12, one flag+patch each —
+overriding the audit's initial document-only lean). All recorded in the reference doc §§1–2, 5.
 
 ## Cross-links
 

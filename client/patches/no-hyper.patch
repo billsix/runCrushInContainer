@@ -1,0 +1,107 @@
+Neutralize Charm Hyper egress (PATCH_OUT_HYPER, default 1).
+
+Guards every function that builds a request to https://hyper.charm.land:
+the device-flow OAuth (internal/oauth/hyper/device.go: InitiateDeviceAuth,
+pollOnce, ExchangeToken, IntrospectToken), the provider-catalog fetch
+(internal/config/hyper.go doGet), the credits fetch
+(internal/agent/hyper/provider.go FetchCredits), and the LLM proxy path +
+x-crush-id header (internal/agent/coordinator.go, hyper case; the now-unused
+internal/event import is dropped with it). The hyper packages stay compiled —
+they are wired into config/UI across many files, so guards at the egress
+chokepoints are the minimal safe cut. See
+tasks/reference/dependency-network-audit.md D11.
+
+diff --git a/internal/agent/coordinator.go b/internal/agent/coordinator.go
+index 5a7b3f8f..1f0a63e7 100644
+--- a/internal/agent/coordinator.go
++++ b/internal/agent/coordinator.go
+@@ -26,7 +26,6 @@ import (
+ 	"github.com/charmbracelet/crush/internal/agent/tools/mcp"
+ 	"github.com/charmbracelet/crush/internal/config"
+ 	"github.com/charmbracelet/crush/internal/discover"
+-	"github.com/charmbracelet/crush/internal/event"
+ 	"github.com/charmbracelet/crush/internal/filetracker"
+ 	"github.com/charmbracelet/crush/internal/history"
+ 	"github.com/charmbracelet/crush/internal/hooks"
+@@ -1142,8 +1141,10 @@ func (c *coordinator) buildProvider(providerCfg config.ProviderConfig, model con
+ 	case openaicompat.Name, hyper.Name:
+ 		switch providerCfg.ID {
+ 		case hyper.Name:
+-			baseURL = hyper.BaseURL() + "/v1"
+-			headers["x-crush-id"] = event.GetID()
++			// Hyper support removed by no-hyper.patch (runCrushInContainer,
++			// PATCH_OUT_HYPER): no LLM traffic is proxied to hyper.charm.land
++			// and the x-crush-id header is never attached.
++			return nil, fmt.Errorf("hyper support removed by no-hyper.patch (rebuild with PATCH_OUT_HYPER=0 to restore)")
+ 		case string(catwalk.InferenceProviderZAI):
+ 			if providerCfg.ExtraBody == nil {
+ 				providerCfg.ExtraBody = map[string]any{}
+diff --git a/internal/agent/hyper/provider.go b/internal/agent/hyper/provider.go
+index a4f230c9..21840765 100644
+--- a/internal/agent/hyper/provider.go
++++ b/internal/agent/hyper/provider.go
+@@ -71,6 +71,9 @@ func SetBalance(balance int) {
+ // case Hyper reports the balance in dollars instead and there is no
+ // hypercredit figure to show.
+ func FetchCredits(ctx context.Context, apiKey string) (*int, error) {
++	// Hyper support removed by no-hyper.patch (runCrushInContainer,
++	// PATCH_OUT_HYPER): the /v1/credits request is never built.
++	return nil, fmt.Errorf("hyper support removed by no-hyper.patch (rebuild with PATCH_OUT_HYPER=0 to restore)")
+ 	if hasBalance.Load() {
+ 		hasBalance.Store(false)
+ 		balance := int(lastKnownBalance.Load())
+diff --git a/internal/config/hyper.go b/internal/config/hyper.go
+index ba80eb82..1ba8bb46 100644
+--- a/internal/config/hyper.go
++++ b/internal/config/hyper.go
+@@ -141,6 +141,9 @@ func (r realHyperClient) Get(ctx context.Context, etag string) (catwalk.Provider
+ 
+ func (r realHyperClient) doGet(ctx context.Context, etag string) (catwalk.Provider, error) {
+ 	var result catwalk.Provider
++	// Hyper support removed by no-hyper.patch (runCrushInContainer,
++	// PATCH_OUT_HYPER): the provider-catalog fetch never builds a request.
++	return result, errors.New("hyper support removed by no-hyper.patch (rebuild with PATCH_OUT_HYPER=0 to restore)")
+ 	req, err := http.NewRequestWithContext(
+ 		ctx,
+ 		http.MethodGet,
+diff --git a/internal/oauth/hyper/device.go b/internal/oauth/hyper/device.go
+index 886524e8..b86def7a 100644
+--- a/internal/oauth/hyper/device.go
++++ b/internal/oauth/hyper/device.go
+@@ -38,6 +38,9 @@ type TokenResponse struct {
+ 
+ // InitiateDeviceAuth calls the /device/auth endpoint to start the device flow.
+ func InitiateDeviceAuth(ctx context.Context) (*DeviceAuthResponse, error) {
++	// Hyper support removed by no-hyper.patch (runCrushInContainer,
++	// PATCH_OUT_HYPER): no request to hyper.charm.land is ever built.
++	return nil, errors.New("hyper support removed by no-hyper.patch (rebuild with PATCH_OUT_HYPER=0 to restore)")
+ 	url := hyper.BaseURL() + "/device/auth"
+ 
+ 	req, err := http.NewRequestWithContext(
+@@ -117,6 +120,8 @@ func PollForToken(ctx context.Context, deviceCode string, expiresIn int) (string
+ 
+ func pollOnce(ctx context.Context, deviceCode string) (TokenResponse, error) {
+ 	var result TokenResponse
++	// Hyper support removed by no-hyper.patch (see InitiateDeviceAuth).
++	return result, errors.New("hyper support removed by no-hyper.patch (rebuild with PATCH_OUT_HYPER=0 to restore)")
+ 	url := fmt.Sprintf("%s/device/auth/%s", hyper.BaseURL(), deviceCode)
+ 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+ 	if err != nil {
+@@ -151,6 +156,8 @@ func pollOnce(ctx context.Context, deviceCode string) (TokenResponse, error) {
+ 
+ // ExchangeToken exchanges a refresh token for an access token.
+ func ExchangeToken(ctx context.Context, refreshToken string) (*oauth.Token, error) {
++	// Hyper support removed by no-hyper.patch (see InitiateDeviceAuth).
++	return nil, errors.New("hyper support removed by no-hyper.patch (rebuild with PATCH_OUT_HYPER=0 to restore)")
+ 	reqBody := map[string]string{
+ 		"refresh_token": refreshToken,
+ 	}
+@@ -208,6 +215,8 @@ type IntrospectTokenResponse struct {
+ // IntrospectToken validates an access token using the introspection endpoint.
+ // Implements OAuth2 Token Introspection (RFC 7662).
+ func IntrospectToken(ctx context.Context, accessToken string) (*IntrospectTokenResponse, error) {
++	// Hyper support removed by no-hyper.patch (see InitiateDeviceAuth).
++	return nil, errors.New("hyper support removed by no-hyper.patch (rebuild with PATCH_OUT_HYPER=0 to restore)")
+ 	reqBody := map[string]string{
+ 		"token": accessToken,
+ 	}

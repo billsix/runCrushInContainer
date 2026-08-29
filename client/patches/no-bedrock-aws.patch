@@ -1,0 +1,69 @@
+Remove AWS Bedrock support (PATCH_OUT_BEDROCK_AWS, default 1).
+
+Cuts the Bedrock branch out of vendored charm.land/fantasy/providers/anthropic:
+the anthropic-sdk-go/bedrock and aws-sdk-go-v2/config imports and bedrock.go
+(bedrockBasicAuthConfig) are removed, un-compiling all nine aws-sdk-go-v2
+modules and smithy-go — including the 169.254.169.254 IMDS credential-chain
+probe. A Bedrock-configured provider fails with an explicit error; the plain
+Anthropic provider is untouched. Crush itself is untouched (its
+providers/bedrock wrapper compiles but ends at the guard). Import lines are
+REPLACED by unique marker comments (never bare-deleted) so every hunk is
+anchored in both directions; zero-context hunks are used where
+no-google-provider.patch edits the same lines. Apply with git apply
+--unidiff-zero. See tasks/reference/dependency-network-audit.md 4.2 and D6.
+
+diff --git a/vendor/charm.land/fantasy/providers/anthropic/anthropic.go b/vendor/charm.land/fantasy/providers/anthropic/anthropic.go
+index 104aabe0..5d17bda7 100644
+--- a/vendor/charm.land/fantasy/providers/anthropic/anthropic.go
++++ b/vendor/charm.land/fantasy/providers/anthropic/anthropic.go
+@@ -21 +21 @@ import (
+-	"github.com/anthropics/anthropic-sdk-go/bedrock"
++	// import "github.com/anthropics/anthropic-sdk-go/bedrock" removed by no-bedrock-aws.patch
+@@ -25 +25 @@ import (
+-	"github.com/aws/aws-sdk-go-v2/config"
++	// import "github.com/aws/aws-sdk-go-v2/config" removed by no-bedrock-aws.patch
+@@ -289,17 +289,6 @@ func (a *provider) LanguageModel(ctx context.Context, modelID string) (fantasy.L
+-		if a.options.skipAuth || a.options.apiKey != "" {
+-			clientOptions = append(
+-				clientOptions,
+-				bedrock.WithConfig(bedrockBasicAuthConfig(a.options.apiKey, a.options.bedrockRegion)),
+-			)
+-		} else {
+-			if cfg, err := config.LoadDefaultConfig(ctx); err == nil {
+-				cfg.Region = cmp.Or(a.options.bedrockRegion, cfg.Region)
+-				clientOptions = append(
+-					clientOptions,
+-					bedrock.WithConfig(cfg),
+-				)
+-			}
+-		}
+-		if a.options.baseURL != "" {
+-			clientOptions = append(clientOptions, option.WithBaseURL(a.options.baseURL))
+-		}
++		// Bedrock support is removed by no-bedrock-aws.patch
++		// (runCrushInContainer, PATCH_OUT_BEDROCK_AWS): the
++		// anthropic-sdk-go/bedrock and aws-sdk-go-v2/config imports are
++		// dropped, un-compiling all nine aws-sdk-go-v2 modules and smithy-go —
++		// including the 169.254.169.254 IMDS credential probe.
++		return nil, errors.New("bedrock support removed by no-bedrock-aws.patch (rebuild with PATCH_OUT_BEDROCK_AWS=0 to restore)")
+diff --git a/vendor/charm.land/fantasy/providers/anthropic/bedrock.go b/vendor/charm.land/fantasy/providers/anthropic/bedrock.go
+deleted file mode 100644
+index b8ac35e6..00000000
+--- a/vendor/charm.land/fantasy/providers/anthropic/bedrock.go
++++ /dev/null
+@@ -1,15 +0,0 @@
+-package anthropic
+-
+-import (
+-	"cmp"
+-
+-	"github.com/aws/aws-sdk-go-v2/aws"
+-	"github.com/aws/smithy-go/auth/bearer"
+-)
+-
+-func bedrockBasicAuthConfig(apiKey string, region string) aws.Config {
+-	return aws.Config{
+-		Region:                  cmp.Or(region, "us-east-1"),
+-		BearerAuthTokenProvider: bearer.StaticTokenProvider{Token: bearer.Token{Value: apiKey}},
+-	}
+-}
