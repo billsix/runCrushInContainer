@@ -45,9 +45,11 @@ Resolved in the sibling task, apply in both:
    (Applied across the fleet; the client port here already uses `shell-exec: image`.)
 3. **Outliers get standardized INTO the template, not excluded** — done for `graphicalcontainer`.
 
-Remaining for this repo: adopt the standard in this repo's `CLAUDE.md`, and — since the client's
-`shell.sh` is **baked** (COPY) — decide whether to bind-mount it (so a `shell.sh` edit is live without
-a 22 GB image rebuild), per the "bind-mount the launcher" standard.
+**Done 2026-08-29:** the client's `shell.sh` is now **bind-mounted** (`-v ./entrypoint/shell.sh:/shell.sh:Z`
+in `client/Makefile`'s `SHELL_RUN_FLAGS`) — so a `shell.sh` edit is live without a 22 GB rebuild; the
+Dockerfile `COPY … /shell.sh` stays as the baked fallback. Bill's reasoning: this is the tool you
+actively develop, so live launcher edits matter here (unlike a dead project). The `CLAUDE.md`
+framing/shell-exec notes are also updated. No further items open for this repo.
 
 ## Cross-links
 

@@ -151,6 +151,7 @@ vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/cr
 # tasks/add-shell-exec-target.md for the design.
 SHELL_RUN_FLAGS = \
 		--entrypoint /bin/bash \
+		-v ./entrypoint/shell.sh:/shell.sh:Z \
 		-e NESTED_PODMAN=$(NESTED_PODMAN) \
 		$(SELINUX_OPT) \
 		$(NET_FLAGS) \

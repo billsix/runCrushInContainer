@@ -1,9 +1,17 @@
 # runCrushInContainer
 
 Run a **local coding LLM** on your Mac and drive it from **[Crush](https://github.com/charmbracelet/crush)**
-(Charm's terminal coding agent) in a disposable Linux container. A sibling of
-[runClaudeInContainer](https://github.com/billsix/runClaudeInContainer), built to be a
-template you can point at a different model or agent.
+(Charm's terminal coding agent) in a disposable Linux container — a **tool for developing your own
+codebases with a private, local coding assistant**, the way
+[runClaudeInContainer](https://github.com/billsix/runClaudeInContainer) does with Claude Code. Its
+job has two halves: it **runs the agent** in a throwaway container pointed at whatever project
+you're working on, and it **delivers to the agent the conventions** that teach it how your projects
+are structured and built (the ported working-method machinery — see "What's in use").
+
+It's **fork-friendly** — the model, quant, serving port, and agent are Makefile variables you can
+swap — so it's a starting point for *your own assistant-runner*. That is **not** the same as a
+template for the codebases you build with it: those follow the container-per-project conventions the
+agent is taught, which live in your personal overlay (`ai-coding-conventions.personal.md`), not here.
 
 > **Status: working.** Both sides are built and running — the model serves on the Mac
 > (Metal) and Crush in the Linux client container generates against it over the SSH tunnel.
@@ -209,10 +217,21 @@ The runClaudeInContainer working-method machinery is now **ported** — the cros
 (host-mounted so it survives `--rm`), the personal-overlay layering, the 7 slash commands, and
 nested-podman support (`make shell NESTED_PODMAN=1`). See `tasks/port-runclaude-conventions-systems.md`.
 
+**Customize it for yourself — the personal overlay (`ai-coding-conventions.personal.md`).** The baked, always-loaded
+`CLAUDE.md` (at `~/.config/crush/CLAUDE.md`) `@`-imports **`~/.config/crush/ai-coding-conventions.personal.md`**,
+over which `make shell` mounts your host's **`~/.ai-coding-conventions.personal.md`** (auto-created
+empty if absent). **That one mounted file is where your per-user config and instructions go** — your
+identity, project→URL mapping, mount layout, standing authorizations, any personal guidance — and the
+agent picks them up every session, while the conventions tracked in this repo stay maintainer-agnostic.
+So you customize the setup without editing anything tracked: just fill in that host file. Start from
+`client/entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md`; see `FORKING.md`.
+
 ## Forking
 
-runCrushInContainer is a template — point it at a different model, quant, serving port, or agent by
-editing the Makefile variables, and layer in your own personal conventions. See **`FORKING.md`** for
+runCrushInContainer is a fork-friendly **assistant-runner** — point it at a different model, quant,
+serving port, or agent by editing the Makefile variables, and layer in your own personal conventions
+(the ones the agent then follows). (It's a template for *this tool*, not for the projects you develop
+with it.) See **`FORKING.md`** for
 exactly what to change (and what's portable vs personal).
 
 ## License

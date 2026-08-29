@@ -1,7 +1,9 @@
 # Forking this template for your own model / agent / conventions
 
-runCrushInContainer is a **template**: a local coding LLM served on one machine (`server/`) driven by a
-terminal coding agent in a disposable container (`client/`) over an SSH tunnel. It's built to be
+runCrushInContainer is a **fork-friendly assistant-runner** (a "template" only in the sense of *this
+tool* — a starting point to fork, **not** a template for the codebases you develop with it): a local
+coding LLM served on one machine (`server/`) driven by a terminal coding agent in a disposable
+container (`client/`) over an SSH tunnel, used to develop your other projects. It's built to be
 re-pointed at a different **model**, **quant**, **serving port**, or **agent version** — the swappable
 surface is Makefile variables, and the maintainer's personal layer is kept separate so you can adopt
 the machinery and pull upstream improvements without conflicts.

@@ -6,8 +6,10 @@ during bring-up. Not a task; update in place. Last updated 2026-08-19.
 ## What this is
 
 A local coding LLM (Meta **Muse Glimmer 30B**) served on a Mac, driven by **Crush** (Charm's
-terminal agent, `github.com/charmbracelet/crush`) from a disposable Linux container. A
-sibling/template of `github.com/billsix/runClaudeInContainer`. Two machines, one SSH tunnel:
+terminal agent, `github.com/charmbracelet/crush`) from a disposable Linux container — a tool for
+developing your codebases with a private local assistant, and a fork-friendly sibling of
+`github.com/billsix/runClaudeInContainer` (swap the model/agent via Makefile vars). Two machines, one
+SSH tunnel:
 
 ```
 [MAC]  llama.cpp (Metal) → llama-server on 127.0.0.1:8080 (OpenAI /v1)

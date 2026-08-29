@@ -6,10 +6,18 @@ the SSH tunnel, loads the ported conventions, and follows them. The runClaudeInC
 working-method machinery is now ported (see "What's in use" below); remaining items are tracked in
 `tasks/`.
 
-This repo runs a **local coding LLM** (Meta's **Muse Glimmer 30B**) and drives it with
-**Crush** (Charm's terminal coding agent, `github.com/charmbracelet/crush`). It is a sibling
-of `github.com/billsix/runClaudeInContainer` and is meant to become a **template**: the
-model, quant, and pinned tool versions are Makefile variables a fork can swap.
+**What this repo is for.** Like `github.com/billsix/runClaudeInContainer`, this is a **tool for
+running a coding assistant in a disposable container to develop your *other* codebases** — here the
+assistant is **Crush** (Charm's terminal agent, `github.com/charmbracelet/crush`) driving a **local
+coding LLM** (Meta's **Muse Glimmer 30B**) served on the Mac. Its job is two-fold: **run the agent**
+(in a throwaway container, pointed at the project mounted at `/work`), and **deliver to the agent the
+conventions** that teach it how your projects are structured and built — the ported working-method
+machinery (see "What's in use"). It is **fork-friendly** — model, quant, and pinned tool versions are
+Makefile variables a fork can swap — so it is a template for *the assistant-runner itself*. It is
+**not** a template for the codebases you build with it: those follow the container-per-project
+conventions the agent is taught (which live in the personal overlay (`ai-coding-conventions.personal.md`), not in this repo). This
+repo does happen to follow those same conventions for its own `client/` image, but that's incidental
+to its purpose.
 
 ## Two parts, two machines
 
@@ -71,7 +79,13 @@ The full working-method machinery is now **ported and in use** (Phases 0–4, 20
   and registered as a `global-context-path` in `crushrc` (the reference docs + personal overlay pulled
   in via the `@`-import patch);
 - **diversion stack** — host-mounted at `~/.config/crush/stack.md` (survives `--rm`);
-- **personal-overlay layering** (blank baked default + host `~/.ai-coding-conventions.personal.md` mount);
+- **personal-overlay layering** — the everyday per-user customization path: the baked always-loaded
+  `CLAUDE.md` (`~/.config/crush/CLAUDE.md`) `@`-imports `~/.config/crush/ai-coding-conventions.personal.md`
+  (blank tracked default), over which `make shell` mounts the host's `~/.ai-coding-conventions.personal.md`
+  (auto-`touch`ed if absent). **Filling in that one host file is how a user adds their own identity /
+  project→URL mapping / mount layout / instructions** without editing anything tracked; the agent loads
+  it every session and the tracked conventions stay maintainer-agnostic. Example to copy:
+  `client/entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md`; see `FORKING.md`;
 - **7 slash commands** (`/new-task`, `/stack-*`, … — in Crush's `/` dialog under the **User** tab);
 - **nested-podman** (`make shell NESTED_PODMAN=1`; inner runs need `--cgroups=disabled --network=host`);
 - **`make shell-exec`** (`client/Makefile`) — the batch twin of `make shell`: `make shell-exec
@@ -80,7 +94,7 @@ The full working-method machinery is now **ported and in use** (Phases 0–4, 20
   `SHELL_RUN_FLAGS` variable so they can't drift; `client/entrypoint/shell.sh` ends `set -e … exec
   bash "$@"`. Cross-project fan-out + design: `github.com/billsix/runClaudeInContainer`
   `tasks/add-shell-exec-target.md` and `.../fan-out-shell-exec-to-projects.md`. The general template
-  contract for this lives in the personal `.ai` overlay, not here.
+  contract for this lives in the personal overlay (`ai-coding-conventions.personal.md`), not here.
 - **two local Crush patches** (`client/patches/`): `crush-at-import.patch` (gated on
   `CRUSH_AT_IMPORT`) and `crush-no-update-check.patch` (**always applied** — disables the startup
   GitHub update check; see below). Because a patch needs a source tree, every non-vendored build now
