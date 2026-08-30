@@ -248,6 +248,10 @@ format: image ## format the client shell scripts with shfmt (runs in the built i
 		$(CONTAINER_NAME) \
 		/src/entrypoint/format.sh
 
+.PHONY: manifest
+manifest: ## print the container file layout (what the Dockerfile bakes, what the Makefile mounts, final paths) — read-only, no image build
+	@cat ../tasks/reference/container-file-layout.md
+
 .PHONY: image-export
 image-export: ## save the built image to a timestamped tar (podman save)
 	$(CONTAINER_CMD) save $(CONTAINER_NAME) -o $(CONTAINER_NAME)-$(shell date +%m-%d-%Y_%H-%M-%S).tar

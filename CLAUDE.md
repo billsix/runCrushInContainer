@@ -136,10 +136,15 @@ guidance is in `FORKING.md`.
 - `tasks/reference/glimmer-models-and-airgap-quant-selection.md` — survey of Meta's Muse Glimmer model
   family + the third-party quant landscape (sizes, licenses — all Apache-2.0), with a hardware-deferred
   recommendation for which GGUF quant to vendor to an airgap box. Read when deciding what/how much to pull.
+- `tasks/reference/container-file-layout.md` — the baked-vs-mounted map of the client container: every
+  Dockerfile `COPY`, every `SHELL_RUN_FLAGS` mount, final runtime paths, and the repo↔baked
+  reference-doc mapping. Printable via `make -C client manifest`; also baked into the image (below).
+  Consult it before citing a container path.
 
 Also **baked into the image** at `~/.config/crush/reference/` (agent-readable on-demand, NOT
 always-loaded, to save the local model's context): `llm-overused-phrases.md`, `print-debugging.md`,
-`sandbox-capability-map.md`, `nested-podman-design.md`, and `bluf-bottom-line-up-front.md` (the full
+`sandbox-capability-map.md`, `nested-podman-design.md`, `container-file-layout.md` (the baked-vs-mounted
+map — kept in sync with its `tasks/reference/` twin), and `bluf-bottom-line-up-front.md` (the full
 write-up behind the `## BLUF` task-doc convention). **Cite a baked doc by its
 `~/.config/crush/reference/…` path, never `tasks/reference/…`** — the latter is a repo path absent
 inside the container, so the agent can't reach it (the offline miss fixed 2026-08-22; a baked doc that
@@ -198,4 +203,7 @@ triaged, 66 deep-audited at source, twelve `PATCH_OUT_<X>` decisions confirmed �
 `tasks/reference/dependency-network-audit.md`; 2026/08/29), and the **egress patch/flag
 implementation** (thirteen flag-guarded build-time patches, combination-tested by
 `tools/sweep_egress_patch_combos.sh`; vendor-complete-unpatched + patch-at-build model; verified on
-the real machine — default-flag image built, Crush connected to the local model; 2026/08/29).
+the real machine — default-flag image built, Crush connected to the local model; 2026/08/29), and the
+**container file-layout map** (`tasks/reference/container-file-layout.md` + synced baked twin +
+`make manifest`; grew out of an in-container Crush session that had to reverse-engineer its own
+layout — see the archived task's `crush.log`; 2026/08/30).

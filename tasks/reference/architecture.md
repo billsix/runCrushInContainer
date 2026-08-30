@@ -56,6 +56,10 @@ SSH tunnel:
 
 ## Client (`client/`, Linux container)
 
+- **File layout — what the Dockerfile bakes vs what the Makefile mounts over it, and the final
+  container paths — is mapped in `tasks/reference/container-file-layout.md`** (printable via
+  `make -C client manifest`; also baked at `~/.config/crush/reference/container-file-layout.md`
+  so the agent can read it in-container). Consult it before citing a container path.
 - Full runClaudeInContainer toolchain (`entrypoint/01-install-base.sh`, verbatim copy) +
   **Crush built from source at image-build time**, pinned `CRUSH_TAG` (default **`v0.89.0`**,
   the latest stable at bring-up; `github.com/charmbracelet/crush`). The build is

@@ -4,8 +4,10 @@
 # What `make shell` runs. Barebones: land in the mounted project and remind the user how to
 # reach the model. No auth, no conventions layering — that's deferred (see the task docs).
 # Fail-fast setup (there's no heavy setup here, but this is the template convention;
-# the final `exec bash` is a fresh bash not under -e). NOTE: this shell.sh is BAKED
-# into the image (COPY), not bind-mounted, so this edit takes effect after `make image`.
+# the final `exec bash` is a fresh bash not under -e). NOTE: the Dockerfile bakes this
+# file at /shell.sh as a fallback, but `make shell` bind-mounts the repo copy over it
+# (SHELL_RUN_FLAGS), so an edit here is live on the next launch — no `make image` needed.
+# Full baked-vs-mounted map: tasks/reference/container-file-layout.md.
 set -e
 cd /work 2>/dev/null || cd /
 
