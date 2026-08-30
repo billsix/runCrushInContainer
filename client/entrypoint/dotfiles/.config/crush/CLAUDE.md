@@ -198,7 +198,11 @@ won't have those flags — **don't silently edit their build files**; add them t
 propose the edit and wait. The inner image store is RAM-backed and ephemeral. Full detail:
 `~/.config/crush/reference/nested-podman-design.md`. For **what tools/services this sandbox ships and its
 limits** (before assuming something isn't available), read
-`~/.config/crush/reference/sandbox-capability-map.md`.
+`~/.config/crush/reference/sandbox-capability-map.md`. For **where your own files live** — which
+container paths are baked vs mounted, and which reference docs exist only in the source repo —
+read `~/.config/crush/reference/container-file-layout.md`; the short version: the project you
+were pointed at is mounted at `/work`, and any other repo path you find yourself in came from
+`EXTRA_MOUNTS` and is invisible to these docs.
 
 ## Ending a session — sweep the always-read docs
 

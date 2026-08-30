@@ -130,6 +130,7 @@ make image     # build the image: full toolchain + Crush compiled from source (p
 make shell     # podman run --rm --network=host … then launch `crush`
 make shell-exec SCRIPT=path/to/script.sh   # run a script in that same env (no TTY), then exit
 make shell-exec CMD='some command'         # ^ or an inline command
+make manifest  # print the container file layout (baked vs mounted paths; no build)
 ```
 
 `make shell-exec` is the batch twin of `make shell`: same container and mounts, but it runs a
