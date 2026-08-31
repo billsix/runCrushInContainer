@@ -81,7 +81,11 @@ write-up `~/.config/crush/reference/bluf-bottom-line-up-front.md`) and **`## Con
 orientation: what to read first, current state, decisions-with-rationale) — then Goal / Plan / Notes /
 Open questions. Priority & Difficulty are 1–10 (1 = highest priority / easiest); pick next work by
 lowest-priority-number then lowest-difficulty-number. Update as work progresses. When complete, **move**
-to `tasks/archive/<YYYY>/<MM>/<DD>/<slug>.md`. Don't make a task doc for one-off questions. If a task's
+to `tasks/archive/<YYYY>/<MM>/<DD>/<slug>.md` — **yours to do at the moment of completion, unprompted
+(2026-08-31)**: done-state met + gates green = archive it (harvest, fix inbound pointers, `git mv`,
+stage) in the same handoff as the unit's code and doc deltas; don't ask, and don't hold because staged
+work awaits my commit or a status says "pending review" — ask only when the done-state itself is
+genuinely ambiguous. Don't make a task doc for one-off questions. If a task's
 Open questions are non-empty, surface them as a numbered list when you report making it.
 
 ## Reference documents (`tasks/reference/<slug>.md`)
