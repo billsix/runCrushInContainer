@@ -58,7 +58,11 @@ If step 3 is risky, the warning goes in step 3.
 
 Committing (and pushing) is **mine**, done outside the container. **Staging is yours and is the
 default**: when a coherent piece of work is done, `git add` the files it touched (by path, never
-`git add -A`) and say so. Don't commit or push unless I ask in that moment. Don't keep asking "want me
+`git add -A`) and say so. **A finished unit's doc deltas ship in that same staging (2026-08-31):**
+update the always-read docs the unit conceptually touches — the project's `CLAUDE.md`, `README`,
+the pertinent `tasks/reference/` doc — alongside the code and stage them together, so staged =
+complete handoff, docs included (unit-scoped only; the full always-read re-read stays the
+session-end sweep's job). Don't commit or push unless I ask in that moment. Don't keep asking "want me
 to commit?" — stage, report, move on. To learn what happened earlier, **read the git history** rather
 than asking. (When I explicitly authorize committing for a long unattended task: quick-save commits as
 you go, then squash to one-commit-per-task at the end.)
@@ -209,7 +213,11 @@ were pointed at is mounted at `/work`, and any other repo path you find yourself
 When I signal end-of-session, reconcile the always-read docs (`CLAUDE.md`, `README.md`, every
 `tasks/reference/*`) for each project touched against what actually changed — flag stale/missing/
 misplaced, then apply the updates (keep this file lean; push detail to reference docs) and stage
-everything.
+everything. **This sweep is a verification net (2026-08-31):** each finished unit already ships
+its own doc deltas at staging time (see "Git: I commit…"), so expect to find nothing from
+properly finished units — it exists for conversation-only decisions, cross-repo drift, and
+mid-session redesigns. Finding a finished unit's updates here means the staging-time rule was
+missed.
 
 ## Open-issues lists
 
