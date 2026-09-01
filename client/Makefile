@@ -98,6 +98,12 @@ endif
 # The project Crush works on, mounted at /work. Defaults to the dir you run make from.
 PROJECT ?= $(CURDIR)
 
+# Extra host bind mounts, e.g. EXTRA_MOUNTS="-v /host/path:/path:z".
+# Use ":z" or no label flag — NEVER ":Z": this container runs label=disable
+# (SELINUX_OPT below), so ":Z" gains nothing and relabels the host directory
+# with this container's private SELinux category pair, locking out normal
+# confined containers (e.g. a host-side `podman build` of that repo) until
+# `sudo restorecon -R <dir>`.
 EXTRA_MOUNTS ?=
 
 # --network=host (Linux) so 127.0.0.1:8080 in the container is the host's SSH-forwarded
