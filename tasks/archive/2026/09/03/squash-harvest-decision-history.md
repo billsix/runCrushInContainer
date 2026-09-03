@@ -1,6 +1,6 @@
 # Convention: on "I'm going to squash", harvest the full decision history into the task doc first
 
-**Status:** proposed — needs go-ahead
+**Status:** DONE 2026-09-03 — convention added to client/entrypoint/dotfiles/.config/crush/CLAUDE.md (squash section).
 **Priority:** 3
 **Difficulty:** 2
 

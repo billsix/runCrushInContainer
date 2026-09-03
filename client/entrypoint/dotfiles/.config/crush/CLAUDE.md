@@ -67,6 +67,15 @@ to commit?" — stage, report, move on. To learn what happened earlier, **read t
 than asking. (When I explicitly authorize committing for a long unattended task: quick-save commits as
 you go, then squash to one-commit-per-task at the end.)
 
+**Before squashing, harvest the commit history into the task doc.** When I say I'm going to squash, first
+walk **every commit in the unpushed range** (`<upstream>..HEAD`; find `<upstream>` via
+`git rev-parse --abbrev-ref @{u}`), reading the **task-doc AND code diffs** at each, and update the task doc so
+it records — **chronologically — every decision we made and why** (what changed, what we rejected and why, what
+each step found). Only then squash. The squash collapses the per-commit trail, so the archived task doc becomes
+the only record of the reasoning — it must carry the full play-by-play *before* the history is flattened. Do
+this as part of the squash, unprompted (like staging). (Durable-knowledge harvest into a reference doc still
+happens at archive time.)
+
 ## Task documents (`tasks/<slug>.md`)
 
 For non-trivial, multi-step, or resumable work, keep a doc at `tasks/<slug>.md` in the repo root.
