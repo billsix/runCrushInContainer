@@ -1,6 +1,6 @@
 # Diversion stack is IN-SESSION only — stop host-persisting it; harvest it at session-end instead
 
-**Status:** proposed — needs go-ahead
+**Status:** DONE 2026-09-03 — Makefile no longer creates/mounts the stack; conventions + layout doc updated; sweep harvests it.
 **Priority:** 4
 **Difficulty:** 3
 

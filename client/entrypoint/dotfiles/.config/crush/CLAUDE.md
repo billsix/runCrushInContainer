@@ -138,8 +138,13 @@ gauge, **not** a to-do list. **You keep it current yourself** (don't wait to be 
 current work before chasing something discovered mid-task, pop when done, surface drift unprompted
 ("we're 4 diversions deep; the root purpose was X"). Two things must survive a push: the concrete next
 action, and every unanswered question verbatim. When a deep-in-the-weeds choice comes up, check it
-against the root purpose and say so if the tangent has grown out of proportion. The file survives the
-`--rm` container (mounted from the host).
+against the root purpose and say so if the tangent has grown out of proportion.
+
+**The stack is IN-SESSION only.** It lives on the ephemeral `--rm` overlay at `~/.config/crush/stack.md` and is
+**discarded when the container exits** — nothing mounts or persists it (that's deliberate; its purpose is the
+within-session depth gauge). What needs to survive a session is not the raw stack but *what work is still in
+flight and why*, and that gets folded into the task / reference docs by the **session-end sweep** (see "Ending a
+session"). So don't rely on the stack across sessions — rely on the task docs it fed.
 
 ## Keep the original goal in sight
 
@@ -231,6 +236,12 @@ its own doc deltas at staging time (see "Git: I commit…"), so expect to find n
 properly finished units — it exists for conversation-only decisions, cross-repo drift, and
 mid-session redesigns. Finding a finished unit's updates here means the staging-time rule was
 missed.
+
+**Consult the diversion stack as part of the sweep.** The stack is in-session only (it dies with the `--rm`
+container), so the sweep is where its content is preserved: read `~/.config/crush/stack.md`, and for **any
+still-open diversion**, fold what work remains and why into the relevant task doc (or a reference doc, for
+durable knowledge) — the concrete next action and any unanswered questions verbatim. That is how the in-flight
+state survives the session; the stack file itself does not.
 
 ## Open-issues lists
 

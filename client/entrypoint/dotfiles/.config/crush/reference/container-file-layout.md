@@ -73,8 +73,12 @@ GOBIN=/usr/local/bin GOFLAGS=-trimpath`.
 | `~/.gnupg` | `/root/.gnupg` | only if it exists on the host |
 | `~/.gitconfig` | `/root/.gitconfig` | only if it exists on the host |
 | `~/.ai-coding-conventions.personal.md` | `/root/.config/crush/ai-coding-conventions.personal.md` | always (`touch`ed blank if absent) — **overrides the baked blank**; note the dotted host name → un-dotted container name |
-| `~/.config/crush/stack.md` | `/root/.config/crush/stack.md` | always (`mkdir`+`touch`) — the diversion stack survives `--rm` |
 | `EXTRA_MOUNTS` | user-chosen | user-supplied; no doc covers these paths |
+
+> The **diversion stack** (`~/.config/crush/stack.md`) is **not** a host mount and is **not** baked (as of
+> 2026-09-03) — it is in-session only: created on the ephemeral `--rm` overlay inside the container and discarded
+> at exit. Its still-open items are folded into the task/reference docs by the session-end sweep. See the
+> conventions `CLAUDE.md` ("The diversion stack" / "Ending a session").
 
 Non-mount run flags that also shape the environment: `--network=host`
 (`NET_FLAGS`), `--security-opt label=disable` (`SELINUX_OPT`),

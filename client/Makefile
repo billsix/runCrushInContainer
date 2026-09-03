@@ -152,11 +152,11 @@ GNUPG_MOUNT := $(shell if [ -d $(GNUPG_REAL_PATH) ]; then echo "-v $(GNUPG_REAL_
 PERSONAL_FILE := $(HOME)/.ai-coding-conventions.personal.md
 PERSONAL_MOUNT := $(shell touch $(PERSONAL_FILE) 2>/dev/null; echo "-v $(PERSONAL_FILE):/root/.config/crush/ai-coding-conventions.personal.md:Z")
 
-# Diversion-stack mount (UNCONDITIONAL, persists across --rm): the conventions reference
-# ~/.config/crush/stack.md; keep it on the HOST so the global-across-repos stack survives the
-# ephemeral container. mkdir+touch at parse time so the mount always resolves.
-STACK_FILE := $(HOME)/.config/crush/stack.md
-STACK_MOUNT := $(shell mkdir -p $(HOME)/.config/crush 2>/dev/null; touch $(STACK_FILE) 2>/dev/null; echo "-v $(STACK_FILE):/root/.config/crush/stack.md:Z")
+# Diversion stack: intentionally NOT mounted or created on the host. It is IN-SESSION only
+# (a within-session depth gauge), so it lives on the ephemeral --rm overlay at
+# /root/.config/crush/stack.md and dies with the container. Its cross-session value — what
+# work is still in flight and why — is harvested into the task / reference docs by the
+# session-end sweep (see .config/crush/CLAUDE.md), which is the part that persists.
 
 # Nested podman (opt-in: `make shell NESTED_PODMAN=1`): run podman INSIDE the client so Crush can
 # build/run a project's own containers nested (make image/run/shell for container-per-project repos).
@@ -225,7 +225,6 @@ SHELL_RUN_FLAGS = \
 		$(GNUPG_MOUNT) \
 		$(GITCONFIG_MOUNT) \
 		$(PERSONAL_MOUNT) \
-		$(STACK_MOUNT) \
 		$(NESTED_PODMAN_FLAGS) \
 		$(EXTRA_MOUNTS)
 
