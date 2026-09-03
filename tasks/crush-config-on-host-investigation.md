@@ -1,6 +1,6 @@
 # Why does host `~/.config/crush` have files? — investigation + decision
 
-**Status:** proposed — needs decision (investigation DONE, 2026-09-03)
+**Status:** RESOLVED 2026-09-03 — decision made: **stop persisting** the stack; harvest it at session-end instead. Implementation tracked in `stack-in-session-only-harvest-at-sweep.md`. Archive once that lands.
 **Priority:** 6
 **Difficulty:** 2
 
