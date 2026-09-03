@@ -15,7 +15,7 @@
 #  any auth plumbing — the endpoint is a local, keyless llama-server behind SSH.
 # ============================================================================
 
-CONTAINER_CMD  = podman
+CONTAINER_CMD ?= $(shell command -v podman >/dev/null 2>&1 && echo podman || echo docker)
 CONTAINER_NAME = crushcontainer
 
 # Latest stable Crush release (decision 2026-08-18). Override: make image CRUSH_TAG=vX.Y.Z
