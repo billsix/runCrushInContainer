@@ -97,6 +97,24 @@ work awaits my commit or a status says "pending review" — ask only when the do
 genuinely ambiguous. Don't make a task doc for one-off questions. If a task's
 Open questions are non-empty, surface them as a numbered list when you report making it.
 
+## Step tasks — an umbrella task with sequenced children
+
+For a **multi-step initiative** too big for one doc (a phased refactor, a migration with per-step commit
+boundaries, anything where step N can't sensibly start until N-1 lands), split it into an **umbrella task**
+plus one **step-task per step**. The umbrella (`tasks/<initiative>.md`) holds the vision, rationale, the
+ordered step list (it IS the index), cross-cutting risks, and the cross-step decisions — not each step's
+detail; give it the initiative's Priority/Difficulty. Each step-task (`tasks/<initiative>-step-N-<slug>.md`,
+so they sort together) is a normal cold-readable task doc carrying header links `**Part of:**` (umbrella),
+`**Depends on:**` (prev step), `**Next:**` (next step). **Express ordering with Priority + a "Depends on"
+note, NOT `blocked`** — `blocked` is for gates *outside* our control; a step waiting only on an earlier step
+is within our control, so the ready step gets a low priority-number (next-work) and later steps get higher
+ones plus a "don't start until step N-1 lands" line (keeps the easy-wins scan honest). Track status in both
+the step-task's `Status` and a one-line-per-step checklist in the umbrella. Each step-task archives on its own
+completion (normal rule); the umbrella archives when the last step is done and is where you harvest the
+initiative's rationale into a reference doc. **Don't over-scaffold** — reach for this only at three-plus
+sizeable sequential chunks (or a step with its own commit boundary); a two-step job is just one task with a
+phase list.
+
 ## Reference documents (`tasks/reference/<slug>.md`)
 
 Durable knowledge that outlives the work that produced it (comparisons, investigations' conclusions,
