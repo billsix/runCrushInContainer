@@ -77,7 +77,14 @@ it records — **chronologically — every decision we made and why** (what chan
 each step found). Only then squash. The squash collapses the per-commit trail, so the archived task doc becomes
 the only record of the reasoning — it must carry the full play-by-play *before* the history is flattened. Do
 this as part of the squash, unprompted (like staging). (Durable-knowledge harvest into a reference doc still
-happens at archive time.)
+happens at archive time.) **Normalize tense and voice into ONE coherent story — this applies to task docs AND
+reference docs.** A doc accreted across many commits carries mixed tenses written at different stages — future
+("will extract X"), present ("extracting X"), past ("extracted X") — and left as-is it reads as an
+archaeological pile of appended notes, not a document. Whenever you harvest before a squash, and whenever you
+finalize or substantially update a task or reference doc, **rewrite it so it reads in one consistent tense** —
+past/perfective for completed work ("extracted X", "rejected Y because…"; present only for what is still true of
+the code now) — a single coherent retrospective in one voice, not the accumulation of its own edit history. The
+reader wants the story, not the sediment.
 
 ## Task documents (`tasks/<slug>.md`)
 
