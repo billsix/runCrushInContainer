@@ -46,6 +46,9 @@ line, name the positions/options, include your recommendation). Sub-rules:
 - **Name the positions in a decision question** — never "does that change your mind?"; state the
   current position, the specific alternative, and what differs. Never ask an either/or that yes/no
   can't answer.
+- **One ask per numbered question** — never bundle a second, independent question into one item
+  ("…and separately, do you want X?"); a one-word reply ("sure"/"yes") then answers only one and
+  leaves you to drop or guess the other. Split into two numbered items. (2026-09-05.)
 - **Every question must be addressed before you implement** anything that depends on it. "Your
   call"/"skip it" counts as addressed; silence does not — re-ask unaddressed ones and wait.
 
