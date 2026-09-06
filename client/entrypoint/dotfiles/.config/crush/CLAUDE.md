@@ -63,7 +63,8 @@ Committing (and pushing) is **mine**, done outside the container. **Staging is y
 default**: when a coherent piece of work is done, `git add` the files it touched (by path, never
 `git add -A`) and say so. **A finished unit's doc deltas ship in that same staging (2026-08-31):**
 update the always-read docs the unit conceptually touches — the project's `CLAUDE.md`, `README`,
-the pertinent `tasks/reference/` doc — alongside the code and stage them together, so staged =
+the pertinent `tasks/reference/` doc, and, in a repo with a `CHANGELOG.md`, its `[Unreleased]` entry for
+anything a pin-bumping consumer would notice — alongside the code and stage them together, so staged =
 complete handoff, docs included (unit-scoped only; the full always-read re-read stays the
 session-end sweep's job). Don't commit or push unless I ask in that moment. Don't keep asking "want me
 to commit?" — stage, report, move on. To learn what happened earlier, **read the git history** rather
@@ -76,8 +77,9 @@ walk **every commit in the unpushed range** (`<upstream>..HEAD`; find `<upstream
 it records — **chronologically — every decision we made and why** (what changed, what we rejected and why, what
 each step found). Only then squash. The squash collapses the per-commit trail, so the archived task doc becomes
 the only record of the reasoning — it must carry the full play-by-play *before* the history is flattened. Do
-this as part of the squash, unprompted (like staging). (Durable-knowledge harvest into a reference doc still
-happens at archive time.) **Normalize tense and voice into ONE coherent story — this applies to task docs AND
+this as part of the squash, unprompted (like staging); for a repo with a `CHANGELOG.md`, also reconcile
+`[Unreleased]` against everything since the last tag (see "Versioning & changelogs"). (Durable-knowledge
+harvest into a reference doc still happens at archive time.) **Normalize tense and voice into ONE coherent story — this applies to task docs AND
 reference docs.** A doc accreted across many commits carries mixed tenses written at different stages — future
 ("will extract X"), present ("extracting X"), past ("extracted X") — and left as-is it reads as an
 archaeological pile of appended notes, not a document. Whenever you harvest before a squash, and whenever you
@@ -216,7 +218,13 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
 `sort -V` / `git tag --sort=v:refname`; re-check before reporting a version "missing". For a
 consumer-facing library/tool, keep a `CHANGELOG.md` (newest-first, `[Unreleased]` at top, call out
 **breaking** changes) and bump the version **before** publishing. A private app nobody pins doesn't
-need this.
+need this. **Write the entry when you make the change** — it is one of a finished unit's doc deltas — and
+**reconcile at the three moments that already look back** (the pre-squash harvest, the session-end sweep,
+any release): diff the public surface since the last tag (`git diff $(git describe --tags --abbrev=0)..HEAD
+-- src/`) against `[Unreleased]` and write what is missing (2026-09-06: gacalc 0.0.19 shipped unlogged).
+Promoting `[Unreleased]` to `## [version] — date` is part of the version bump. A project with a changelog
+carries a version↔changelog consistency check in its gate (gacalc `tools/check_changelog.py`). Per-commit
+changelogging was declined: the agent doesn't commit, and diff-derived entries log churn without the why.
 
 ## Debugging — instrumentation-driven
 
@@ -263,7 +271,8 @@ were pointed at is mounted at `/work`, and any other repo path you find yourself
 
 When I signal end-of-session, reconcile the always-read docs (`CLAUDE.md`, `README.md`, every
 `tasks/reference/*`) for each project touched against what actually changed — flag stale/missing/
-misplaced, then apply the updates (keep this file lean; push detail to reference docs) and stage
+misplaced, then apply the updates (keep this file lean; push detail to reference docs), reconcile any
+touched repo's `CHANGELOG.md` `[Unreleased]` against everything since its last tag, and stage
 everything. **This sweep is a verification net (2026-08-31):** each finished unit already ships
 its own doc deltas at staging time (see "Git: I commit…"), so expect to find nothing from
 properly finished units — it exists for conversation-only decisions, cross-repo drift, and
