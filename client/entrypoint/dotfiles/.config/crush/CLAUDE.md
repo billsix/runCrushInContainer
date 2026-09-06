@@ -139,6 +139,15 @@ follow-on task for that action** (`proposed — needs go-ahead`, or `blocked` on
 hinges on), cross-linked to the reference doc — don't strand the recommendation in the archived doc. (A
 "don't do X" recommendation needs no task; fold findings into an existing task rather than duplicating.)
 
+**Layered levels of detail (LoD).** A big topic — or a *set* — can be written at layers: **L0** a
+one-paragraph capsule (all L0s aggregate into a set's `tasks/reference/<set>/README.md` map = its
+TOC + status board), **L1** a code-free one-page mental model (only when non-obvious, self-contained,
+and *not* another topic's job — else cross-link to the owner), **L2** the anchored mechanism, **L3**
+the source (cite by **stable named anchor** — a symbol or `doc-region` marker — never a line number,
+which rots). Name L2 `<topic>.md`, L1 `<topic>-overview.md`, L0 a map row. Generate **deepest-first,
+then compress upward** (~half the lines per level, each fresh at its altitude), and **compare each doc
+to a baseline the reader knows**. `/new-reference-set` scaffolds one.
+
 ## A project README is commands-forward; prose goes in reference docs
 
 A README gets me running: **commands forward, rationale trimmed, few invocations** (prefer one

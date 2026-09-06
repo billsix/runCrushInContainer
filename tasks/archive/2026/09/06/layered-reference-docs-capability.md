@@ -1,6 +1,6 @@
 # Layered reference docs (levels of detail) — native capability
 
-**Status:** proposed — needs go-ahead
+**Status:** DONE — 2026-09-06. Implemented: a 'Layered reference documents (levels of detail)' convention in this repo's CLAUDE.md + a /new-reference-set command. Archived same day.
 **Priority:** 5
 **Difficulty:** 4
 
