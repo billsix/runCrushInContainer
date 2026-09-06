@@ -156,7 +156,12 @@ inputs and re-run the FINAL script once** (don't re-apply on top of already-tran
 reproduces its diff from the original — checkout **only the processed files** (`git checkout
 <pre-script-SHA> -- <files>`), NOT a whole-tree `git checkout <SHA>` (that deletes the script itself);
 run once, confirm `git diff` on those files is empty. At archive: **one-shot → `git rm`** (history
-keeps it); **reusable → promote** to `tools/`.
+keeps it); **reusable → promote** to `tools/`. **A directory the conventions promise must survive being
+empty: git tracks files, not directories, so put an empty `.keep` in `tasks/adhoc/` (and in
+`tasks/reference/`, `tasks/archive/`, `tools/` — any directory these conventions point a reader
+at) when you create it, and never `git rm` the `.keep`** — the first cleanup that removes the last
+file would otherwise remove the directory from the repo (2026-09-06, mvp: archiving the last one-shot
+codemods `git rm`'d `tasks/adhoc/` itself; the maintainer restored it with a `.keep`).
 
 ## The diversion stack (`~/.config/crush/stack.md`) — you maintain it
 
