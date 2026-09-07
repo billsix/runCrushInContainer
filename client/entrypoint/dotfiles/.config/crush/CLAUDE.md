@@ -167,7 +167,12 @@ inputs and re-run the FINAL script once** (don't re-apply on top of already-tran
 reproduces its diff from the original — checkout **only the processed files** (`git checkout
 <pre-script-SHA> -- <files>`), NOT a whole-tree `git checkout <SHA>` (that deletes the script itself);
 run once, confirm `git diff` on those files is empty. At archive: **one-shot → `git rm`** (history
-keeps it); **reusable → promote** to `tools/`. **A directory the conventions promise must survive being
+keeps it); **reusable → promote** to `tools/`. **Under "I commit, you don't" the one-shot's `git rm`
+waits until its carrying commit exists** — staging an add *and* a remove before any commit nets to
+nothing and loses the audit trail — so the removal trails the archive by one commit; **track the owed
+deletion** (in the archived task or the stack) rather than assuming archive-time removal. (mvp
+2026-09-06: two codemods were archived with their tasks but only `git rm`'d a commit later, after the
+work commit that carried them.) **A directory the conventions promise must survive being
 empty: git tracks files, not directories, so put an empty `.keep` in `tasks/adhoc/` (and in
 `tasks/reference/`, `tasks/archive/`, `tools/` — any directory these conventions point a reader
 at) when you create it, and never `git rm` the `.keep`** — the first cleanup that removes the last
