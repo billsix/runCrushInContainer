@@ -1,6 +1,8 @@
 # Archiving is its own commit AFTER the work commit — stop bundling the archive into the work handoff
 
-**Status:** proposed — needs go-ahead (do NOT edit the conventions until approved)
+**Status:** DONE 2026-09-07 — reworded the archiving guidance + adhoc One-shot note in this repo's
+`CLAUDE.md` (condensed), mirroring the runClaudeInContainer fix; the agent memory was corrected
+alongside. Verified: no leftover "same handoff" phrasing.
 **Priority:** 3
 **Difficulty:** 2
 
@@ -18,10 +20,10 @@ adhoc `git rm`) is staged as its **own** set **after the work commit exists** �
 never bundled with the work — while **keeping** the "proactive, unprompted,
 don't-make-me-ask" intent. **Conventions/doc change only — no code.**
 
-(Twin fix: runClaudeInContainer carries the same guidance and the same fix in its
-own `tasks/archive-is-its-own-commit-after-work.md` — the two are separate projects
-and each tracks its own `CLAUDE.md`; keep them consistent, but this doc stands
-alone.)
+(Twin fix: runClaudeInContainer carries the same guidance and the same fix, archived
+at its own `tasks/archive/2026/09/07/archive-is-its-own-commit-after-work.md` — the two
+are separate projects and each tracks its own `CLAUDE.md`; kept consistent, but this doc
+stands alone.)
 
 ## Context — read these first
 
