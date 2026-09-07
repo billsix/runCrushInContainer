@@ -102,11 +102,19 @@ write-up `~/.config/crush/reference/bluf-bottom-line-up-front.md`) and **`## Con
 orientation: what to read first, current state, decisions-with-rationale) — then Goal / Plan / Notes /
 Open questions. Priority & Difficulty are 1–10 (1 = highest priority / easiest); pick next work by
 lowest-priority-number then lowest-difficulty-number. Update as work progresses. When complete, **move**
-to `tasks/archive/<YYYY>/<MM>/<DD>/<slug>.md` — **yours to do at the moment of completion, unprompted
-(2026-08-31)**: done-state met + gates green = archive it (harvest, fix inbound pointers, `git mv`,
-stage) in the same handoff as the unit's code and doc deltas; don't ask, and don't hold because staged
-work awaits my commit or a status says "pending review" — ask only when the done-state itself is
-genuinely ambiguous. Don't make a task doc for one-off questions. If a task's
+to `tasks/archive/<YYYY>/<MM>/<DD>/<slug>.md` — **yours to do proactively at the moment of completion,
+no go/no-go question (2026-08-31; timing corrected 2026-09-07)**: done-state met + gates green = the
+archive is *owed* (harvest, fix inbound pointers, `git mv`, `git rm` one-shot adhoc scripts) — never
+ask whether to archive or present a done task as a *candidate*; ask only when the done-state itself is
+ambiguous. **BUT the archive is its own commit AFTER the work commit — never bundled into the work's
+staged handoff.** Lifecycle = **three commits**: (1) task-add, (2) work + adhoc scripts, (3)
+archive-move + one-shot `git rm`, together, a *separate* commit after the work commit. So don't
+`git mv`/`git rm` into the work's staged set: stage the work and stop, and once its commit exists (I
+make it by default — "Git: I commit, you don't") **proactively** stage the archive set as commit 3 —
+an owed, tracked action (note it in `Status` or the stack), never a question. When I've authorized you
+to commit this session (per-project), *you* commit the work, then commit the archive-move + one-shot
+`git rm` as a **separate** commit — same two boundaries, never one combined "work + archive" commit.
+"Pending review" applies to the *work*, not the lifecycle move. Don't make a task doc for one-off questions. If a task's
 Open questions are non-empty, surface them as a numbered list when you report making it.
 
 ## Step tasks — an umbrella task with sequenced children
@@ -167,12 +175,12 @@ inputs and re-run the FINAL script once** (don't re-apply on top of already-tran
 reproduces its diff from the original — checkout **only the processed files** (`git checkout
 <pre-script-SHA> -- <files>`), NOT a whole-tree `git checkout <SHA>` (that deletes the script itself);
 run once, confirm `git diff` on those files is empty. At archive: **one-shot → `git rm`** (history
-keeps it); **reusable → promote** to `tools/`. **Under "I commit, you don't" the one-shot's `git rm`
-waits until its carrying commit exists** — staging an add *and* a remove before any commit nets to
-nothing and loses the audit trail — so the removal trails the archive by one commit; **track the owed
-deletion** (in the archived task or the stack) rather than assuming archive-time removal. (mvp
-2026-09-06: two codemods were archived with their tasks but only `git rm`'d a commit later, after the
-work commit that carried them.) **A directory the conventions promise must survive being
+keeps it); **reusable → promote** to `tools/`. **The one-shot's `git rm` belongs IN the archive commit**
+(paired with the task's `git mv`) — a separate commit AFTER the work commit that carried the script;
+staging an add *and* a remove before any commit nets to nothing and loses the audit trail. So it's an
+owed action performed **with** the archive (commit 3), never bundled into the work's staged set; **track
+the owed deletion** (in the archived task or the stack). (mvp 2026-09-06: two codemods were archived with
+their tasks but `git rm`'d only after the work commit that carried them.) **A directory the conventions promise must survive being
 empty: git tracks files, not directories, so put an empty `.keep` in `tasks/adhoc/` (and in
 `tasks/reference/`, `tasks/archive/`, `tools/` — any directory these conventions point a reader
 at) when you create it, and never `git rm` the `.keep`** — the first cleanup that removes the last
