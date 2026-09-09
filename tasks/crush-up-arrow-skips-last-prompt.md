@@ -1,7 +1,8 @@
 # Make Crush's Up-arrow recall the LAST prompt, the way bash does
 
-**Status:** proposed — research done 2026-09-09, root causes identified and anchored; the patch
-itself is **not yet written or compiled**.
+**Status:** proposed — research done 2026-09-09 against **v0.89.0** (the pinned `CRUSH_TAG`),
+root causes identified and anchored; the patch itself is **not yet written or compiled**.
+**Background:** `tasks/reference/crush-prompt-history.md` documents the whole subsystem.
 **Priority:** 3
 **Difficulty:** 4
 
@@ -9,8 +10,8 @@ itself is **not yet written or compiled**.
 
 Pressing Up in Crush's editor recalls the prompt *before* the one you just sent, not the one you
 just sent — so the maintainer's first Up lands on what he thinks of as "two commands ago". Two
-independent defects in Crush cause it, both confirmed present from `v0.89.0` (the pinned
-`CRUSH_TAG`) through `v0.92.0` and on upstream `main` at `6bbfa8a` (2026-09-08). Done = a
+independent defects in Crush v0.89.0 (the pinned `CRUSH_TAG`) cause it, and neither is fixed
+upstream, so a bump will not remove the need for this patch. Done = a
 `client/patches/crush-shell-history.patch`, applied **by default**, after which the first Up
 recalls the last submitted prompt and repeated Ups walk strictly backwards in submission order.
 
@@ -27,9 +28,8 @@ recalls the last submitted prompt and repeated Ups walk strictly backwards in su
   follow-up is `tasks/crush-at-import-parity.md`.
 - **Every patch must be re-verified on a `CRUSH_TAG` bump** — see `tasks/bump-crush-to-v0.90.0.md`,
   which is the open bump task; this patch will need rebasing there too.
-- Line numbers below are from **v0.89.0** unless stated. The same code exists at v0.92.0 and on
-  `main`; only the line numbers move (the send site is `ui.go:2639` at v0.92.0, `ui.go:2637` on
-  `main`). Anchor on the symbol names, not the numbers.
+- Every line number below is **v0.89.0**. Anchor on the symbol names, not the numbers, so a bump
+  is a re-anchor rather than a re-derivation.
 
 ## Root cause 1 — the history is reloaded from SQLite *before* the new prompt is written
 
@@ -155,6 +155,6 @@ to `README.md` wherever the other flags are listed.
 2. **Include edit 3 (the mid-browse clobber guard)?** Recommend yes; it is three lines and it is
    the difference between "Up works" and "Up works unless a shell command finishes while you are
    scrolling".
-3. **Report it upstream?** Both defects are on `main` as of 2026-09-08, so a fix would eventually
-   remove the need for this patch. Recommend filing after the patch is verified locally, and
-   keeping the patch either way until a release carries the fix.
+3. **Report it upstream?** Neither defect is fixed upstream, so a fix there would eventually
+   remove the need for this patch. Recommend filing after it is verified locally, and keeping the
+   patch either way until a release we actually pin carries the fix.
