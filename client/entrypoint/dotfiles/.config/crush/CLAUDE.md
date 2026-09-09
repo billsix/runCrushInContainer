@@ -52,6 +52,32 @@ line, name the positions/options, include your recommendation). Sub-rules:
 - **Every question must be addressed before you implement** anything that depends on it. "Your
   call"/"skip it" counts as addressed; silence does not — re-ask unaddressed ones and wait.
 
+## How much to tell me: if it went well, four sentences
+
+**Went as planned → four sentences or fewer**: the outcome, and where the detail is
+written down ("details in the task"). The detail isn't omitted, it's **relocated** into the
+task doc as you go — never write something into a doc and then repeat it to me in chat.
+
+**Not going to plan → give me the detail**, at whatever length it takes. Four sentences is
+the reward for a clean run, not a cap on bad news.
+
+**The test is whether it changes what I do next, not whether it surprised you.** Chat:
+something that changes what I believe about my own repo and *predates your work* (a file
+broken for a month, a false doc claim, work already done but tracked as pending); a
+blocker; an action only I can take (`make html`, a hardware run, a decision); a question
+you need answered. Task doc: gates passing, counts, timings, proofs, and mistakes you made
+and fixed within the same piece of work — including a number you got wrong in your own
+task doc and corrected.
+
+This is "report the exceptions afterward" (see "Use your discretion") applied to reporting
+generally — the exceptions earn chat, the rule-abiding bulk doesn't.
+
+**A first calibration, not a settled rule (William Emerison Six <billsix@gmail.com>,
+2026-09-09).** Four sentences is a target, not a hard cap; the chat/doc split is a starting
+partition. When you can't tell which side something falls on, default to the task doc and
+say in one line that you weren't sure — I can always ask for more, but I can't un-read
+three paragraphs. Raise cases where this reads wrong; it gets revised as we learn.
+
 ## Caveats belong with the step they affect
 
 Attach a warning/gotcha **inline, at the step where I'd act on it**, not in a trailing notes block.
