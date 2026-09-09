@@ -195,7 +195,7 @@ silent footgun) stays inline as a one-line `>`-note, but its explanation moves t
 ## Ad-hoc scripts (`tasks/adhoc/<task-slug>/`)
 
 Save *substantive* throwaway scripts (codemods, verification harnesses) under `tasks/adhoc/<slug>/`,
-run from there, commit as an audit trail. Skip one-liners. Make a file-mutating codemod **idempotent
+run from there, commit as an audit trail. Skip one-liners. **Paths must be relative — to the script itself or to the repo root — never container-absolute.** A mount path like `/foo/opt/<project>` exists only because *this* sandbox launch had that `EXTRA_DIRS`; another launch, machine, or host checkout puts the repo elsewhere and the saved script is dead. Derive the root from the script's own location (`pathlib.Path(__file__).resolve().parents[3]` for `tasks/adhoc/<slug>/<name>`, or `git rev-parse --show-toplevel` in shell) and address everything from there — including what the script **writes**: outputs, baselines, logs go under the repo or a path passed as an argument. Make a file-mutating codemod **idempotent
 and prove it** (run twice, second run = zero changes). If the script changes mid-task, **revert its
 inputs and re-run the FINAL script once** (don't re-apply on top of already-transformed files) so it
 reproduces its diff from the original — checkout **only the processed files** (`git checkout
