@@ -91,7 +91,7 @@ inserted by the agent side afterwards, so the reload returns a list **without** 
 sent, and `promptHistoryLoadedMsg` (`ui.go:839`) installs it wholesale. For the rest of the
 session, the first Up recalls the prompt *before* the last one.
 
-Tracked in `tasks/crush-up-arrow-skips-last-prompt.md`.
+Fixed by our patch (§7); work record `tasks/archive/2026/09/09/crush-up-arrow-skips-last-prompt.md`.
 
 `promptHistoryLoadedMsg` also resets `index` and `draft` unconditionally, so a reload landing
 mid-browse drops the user back to the draft.
@@ -122,7 +122,7 @@ another process holds it. One shared data dir therefore means **one Crush at a t
 PID written into the lock file is a container PID, so the diagnostic on a stale lock is
 misleading. Weigh that before consolidating.
 
-Tracked in `tasks/crush-history-across-sessions-and-days.md`.
+Fixed by our patch (§7); work record `tasks/archive/2026/09/09/crush-history-across-sessions-and-days.md`.
 
 ## 6. What a bash-style `Ctrl-R` would take
 
@@ -142,7 +142,7 @@ There is **no search UI today** — the only history keys are Up and Down (§2).
   editor mode: its own key routing, a replaced prompt line, `Ctrl-R` again to walk to older
   matches, `Ctrl-G`/`Esc` to cancel restoring the draft, and Enter to accept into the editor.
 
-Tracked in `tasks/crush-ctrl-r-history-search.md`.
+Added by our patch (§7); work record `tasks/archive/2026/09/09/crush-ctrl-r-history-search.md`.
 
 ## 7. What our patch changes (`CRUSH_SHELL_HISTORY`, 2026-09-09)
 
@@ -178,10 +178,9 @@ The patch also extends one test double (`countingWorkspace` in
 `internal/ui/model/session_busy_test.go`), which implemented `ListUserMessages` but not
 `ListAllUserMessages` — nil once change 2 lands, and a panic in that package's tests.
 
-Work records — `tasks/crush-up-arrow-skips-last-prompt.md`,
-`tasks/crush-ctrl-r-history-search.md`, `tasks/crush-history-across-sessions-and-days.md` — each
-marked DONE and awaiting their archive commit; look under `tasks/archive/2026/09/` once that
-lands.
+Work records: `tasks/archive/2026/09/09/crush-up-arrow-skips-last-prompt.md`,
+`tasks/archive/2026/09/09/crush-ctrl-r-history-search.md`,
+`tasks/archive/2026/09/09/crush-history-across-sessions-and-days.md`.
 
 ## 8. The patch system these changes live in
 
