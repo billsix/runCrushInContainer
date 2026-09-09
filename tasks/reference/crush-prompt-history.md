@@ -144,7 +144,40 @@ There is **no search UI today** — the only history keys are Up and Down (§2).
 
 Tracked in `tasks/crush-ctrl-r-history-search.md`.
 
-## 7. The patch system these changes live in
+## 7. What our patch changes (`CRUSH_SHELL_HISTORY`, 2026-09-09)
+
+Everything above describes **stock** Crush v0.89.0. `client/patches/crush-shell-history.patch`,
+applied by default, changes four things — read this section together with §§1-6, which document
+what it is changing.
+
+1. **The submitted prompt is recorded in memory, not re-read from the database.** A new
+   `historyPush` in `internal/ui/model/history.go` puts the text (or `"!"+command`) at the front of
+   `promptHistory.messages`, and the submit sites no longer batch a `loadPromptHistory` that cannot
+   see the row yet. Fixes §4. Consecutive duplicates are skipped, as bash under
+   `HISTCONTROL=ignoredups`.
+2. **History spans sessions.** `loadPromptHistory` always calls `ListAllUserMessages`; the
+   session-scoped branch in §1 is gone. One history per project, the way a shell has one per user.
+3. **Ordering is deterministic.** Both queries order by `created_at DESC, rowid DESC` — in the
+   `.sql` source and in the sqlc-generated `.go` mirror, since the build does not run sqlc. Fixes
+   §3 without touching the seconds-resolution timestamp itself.
+4. **`ctrl+r` opens a reverse search.** A new `internal/ui/dialog/history.go` (`History` dialog +
+   `HistoryItem`) on `list.FilterableList`: typing filters fuzzily, `enter` inserts the entry into
+   the editor unsent, `ctrl+r` again steps to the next match, `esc` closes. It reads
+   `m.promptHistory.messages` rather than querying, so it can never disagree with what Up shows.
+   **The key is shared, not stolen:** `ui.go` routes `ctrl+r` to the dialog only when no attachment
+   is pending, checked before the attachments component sees the key; with attachments present it
+   remains the delete prefix of §6. Both editor help blocks advertise it under the same condition.
+
+The patch also extends one test double (`countingWorkspace` in
+`internal/ui/model/session_busy_test.go`), which implemented `ListUserMessages` but not
+`ListAllUserMessages` — nil once change 2 lands, and a panic in that package's tests.
+
+Work records — `tasks/crush-up-arrow-skips-last-prompt.md`,
+`tasks/crush-ctrl-r-history-search.md`, `tasks/crush-history-across-sessions-and-days.md` — each
+marked DONE and awaiting their archive commit; look under `tasks/archive/2026/09/` once that
+lands.
+
+## 8. The patch system these changes live in
 
 Every local change to Crush is a `client/patches/*.patch` applied at image build by
 `client/entrypoint/03-build-crush.sh` under its own flag, with `git apply --unidiff-zero`. Feature

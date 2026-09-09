@@ -208,6 +208,12 @@ The first cut was just "get it running"; the client has since grown a few things
 - **A local `@`-import patch for Crush** (`client/patches/`, applied at build when
   `CRUSH_AT_IMPORT=1`, on by default via `make image`) so a `@path` on its own line in a context
   file (`CLAUDE.md`/`AGENTS.md`/`CRUSH.md`) is recursively spliced in — a feature Crush lacks upstream.
+- **Shell-style prompt history** (`client/patches/crush-shell-history.patch`, applied when
+  `CRUSH_SHELL_HISTORY=1`, on by default via `make image`): Up recalls the prompt you just sent,
+  history spans every session in the project rather than resetting with each one, same-second
+  entries stop shuffling, and **`ctrl+r` opens a reverse search** — except while an attachment is
+  pending, where `ctrl+r` remains Crush's attachment-delete prefix. How it all works:
+  `tasks/reference/crush-prompt-history.md`.
 - **Only the local model is offered** — the baked `crushrc` pins Muse Glimmer explicitly and sets
   `option default-providers false` to suppress Crush's built-in provider catalog.
 - **Host config mounts** — `~/.tmux.conf` / `~/.gitconfig` / `~/.gnupg` are mounted in when present,

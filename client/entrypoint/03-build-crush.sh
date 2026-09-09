@@ -43,6 +43,10 @@
 #                    for a bare-host run point it at client/patches
 #   CRUSH_AT_IMPORT               0/1, default 0 — local @-import FEATURE patch (adds
 #                                 recursive `@path` splicing to context files)
+#   CRUSH_SHELL_HISTORY           0/1, default 0 — shell-history FEATURE patch: Up recalls
+#                                 the prompt just sent, history spans sessions, same-second
+#                                 entries keep their order, and ctrl+r reverse-searches
+#                                 (see tasks/reference/crush-prompt-history.md)
 #   PATCH_OUT_UPDATE_CHECK        0/1, default 1 — no startup api.github.com release check
 #   PATCH_OUT_TELEMETRY           0/1, default 1 — PostHog/data.charm.land unreachable at
 #                                 build level (on top of the env/config opt-outs)
@@ -72,6 +76,7 @@ CRUSH_VENDORED="${CRUSH_VENDORED:-0}"
 PATCHES_DIR="${PATCHES_DIR:-/patches}"
 
 CRUSH_AT_IMPORT="${CRUSH_AT_IMPORT:-0}"
+CRUSH_SHELL_HISTORY="${CRUSH_SHELL_HISTORY:-0}"
 PATCH_OUT_UPDATE_CHECK="${PATCH_OUT_UPDATE_CHECK:-1}"
 PATCH_OUT_TELEMETRY="${PATCH_OUT_TELEMETRY:-1}"
 PATCH_OUT_UPDATE_PROVIDERS_CMD="${PATCH_OUT_UPDATE_PROVIDERS_CMD:-1}"
@@ -105,6 +110,7 @@ apply_patch() {
     fi
 }
 apply_patch "$CRUSH_AT_IMPORT"                "crush-at-import.patch"
+apply_patch "$CRUSH_SHELL_HISTORY"            "crush-shell-history.patch"
 apply_patch "$PATCH_OUT_UPDATE_CHECK"         "crush-no-update-check.patch"
 apply_patch "$PATCH_OUT_TELEMETRY"            "no-telemetry.patch"
 apply_patch "$PATCH_OUT_UPDATE_PROVIDERS_CMD" "no-update-providers-cmd.patch"

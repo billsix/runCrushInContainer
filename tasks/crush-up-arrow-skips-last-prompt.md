@@ -1,8 +1,11 @@
 # Make Crush's Up-arrow recall the LAST prompt, the way bash does
 
-**Status:** proposed — research done 2026-09-09 against **v0.89.0** (the pinned `CRUSH_TAG`),
-root causes identified and anchored; the patch itself is **not yet written or compiled**.
-**Background:** `tasks/reference/crush-prompt-history.md` documents the whole subsystem.
+**Status:** **DONE 2026-09-09.** Delivered by `client/patches/crush-shell-history.patch`
+(flag `CRUSH_SHELL_HISTORY`, on by default), which carries all three history tasks — they turned
+out to be one change to one subsystem. Verified: the patch applies to a pristine v0.89.0 clone
+with the build script's own `git apply --unidiff-zero`, `go build ./...` is clean, and
+`go test ./internal/ui/... ./internal/db/...` passes.
+**How it all works:** `tasks/reference/crush-prompt-history.md`.
 **Priority:** 3
 **Difficulty:** 4
 
@@ -158,3 +161,28 @@ to `README.md` wherever the other flags are listed.
 3. **Report it upstream?** Neither defect is fixed upstream, so a fix there would eventually
    remove the need for this patch. Recommend filing after it is verified locally, and keeping the
    patch either way until a release we actually pin carries the fix.
+
+
+## What was done (2026-09-09)
+
+All three edits from "The patch" above, as designed, plus a fourth found while doing it.
+
+1. **`historyPush`** added to `internal/ui/model/history.go`, and both submit sites in `ui.go`
+   switched to it — the prompt (or `"!"+command`) is recorded in memory and the racing
+   `loadPromptHistory` dropped from the submit batch. Consecutive duplicates are skipped, as bash
+   does under `HISTCONTROL=ignoredups`.
+2. **`ORDER BY created_at DESC, rowid DESC`** in both user-message queries, in the `.sql` source
+   **and** the sqlc-generated `.go` mirror.
+3. **The mid-browse clobber guard** in `promptHistoryLoadedMsg`.
+4. **A test double had to grow a method.** `countingWorkspace` in
+   `internal/ui/model/session_busy_test.go` implemented `ListUserMessages` but not
+   `ListAllUserMessages`; once history loads across sessions it hits the second, and the embedded
+   interface left it nil, so `TestSessionSwitchRefreshesQueueAndBusy` panicked. The stub now
+   answers both. Nothing in production was affected — every real workspace implements it — but it
+   is why the patch touches a `_test.go` file.
+
+Four tests were added to `internal/ui/model/history_test.go` covering recall-the-last-prompt,
+duplicate suppression, the bang prefix, and empty submissions.
+
+**Answers to the open questions:** (1) yes, shipped in the same patch; (2) yes, included;
+(3) not yet filed upstream — the patch stands on its own and filing is optional follow-up.

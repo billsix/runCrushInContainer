@@ -1,7 +1,11 @@
 # Make Crush's prompt history span sessions and days, like a shell's
 
-**Status:** proposed — research done 2026-09-09. **The premise turned out to be partly wrong:
-history already persists on the host.** Read the first section before planning anything.
+**Status:** **DONE 2026-09-09.** Delivered by `client/patches/crush-shell-history.patch`
+(flag `CRUSH_SHELL_HISTORY`, on by default), which carries all three history tasks — they turned
+out to be one change to one subsystem. Verified: the patch applies to a pristine v0.89.0 clone
+with the build script's own `git apply --unidiff-zero`, `go build ./...` is clean, and
+`go test ./internal/ui/... ./internal/db/...` passes.
+**How it all works:** `tasks/reference/crush-prompt-history.md`.
 **Priority:** 3
 **Difficulty:** 3
 
@@ -73,3 +77,23 @@ once, keep per-project data dirs and accept per-project history.
 2. **Do you want one history across all projects (a shared data dir), or per project?**
    Recommend per project unless you never run two Crush containers at once, because of the
    exclusive data-dir lock.
+
+
+## What was done (2026-09-09)
+
+**`loadPromptHistory` now always calls `ListAllUserMessages`**, dropping the session-scoped branch:
+one history for the project, the way a shell has one history for the user. That is the whole change
+— five lines and a comment.
+
+**No data-directory change was made, and none is needed.** The maintainer's clarification settled
+it: storing history wherever Crush is launched is exactly what Crush already does, and since the
+client launches in `/work` — the mounted project — it persists on the host when launched in a
+mount and is lost otherwise, which is the desired behaviour. The shared-data-dir option in the
+section above was **not** taken; the exclusive `flock` would have limited the setup to one Crush
+container at a time.
+
+One consequence to know about: a test double needed a method it had never been asked for — see
+`tasks/crush-up-arrow-skips-last-prompt.md`, item 4.
+
+**Answers to the open questions:** (1) unconditional, no config option; (2) per project — no
+shared data dir.

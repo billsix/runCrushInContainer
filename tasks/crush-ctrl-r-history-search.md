@@ -1,6 +1,11 @@
 # Give Crush a bash-style Ctrl-R reverse history search
 
-**Status:** proposed — research done 2026-09-09; the patch is **not yet written or compiled**.
+**Status:** **DONE 2026-09-09.** Delivered by `client/patches/crush-shell-history.patch`
+(flag `CRUSH_SHELL_HISTORY`, on by default), which carries all three history tasks — they turned
+out to be one change to one subsystem. Verified: the patch applies to a pristine v0.89.0 clone
+with the build script's own `git apply --unidiff-zero`, `go build ./...` is clean, and
+`go test ./internal/ui/... ./internal/db/...` passes.
+**How it all works:** `tasks/reference/crush-prompt-history.md`.
 **Priority:** 3
 **Difficulty:** 5
 
@@ -84,3 +89,28 @@ guarding `client/patches/crush-history-search.patch`. Document it in both flag b
    Recommend A first, for patch-rebase cost, and treat B as a follow-up.
 3. **Land `tasks/crush-history-across-sessions-and-days.md` before this?** Recommend yes —
    searching one session's prompts is not the feature.
+
+
+## What was done (2026-09-09)
+
+**Design A**, as recommended: a new `internal/ui/dialog/history.go` — a `History` dialog and a
+`HistoryItem`, built on `list.FilterableList` and the shared `renderItem`/`RenderContext` helpers,
+so it looks and behaves like the sessions and commands pickers. Typing filters fuzzily; `enter`
+(or `tab`/`ctrl+y`) inserts the entry into the editor **unsent**; `esc` closes. `ctrl+r` inside the
+dialog moves to the next match, so holding it walks backwards the way bash does.
+
+**Resolution (a) for the key collision**, as recommended: `ui.go` routes `ctrl+r` to the history
+dialog only when `len(m.attachments.List()) == 0`, checked **before** the key reaches the
+attachments component — which claims it either way otherwise. Both editor help blocks advertise
+`ctrl+r  search history` under that same condition, so the hint and the behaviour cannot disagree.
+
+Two details worth keeping:
+
+- **The dialog reads `m.promptHistory.messages`, not the database.** It cannot then disagree with
+  what Up would show, and it needs no query of its own.
+- **A list row is one line tall**, so a multi-line prompt is flattened for display while `Text()`
+  returns the original — otherwise recalling an entry would silently rewrite the prompt. Two tests
+  in `internal/ui/dialog/history_test.go` cover that and the bang prefix.
+
+**Answers to the open questions:** (1) resolution (a); (2) Design A; (3) yes — the cross-session
+change shipped in the same patch, so search covers the whole project's history.

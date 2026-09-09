@@ -1,0 +1,653 @@
+diff --git a/internal/db/messages.sql.go b/internal/db/messages.sql.go
+index 7164a1b..e216ff5 100644
+--- a/internal/db/messages.sql.go
++++ b/internal/db/messages.sql.go
+@@ -137,7 +137,7 @@ const listAllUserMessages = `-- name: ListAllUserMessages :many
+ SELECT id, session_id, role, parts, model, created_at, updated_at, finished_at, provider, is_summary_message
+ FROM messages
+ WHERE role = 'user'
+-ORDER BY created_at DESC
++ORDER BY created_at DESC, rowid DESC
+ `
+ 
+ func (q *Queries) ListAllUserMessages(ctx context.Context) ([]Message, error) {
+@@ -219,7 +219,7 @@ const listUserMessagesBySession = `-- name: ListUserMessagesBySession :many
+ SELECT id, session_id, role, parts, model, created_at, updated_at, finished_at, provider, is_summary_message
+ FROM messages
+ WHERE session_id = ? AND role = 'user'
+-ORDER BY created_at DESC
++ORDER BY created_at DESC, rowid DESC
+ `
+ 
+ func (q *Queries) ListUserMessagesBySession(ctx context.Context, sessionID string) ([]Message, error) {
+diff --git a/internal/db/sql/messages.sql b/internal/db/sql/messages.sql
+index 2c62976..b4c6bd3 100644
+--- a/internal/db/sql/messages.sql
++++ b/internal/db/sql/messages.sql
+@@ -46,13 +46,13 @@ WHERE session_id = ?;
+ SELECT *
+ FROM messages
+ WHERE session_id = ? AND role = 'user'
+-ORDER BY created_at DESC;
++ORDER BY created_at DESC, rowid DESC;
+ 
+ -- name: ListAllUserMessages :many
+ SELECT *
+ FROM messages
+ WHERE role = 'user'
+-ORDER BY created_at DESC;
++ORDER BY created_at DESC, rowid DESC;
+ 
+ -- name: GetLastAssistantMessageBySession :one
+ SELECT *
+diff --git a/internal/ui/dialog/history.go b/internal/ui/dialog/history.go
+new file mode 100644
+index 0000000..0f09e8b
+--- /dev/null
++++ b/internal/ui/dialog/history.go
+@@ -0,0 +1,267 @@
++package dialog
++
++import (
++	"strings"
++
++	"charm.land/bubbles/v2/help"
++	"charm.land/bubbles/v2/key"
++	"charm.land/bubbles/v2/textinput"
++	tea "charm.land/bubbletea/v2"
++	"github.com/charmbracelet/crush/internal/ui/common"
++	"github.com/charmbracelet/crush/internal/ui/list"
++	"github.com/charmbracelet/crush/internal/ui/styles"
++	uv "github.com/charmbracelet/ultraviolet"
++	"github.com/sahilm/fuzzy"
++)
++
++// HistoryID is the identifier for the prompt-history search dialog.
++const HistoryID = "history"
++
++// ActionInsertPrompt asks the caller to put a recalled history entry into
++// the editor, unsent -- the same thing Up does, reached by searching.
++type ActionInsertPrompt struct {
++	// Text is the history entry, with its "!" prefix still attached when it
++	// was a shell command; the editor decides what bang mode to enter.
++	Text string
++}
++
++// HistoryItem wraps one prompt-history entry as a searchable list item.
++type HistoryItem struct {
++	*list.Versioned
++	t       *styles.Styles
++	text    string
++	title   string
++	index   int
++	m       fuzzy.Match
++	cache   map[int]string
++	focused bool
++}
++
++var _ ListItem = &HistoryItem{}
++
++// newHistoryItem builds a list item for one history entry. index is the
++// entry's position in the history (0 = most recent) and is what makes the
++// item's ID unique -- history entries repeat, so the text cannot.
++func newHistoryItem(t *styles.Styles, text string, index int) *HistoryItem {
++	return &HistoryItem{
++		Versioned: list.NewVersioned(),
++		t:         t,
++		text:      text,
++		title:     oneLine(text),
++		index:     index,
++	}
++}
++
++// oneLine flattens a multi-line prompt onto a single row: a list row is one
++// line tall, so the raw text would otherwise be silently cut at its first
++// newline and two different prompts could look identical.
++func oneLine(s string) string {
++	return strings.Join(strings.Fields(s), " ")
++}
++
++// Finished implements list.Item. History entries never change once loaded;
++// SetFocused and SetMatch bump the version themselves.
++func (h *HistoryItem) Finished() bool { return true }
++
++// Filter returns the value the fuzzy search matches against.
++func (h *HistoryItem) Filter() string { return h.title }
++
++// ID returns a unique identifier for the entry.
++func (h *HistoryItem) ID() string { return h.title }
++
++// Text returns the entry as it should be inserted into the editor -- the
++// original, not the flattened one-line form shown in the list.
++func (h *HistoryItem) Text() string { return h.text }
++
++// SetMatch sets the fuzzy match for the item.
++func (h *HistoryItem) SetMatch(m fuzzy.Match) {
++	if sameFuzzyMatch(h.m, m) {
++		return
++	}
++	h.cache = nil
++	h.m = m
++	if h.Versioned != nil {
++		h.Bump()
++	}
++}
++
++// SetFocused sets the focus state of the item.
++func (h *HistoryItem) SetFocused(focused bool) {
++	if h.focused == focused {
++		return
++	}
++	h.cache = nil
++	h.focused = focused
++	if h.Versioned != nil {
++		h.Bump()
++	}
++}
++
++// Render implements list.Item.
++func (h *HistoryItem) Render(width int) string {
++	return renderItem(ListItemStyles{
++		ItemBlurred:     h.t.Dialog.NormalItem,
++		ItemFocused:     h.t.Dialog.SelectedItem,
++		InfoTextBlurred: h.t.Dialog.Sessions.InfoBlurred,
++		InfoTextFocused: h.t.Dialog.Sessions.InfoFocused,
++	}, h.title, "", h.focused, width, h.cache, &h.m)
++}
++
++// History is the prompt-history search dialog: the reverse-search a shell
++// gives you on ctrl+r, as a filtered picker. Typing narrows the list;
++// enter puts the selection in the editor without sending it.
++type History struct {
++	com   *common.Common
++	help  help.Model
++	list  *list.FilterableList
++	input textinput.Model
++
++	keyMap struct {
++		Select   key.Binding
++		Next     key.Binding
++		Previous key.Binding
++		UpDown   key.Binding
++		Close    key.Binding
++	}
++}
++
++var _ Dialog = (*History)(nil)
++
++// NewHistory creates the prompt-history search dialog over entries, which
++// must already be in most-recent-first order (the order loadPromptHistory
++// returns).
++func NewHistory(com *common.Common, entries []string) *History {
++	h := new(History)
++	h.com = com
++
++	items := make([]list.FilterableItem, 0, len(entries))
++	for i, entry := range entries {
++		if strings.TrimSpace(entry) == "" {
++			continue
++		}
++		items = append(items, newHistoryItem(com.Styles, entry, i))
++	}
++
++	hlp := help.New()
++	hlp.Styles = com.Styles.DialogHelpStyles()
++	h.help = hlp
++
++	h.list = list.NewFilterableList(items...)
++	h.list.Focus()
++	h.list.SetSelected(0)
++
++	h.input = textinput.New()
++	h.input.SetVirtualCursor(false)
++	h.input.Placeholder = "Search prompt history"
++	h.input.SetStyles(com.Styles.TextInput)
++	h.input.Focus()
++
++	h.keyMap.Select = key.NewBinding(
++		key.WithKeys("enter", "tab", "ctrl+y"),
++		key.WithHelp("enter", "insert"),
++	)
++	// ctrl+r repeats the search downward, the way holding it in bash walks
++	// back through older matches.
++	h.keyMap.Next = key.NewBinding(
++		key.WithKeys("down", "ctrl+n", "ctrl+r"),
++		key.WithHelp("↓", "next match"),
++	)
++	h.keyMap.Previous = key.NewBinding(
++		key.WithKeys("up", "ctrl+p"),
++		key.WithHelp("↑", "previous match"),
++	)
++	h.keyMap.UpDown = key.NewBinding(
++		key.WithKeys("up", "down"),
++		key.WithHelp("↑↓", "choose"),
++	)
++	h.keyMap.Close = CloseKey
++
++	return h
++}
++
++// ID implements Dialog.
++func (h *History) ID() string { return HistoryID }
++
++// HandleMsg implements Dialog.
++func (h *History) HandleMsg(msg tea.Msg) Action {
++	switch msg := msg.(type) {
++	case tea.KeyPressMsg:
++		switch {
++		case key.Matches(msg, h.keyMap.Close):
++			return ActionClose{}
++		case key.Matches(msg, h.keyMap.Previous):
++			h.list.Focus()
++			if h.list.IsSelectedFirst() {
++				h.list.SelectLast()
++			} else {
++				h.list.SelectPrev()
++			}
++			h.list.ScrollToSelected()
++		case key.Matches(msg, h.keyMap.Next):
++			h.list.Focus()
++			if h.list.IsSelectedLast() {
++				h.list.SelectFirst()
++			} else {
++				h.list.SelectNext()
++			}
++			h.list.ScrollToSelected()
++		case key.Matches(msg, h.keyMap.Select):
++			if item := h.list.SelectedItem(); item != nil {
++				if historyItem, ok := item.(*HistoryItem); ok {
++					return ActionInsertPrompt{Text: historyItem.Text()}
++				}
++			}
++			return ActionClose{}
++		default:
++			var cmd tea.Cmd
++			h.input, cmd = h.input.Update(msg)
++			h.list.SetFilter(h.input.Value())
++			h.list.ScrollToTop()
++			h.list.SetSelected(0)
++			return ActionCmd{cmd}
++		}
++	}
++	return nil
++}
++
++// Cursor returns the cursor position relative to the dialog.
++func (h *History) Cursor() *tea.Cursor {
++	return InputCursor(h.com.Styles, h.input.Cursor())
++}
++
++// Draw implements Dialog.
++func (h *History) Draw(scr uv.Screen, area uv.Rectangle) *tea.Cursor {
++	t := h.com.Styles
++	width := max(0, min(defaultDialogMaxWidth, area.Dx()-t.Dialog.View.GetHorizontalBorderSize()))
++	height := max(0, min(defaultDialogHeight, area.Dy()-t.Dialog.View.GetVerticalBorderSize()))
++	innerWidth := width - t.Dialog.View.GetHorizontalFrameSize()
++	h.input.SetWidth(dialogInputTextWidth(t, h.input, innerWidth))
++	listHeight, listTotalHeight, _ := sizeDialogList(t, h.list, innerWidth, height)
++
++	rc := NewRenderContext(t, width)
++	rc.Title = "History"
++	rc.AddPart(t.Dialog.InputPrompt.Render(h.input.View()))
++	cur := h.Cursor()
++
++	listView := t.Dialog.List.Height(h.list.Height()).Render(h.list.Render())
++	listView = joinScrollbar(t, listView, listHeight, listTotalHeight, listHeight, h.list.Offset())
++	rc.AddPart(listView)
++	rc.Help = renderDialogHelp(t, &h.help, h, innerWidth)
++
++	DrawCenterCursor(scr, area, rc.Render(), cur)
++	return cur
++}
++
++// ShortHelp implements help.KeyMap.
++func (h *History) ShortHelp() []key.Binding {
++	return []key.Binding{
++		h.keyMap.Select,
++		h.keyMap.UpDown,
++		h.keyMap.Close,
++	}
++}
++
++// FullHelp implements help.KeyMap.
++func (h *History) FullHelp() [][]key.Binding {
++	return [][]key.Binding{h.ShortHelp()}
++}
+diff --git a/internal/ui/dialog/history_test.go b/internal/ui/dialog/history_test.go
+new file mode 100644
+index 0000000..26d67be
+--- /dev/null
++++ b/internal/ui/dialog/history_test.go
+@@ -0,0 +1,31 @@
++package dialog
++
++import (
++	"testing"
++
++	"github.com/stretchr/testify/require"
++)
++
++// A list row is one line tall, so a multi-line prompt has to be flattened
++// for display -- but Text() must still hand back the original, or recalling
++// an entry would silently rewrite the prompt.
++func TestHistoryItemFlattensForDisplayButRecallsTheOriginal(t *testing.T) {
++	t.Parallel()
++
++	const raw = "first line\n  second line\n\nthird"
++	item := newHistoryItem(nil, raw, 0)
++
++	require.Equal(t, "first line second line third", item.Filter())
++	require.Equal(t, raw, item.Text())
++}
++
++// Shell commands keep their "!" so the editor re-enters bang mode when the
++// entry is inserted.
++func TestHistoryItemKeepsBangPrefix(t *testing.T) {
++	t.Parallel()
++
++	item := newHistoryItem(nil, "!git status", 3)
++
++	require.Equal(t, "!git status", item.Text())
++	require.Equal(t, "!git status", item.Filter())
++}
+diff --git a/internal/ui/model/history.go b/internal/ui/model/history.go
+index b4b611b..9411551 100644
+--- a/internal/ui/model/history.go
++++ b/internal/ui/model/history.go
+@@ -22,11 +22,12 @@ func (m *UI) loadPromptHistory() tea.Cmd {
+ 		var messages []message.Message
+ 		var err error
+ 
+-		if m.session != nil {
+-			messages, err = m.com.Workspace.ListUserMessages(ctx, m.session.ID)
+-		} else {
+-			messages, err = m.com.Workspace.ListAllUserMessages(ctx)
+-		}
++		// One history for the workspace, not one per session: a shell does
++		// not forget what you typed yesterday because you opened a new
++		// terminal.  Upstream loads only the current session's messages
++		// whenever a session exists, which hides every earlier session's
++		// prompts from Up and from history search.
++		messages, err = m.com.Workspace.ListAllUserMessages(ctx)
+ 		if err != nil {
+ 			slog.Error("Failed to load prompt history", "error", err)
+ 			return promptHistoryLoadedMsg{messages: nil}
+@@ -176,6 +177,27 @@ func (m *UI) historyNext() bool {
+ 	return true
+ }
+ 
++// historyPush records a just-submitted prompt at the front of the in-memory
++// history, so the next Up recalls it the way a shell does.  Reloading from the
++// database cannot do this at submit time: the row is written asynchronously by
++// the agent run (AgentRun returns once the prompt has been ACCEPTED, not once
++// it is stored), so a reload issued alongside the submit returns a list that
++// does not contain the prompt yet -- which is why Up used to skip it.
++//
++// Shell commands are pushed with their "!" restored, matching how
++// loadPromptHistory stores them.
++func (m *UI) historyPush(text string) {
++	m.historyReset()
++	if text == "" {
++		return
++	}
++	if len(m.promptHistory.messages) > 0 && m.promptHistory.messages[0] == text {
++		// consecutive duplicate, as bash under HISTCONTROL=ignoredups
++		return
++	}
++	m.promptHistory.messages = append([]string{text}, m.promptHistory.messages...)
++}
++
+ // historyReset resets the history, but does not clear the message
+ // it just sets the current draft to empty and the position in the history.
+ func (m *UI) historyReset() {
+diff --git a/internal/ui/model/history_test.go b/internal/ui/model/history_test.go
+index 5166f3b..29574f7 100644
+--- a/internal/ui/model/history_test.go
++++ b/internal/ui/model/history_test.go
+@@ -36,3 +36,72 @@ func TestHistoryBangCommandStripsPrefixWhileAlreadyInBangMode(t *testing.T) {
+ 	require.True(t, u.bangMode)
+ 	require.Equal(t, "echo two", u.textarea.Value())
+ }
++
++// A prompt must be recallable with one Up immediately after it is submitted.
++// The database cannot supply this: the row is written asynchronously by the
++// agent run, so the reload that used to run at submit time returned a list
++// without the prompt in it, and the first Up landed on the one before.
++func TestHistoryPushMakesTheLastPromptTheFirstRecalled(t *testing.T) {
++	t.Parallel()
++
++	u := newTestUI()
++	u.com.Workspace = historyWorkspace{}
++	u.promptHistory.messages = []string{"older", "oldest"}
++	u.promptHistory.index = -1
++
++	u.historyPush("just sent")
++
++	require.True(t, u.historyPrev())
++	require.Equal(t, "just sent", u.textarea.Value())
++	require.True(t, u.historyPrev())
++	require.Equal(t, "older", u.textarea.Value())
++	require.True(t, u.historyPrev())
++	require.Equal(t, "oldest", u.textarea.Value())
++	require.False(t, u.historyPrev())
++}
++
++// Repeating the same prompt should not stack duplicate entries, matching
++// bash under HISTCONTROL=ignoredups.
++func TestHistoryPushSkipsConsecutiveDuplicates(t *testing.T) {
++	t.Parallel()
++
++	u := newTestUI()
++	u.com.Workspace = historyWorkspace{}
++
++	u.historyPush("same")
++	u.historyPush("same")
++	u.historyPush("different")
++	u.historyPush("same")
++
++	require.Equal(t, []string{"same", "different", "same"}, u.promptHistory.messages)
++}
++
++// A bang command is recorded with its "!" restored, the form
++// loadPromptHistory stores shell commands in, so recalling it re-enters
++// bang mode.
++func TestHistoryPushRestoresBangPrefix(t *testing.T) {
++	t.Parallel()
++
++	u := newTestUI()
++	u.com.Workspace = historyWorkspace{}
++
++	u.historyPush("!git status")
++
++	require.Equal(t, []string{"!git status"}, u.promptHistory.messages)
++	require.True(t, u.historyPrev())
++	require.True(t, u.bangMode)
++	require.Equal(t, "git status", u.textarea.Value())
++}
++
++// An empty submission must not create a blank history entry.
++func TestHistoryPushIgnoresEmpty(t *testing.T) {
++	t.Parallel()
++
++	u := newTestUI()
++	u.com.Workspace = historyWorkspace{}
++	u.promptHistory.messages = []string{"kept"}
++
++	u.historyPush("")
++
++	require.Equal(t, []string{"kept"}, u.promptHistory.messages)
++}
+diff --git a/internal/ui/model/keys.go b/internal/ui/model/keys.go
+index 6ef04cc..bdfaf0a 100644
+--- a/internal/ui/model/keys.go
++++ b/internal/ui/model/keys.go
+@@ -18,8 +18,9 @@ type KeyMap struct {
+ 		DeleteAllAttachments key.Binding
+ 
+ 		// History navigation
+-		HistoryPrev key.Binding
+-		HistoryNext key.Binding
++		HistoryPrev   key.Binding
++		HistoryNext   key.Binding
++		HistorySearch key.Binding
+ 	}
+ 
+ 	Chat struct {
+@@ -156,6 +157,13 @@ func DefaultKeyMap() KeyMap {
+ 	km.Editor.HistoryNext = key.NewBinding(
+ 		key.WithKeys("down"),
+ 	)
++	// Shares ctrl+r with AttachmentDeleteMode above: the editor routes it
++	// here only when no attachment is pending, so the shell reflex works
++	// whenever there is nothing to delete.
++	km.Editor.HistorySearch = key.NewBinding(
++		key.WithKeys("ctrl+r"),
++		key.WithHelp("ctrl+r", "search history"),
++	)
+ 
+ 	km.Chat.NewSession = key.NewBinding(
+ 		key.WithKeys("ctrl+n"),
+diff --git a/internal/ui/model/session_busy_test.go b/internal/ui/model/session_busy_test.go
+index e6a6206..1bcba86 100644
+--- a/internal/ui/model/session_busy_test.go
++++ b/internal/ui/model/session_busy_test.go
+@@ -104,6 +104,13 @@ func (w *countingWorkspace) ListUserMessages(context.Context, string) ([]message
+ 	return nil, nil
+ }
+ 
++// Prompt history is loaded across sessions, so the stub has to answer this
++// one too -- the embedded interface would otherwise leave it nil and the
++// history load would panic.
++func (w *countingWorkspace) ListAllUserMessages(context.Context) ([]message.Message, error) {
++	return nil, nil
++}
++
+ func (w *countingWorkspace) WorkingDir() string { return "" }
+ 
+ func (w *countingWorkspace) LSPStart(context.Context, string) {}
+diff --git a/internal/ui/model/ui.go b/internal/ui/model/ui.go
+index 2ada427..48d2953 100644
+--- a/internal/ui/model/ui.go
++++ b/internal/ui/model/ui.go
+@@ -837,6 +837,12 @@ func (m *UI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 		}
+ 
+ 	case promptHistoryLoadedMsg:
++		// Adopting a new list mid-browse would move the ground under the
++		// cursor and drop the user back to their draft.  Skip this load; the
++		// next one lands once they are back at the draft.
++		if m.promptHistory.index >= 0 {
++			break
++		}
+ 		m.promptHistory.messages = msg.messages
+ 		m.promptHistory.index = -1
+ 		m.promptHistory.draft = ""
+@@ -2042,6 +2048,19 @@ func (m *UI) handleDialogMsg(msg tea.Msg) tea.Cmd {
+ 			m.com.Workspace.PermissionDeny(msg.Permission)
+ 		}
+ 
++	case dialog.ActionInsertPrompt:
++		// Recalled, not sent: the editor gets the text and the user decides.
++		prevHeight := m.textarea.Height()
++		m.dialog.CloseDialog(dialog.HistoryID)
++		m.textarea.Reset()
++		m.textarea.InsertString(msg.Text)
++		m.syncBangModeFromTextarea()
++		m.promptHistory.index = -1
++		m.promptHistory.draft = m.textarea.Value()
++		if cmd := m.updateTextareaWithPrevHeight(nil, prevHeight); cmd != nil {
++			cmds = append(cmds, cmd)
++		}
++
+ 	case dialog.ActionFilePickerSelected:
+ 		cmds = append(cmds, tea.Sequence(
+ 			msg.Cmd(),
+@@ -2531,6 +2550,19 @@ func (m *UI) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
+ 				}
+ 			}
+ 
++			// ctrl+r is the attachment-delete prefix, but only worth being so
++			// while attachments are pending.  With none, it is free, so give
++			// it the reverse history search a shell puts there.  Checked
++			// BEFORE handing the key to the attachments component, which
++			// otherwise claims it either way.
++			if key.Matches(msg, m.keyMap.Editor.HistorySearch) &&
++				len(m.attachments.List()) == 0 {
++				if cmd := m.openHistoryDialog(); cmd != nil {
++					cmds = append(cmds, cmd)
++				}
++				return tea.Batch(cmds...)
++			}
++
+ 			if ok := m.attachments.Update(msg); ok {
+ 				return tea.Batch(cmds...)
+ 			}
+@@ -2577,7 +2609,7 @@ func (m *UI) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
+ 					m.bangMode = false
+ 					m.setEditorPrompt(m.yoloModeCached())
+ 					m.randomizePlaceholders()
+-					m.historyReset()
++					m.historyPush("!" + value)
+ 					return tea.Batch(m.runShellCommand(value))
+ 				}
+ 
+@@ -2588,9 +2620,11 @@ func (m *UI) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
+ 				}
+ 
+ 				m.randomizePlaceholders()
+-				m.historyReset()
++				// Record it locally instead of re-reading the database: the
++				// row does not exist yet at this point (see historyPush).
++				m.historyPush(value)
+ 
+-				return tea.Batch(m.sendMessage(value, attachments...), m.loadPromptHistory())
++				return m.sendMessage(value, attachments...)
+ 			case key.Matches(msg, m.keyMap.Chat.NewSession):
+ 				if !m.hasSession() {
+ 					break
+@@ -3260,6 +3294,11 @@ func (m *UI) FullHelp() [][]key.Binding {
+ 						k.Editor.Escape,
+ 					},
+ 				)
++			} else {
++				// ctrl+r means history search only while no attachment is
++				// pending, so advertise it in exactly that case -- the same
++				// condition the key handler uses.
++				binds = append(binds, []key.Binding{k.Editor.HistorySearch})
+ 			}
+ 		case uiFocusSidebar:
+ 			binds = append(
+@@ -3331,6 +3370,11 @@ func (m *UI) FullHelp() [][]key.Binding {
+ 						k.Editor.Escape,
+ 					},
+ 				)
++			} else {
++				// ctrl+r means history search only while no attachment is
++				// pending, so advertise it in exactly that case -- the same
++				// condition the key handler uses.
++				binds = append(binds, []key.Binding{k.Editor.HistorySearch})
+ 			}
+ 		}
+ 	}
+@@ -4366,6 +4410,21 @@ func (m *UI) openModelsDialog() tea.Cmd {
+ }
+ 
+ // openCommandsDialog opens the commands dialog.
++// openHistoryDialog opens the prompt-history search over whatever history is
++// currently loaded -- no query of its own, so the dialog cannot disagree with
++// what Up would show.
++func (m *UI) openHistoryDialog() tea.Cmd {
++	if m.dialog.ContainsDialog(dialog.HistoryID) {
++		m.dialog.BringToFront(dialog.HistoryID)
++		return nil
++	}
++	if len(m.promptHistory.messages) == 0 {
++		return util.ReportInfo("No prompt history yet")
++	}
++	m.dialog.OpenDialog(dialog.NewHistory(m.com, m.promptHistory.messages))
++	return nil
++}
++
+ func (m *UI) openCommandsDialog() tea.Cmd {
+ 	if m.dialog.ContainsDialog(dialog.CommandsID) {
+ 		// Bring to front

@@ -68,6 +68,7 @@ RUN if [ -e /usr/share/containers/mounts.conf ]; then : > /usr/share/containers/
 #                    ARG=0 convention, so a bare `podman build` gets the audited posture.
 ARG CRUSH_TAG=v0.89.0
 ARG CRUSH_AT_IMPORT=0
+ARG CRUSH_SHELL_HISTORY=0
 ARG CRUSH_VENDORED=0
 ARG PATCH_OUT_UPDATE_CHECK=1
 ARG PATCH_OUT_TELEMETRY=1
@@ -97,6 +98,7 @@ COPY entrypoint/03-build-crush.sh /usr/local/bin/
 # see entrypoint/03-build-crush.sh. ARGs aren't inherited by a child process, so
 # every flag is passed to the script explicitly.
 RUN CRUSH_TAG="$CRUSH_TAG" CRUSH_VENDORED="$CRUSH_VENDORED" CRUSH_AT_IMPORT="$CRUSH_AT_IMPORT" \
+    CRUSH_SHELL_HISTORY="$CRUSH_SHELL_HISTORY" \
     PATCH_OUT_UPDATE_CHECK="$PATCH_OUT_UPDATE_CHECK" \
     PATCH_OUT_TELEMETRY="$PATCH_OUT_TELEMETRY" \
     PATCH_OUT_UPDATE_PROVIDERS_CMD="$PATCH_OUT_UPDATE_PROVIDERS_CMD" \

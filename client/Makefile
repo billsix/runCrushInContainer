@@ -37,6 +37,15 @@ FULL_TOOLCHAIN ?= 1
 # apply per their own flags). Re-verify the patch on every CRUSH_TAG bump (see the task doc).
 CRUSH_AT_IMPORT ?= 1
 
+# Apply the shell-history patch (client/patches/crush-shell-history.patch, see
+# tasks/reference/crush-prompt-history.md): makes prompt history behave like a shell's —
+# Up recalls the prompt you just sent, history spans sessions instead of resetting with
+# each one, same-second entries stop shuffling, and ctrl+r opens a reverse search (only
+# while no attachment is pending; with attachments, ctrl+r stays the delete prefix).
+# Default ON here; `make image CRUSH_SHELL_HISTORY=0` builds stock behaviour.
+# Re-verify the patch on every CRUSH_TAG bump (see the task docs).
+CRUSH_SHELL_HISTORY ?= 1
+
 # ---- Egress patch flags: one per decision, defaults encode the audit's disposition ----
 # From the dependency network audit (../tasks/reference/dependency-network-audit.md, D1-D12).
 # Each PATCH_OUT_<X> guards one patch in client/patches/, applied at BUILD time by
@@ -193,6 +202,7 @@ image: ## build the client image: full toolchain + Crush built from source (pinn
 	$(CONTAINER_CMD) build -t $(CONTAINER_NAME) \
 		--build-arg CRUSH_TAG=$(CRUSH_TAG) \
 		--build-arg CRUSH_AT_IMPORT=$(CRUSH_AT_IMPORT) \
+		--build-arg CRUSH_SHELL_HISTORY=$(CRUSH_SHELL_HISTORY) \
 		--build-arg FULL_TOOLCHAIN=$(FULL_TOOLCHAIN) \
 		--build-arg VENDOR_TOOLS=$(VENDOR_TOOLS) \
 		$(PATCH_FLAGS) \
