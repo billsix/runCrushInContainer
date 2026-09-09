@@ -184,5 +184,31 @@ All three edits from "The patch" above, as designed, plus a fourth found while d
 Four tests were added to `internal/ui/model/history_test.go` covering recall-the-last-prompt,
 duplicate suppression, the bang prefix, and empty submissions.
 
+### A bug the first cut shipped, reported by the maintainer and fixed the same day
+
+**Symptom:** after exiting and relaunching Crush, Up did nothing until one prompt had been
+submitted; from then on Up and Down worked.
+
+**Cause — edit 3, the mid-browse guard, was mine and it was wrong.** `promptHistory.index` is a
+plain `int` and is **never initialized**: the struct literal that builds the UI
+(`internal/ui/model/ui.go`) leaves it at Go's zero value, `0`. But `-1` is what means "not
+browsing"; `0` means "sitting on the most recent entry". So on a fresh UI the guard read
+"the user is mid-browse", threw the **startup** history load away, and left `messages` empty —
+until the first submit called `historyReset()`, which finally set the index to `-1`.
+
+**Fix, in two parts.** The real one: initialize `ui.promptHistory.index = -1` at construction,
+with a comment saying why the zero value is wrong. The belt-and-braces one: the guard now also
+requires `len(m.promptHistory.messages) > 0`, since there is nothing to protect when no history is
+loaded — which covers any other path that skips the initialization, including
+`newTestUI()`, whose struct literal has the same gap.
+
+**Two tests** in `internal/ui/model/history_test.go` pin both halves:
+`TestPromptHistoryLoadedIsAcceptedOnAFreshUI` (verified to FAIL without the fix) and
+`TestPromptHistoryLoadedIsSkippedWhileBrowsing`, which keeps the original guard honest.
+
+**The lesson worth carrying:** a sentinel of `-1` in a field that is never explicitly initialized
+is a trap, because the zero value is a *valid-looking* state rather than an obviously-empty one.
+Upstream got away with it only because nothing read the index before the first reset.
+
 **Answers to the open questions:** (1) yes, shipped in the same patch; (2) yes, included;
 (3) not yet filed upstream — the patch stands on its own and filing is optional follow-up.

@@ -168,6 +168,12 @@ what it is changing.
    is pending, checked before the attachments component sees the key; with attachments present it
    remains the delete prefix of §6. Both editor help blocks advertise it under the same condition.
 
+`promptHistory.index` is also **initialized to `-1` at construction**, which stock Crush never
+does. The field's sentinel for "not browsing" is `-1` while its zero value is `0` — a
+valid-looking "on the most recent entry" — so anything that reads the index before the first
+`historyReset()` sees a fresh UI claiming to be mid-browse. Change 4's guard did exactly that and
+discarded the startup load, leaving Up dead until the first prompt was sent.
+
 The patch also extends one test double (`countingWorkspace` in
 `internal/ui/model/session_busy_test.go`), which implemented `ListUserMessages` but not
 `ListAllUserMessages` — nil once change 2 lands, and a panic in that package's tests.
