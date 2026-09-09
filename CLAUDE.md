@@ -95,8 +95,11 @@ The full working-method machinery is now **ported and in use** (Phases 0–4, 20
   bash "$@"`. Cross-project fan-out + design: `github.com/billsix/runClaudeInContainer`
   `tasks/add-shell-exec-target.md` and `.../fan-out-shell-exec-to-projects.md`. The general template
   contract for this lives in the personal overlay (`ai-coding-conventions.personal.md`), not here.
-- **thirteen local Crush patches** (`client/patches/`), each behind its own defaulted build flag:
-  `crush-at-import.patch` (`CRUSH_AT_IMPORT ?= 1`) plus twelve `PATCH_OUT_<X>` egress patches from
+- **fourteen local Crush patches** (`client/patches/`), each behind its own defaulted build flag:
+  two FEATURE patches — `crush-at-import.patch` (`CRUSH_AT_IMPORT ?= 1`) and
+  `crush-shell-history.patch` (`CRUSH_SHELL_HISTORY ?= 1`: shell-style prompt history — Up recalls
+  the prompt just sent, history spans sessions, deterministic ordering, and `ctrl+r` reverse search;
+  see `tasks/reference/crush-prompt-history.md`) — plus twelve `PATCH_OUT_<X>` egress patches from
   the dependency network audit (update check, telemetry, `update-providers`, web tools, sourcegraph,
   Google/Vertex, Bedrock/AWS, Azure, OpenRouter, Vercel, Hyper, Copilot — defaults per
   `tasks/reference/dependency-network-audit.md` §5). ALL patches apply at **build time** in
@@ -131,6 +134,11 @@ guidance is in `FORKING.md`.
   autoload, no native `@`-import, custom commands, hooks, provider/model selection + the
   `disable_default_providers` catalog switch, context-window/compaction). Read before touching
   Crush config or the port.
+- `tasks/reference/crush-prompt-history.md` — how Crush's prompt history works at `v0.89.0` (what the
+  history list holds, the Up/Down state machine, ordering, where it is persisted — `.crush/crush.db`
+  in the launch directory, so `/work` — and what `ctrl+r` search needed), plus §7: exactly what our
+  `crush-shell-history.patch` changes. Read before touching history, the editor keymap, or the data
+  directory.
 - `tasks/reference/nested-podman-design.md` — nested-podman design/flags for the client (inner runs
   use the PODMAN_RUN_FLAGS convention + `--network=host`; the `--network=host`-breaks-bridged finding).
 - `tasks/reference/glimmer-models-and-airgap-quant-selection.md` — survey of Meta's Muse Glimmer model
