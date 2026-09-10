@@ -98,6 +98,12 @@ SSH tunnel:
   `entrypoint/03-build-crush.sh`: a clone (or the pre-vendored tree) + `go mod vendor` +
   flag-guarded patches + offline `go build -mod=vendor` — see "The egress patch/flag system"
   below; plain `go install …@tag` is not used.
+- **Editors (2026-09-10):** `vim-enhanced` + `vim-default-editor` (so `$EDITOR`/`git commit` open vim)
+  with plugins as Fedora rpms — fugitive, commentary, nerdtree, ale, gitgutter (`vim-airline`/`-surround`
+  are not packaged; rpm-only by decision) — driven by the baked `entrypoint/dotfiles/.vimrc`, shadowed by
+  the host's `~/.vimrc` when `make shell` finds one (`VIMRC_MOUNT`). No clipboard build (`"+y` is
+  unavailable). Neovim present, unconfigured. Full-image only: the minimal image ships no editor
+  (maintainer: "minimal doesn't need vim"). Record: `tasks/archive/2026/09/10/vim-user-toolkit-in-base-image.md`.
 - **Language servers (2026-09-10): dnf-installed, declared explicitly in the crushrc.** Six `lsp add`
   lines — python (`ty server`), go (`gopls`), c (`clangd`), rust (`rust-analyzer`), sh
   (`bash-language-server start`), glsl (`glsl_analyzer`) — every binary from dnf via

@@ -229,8 +229,6 @@ lowest priority-number, then lowest difficulty-number):
   (vendored `ty` wheel → uncommented Dockerfile block → offline build → `lsp_*` works).
 - `port-lean-image-nested-convention.md` (P4/D1, proposed) — copy the lean-image-when-nested point 3
   into the ported conventions file once runClaudeInContainer's umbrella lands its text.
-- `vim-user-toolkit-in-base-image.md` (P5/D2, proposed) — vim + the usual vim-user extras in the base
-  install script (twin task in runClaudeInContainer).
 - `new-hardware-bringup-runbook.md` (P5/D2, in progress) — runbook written + README wired; open on a
   walk on a real second box.
 - `port-blocked-task-convention.md` (P5/D3) — port the blocked-task convention from runClaudeInContainer.
@@ -259,4 +257,5 @@ layout — see the archived task's `crush.log`; 2026/08/30). **2026/09/10** (`ta
 `b10883`, second crushrc provider), **language servers for Crush** (six dnf servers declared
 explicitly; the RHEL 9 `/venv` + `ty`-wheel block, proven offline in a throwaway Stream 9), the
 **minimal client image as the nested default** (`FULL_TOOLCHAIN` auto-defaults from `NESTED_PODMAN`),
-and the `make llama` tag-checkout fix.
+the `make llama` tag-checkout fix, and the **vim user toolkit** (six Fedora vim plugin rpms, a baked
+`.vimrc`, a conditional host `~/.vimrc` mount; the minimal image deliberately has no editor).

@@ -1,14 +1,11 @@
 # Give vim users a complete setup in the client image (vim is already there)
 
-**Status:** **implemented and staged 2026-09-10; pending the maintainer's host `make image`** (the full
-image does not fit the sandbox's nested store, and the nested default builds the *minimal* image, which
-skips `01-install-base.sh` — vim is a full-image feature) — then archive. Mirrors runClaudeInContainer's
-unit of the same slug exactly (same six rpms, byte-identical `.vimrc` apart from its header, same
-`VIMRC_MOUNT` idiom). Proven in a throwaway `fedora:44` with this repo's `.vimrc`: `$EDITOR` is
-`/usr/bin/vim`, and `:Git` / `:NERDTreeToggle` / `:Commentary` / `:ALEInfo` / `:GitGutterToggle` all
-exist with the vimrc in effect. Created 2026-09-10 at the maintainer's request (William Emerison Six
-<billsix@gmail.com>: "add vim, and whatever normally vim users want installed, to the base install
-script").
+**Status:** **done 2026-09-10, archived** at the maintainer's word ("archive the vim task"); the host
+`make -C client image` remains the maintainer's own check. Durable facts harvested to
+`tasks/reference/architecture.md` (client section, "Editors"); this file is the work record. Mirrors
+runClaudeInContainer's unit of the same slug. Created 2026-09-10 at the maintainer's request (William
+Emerison Six <billsix@gmail.com>: "add vim, and whatever normally vim users want installed, to the base
+install script").
 **Priority:** 6
 **Difficulty:** 2
 

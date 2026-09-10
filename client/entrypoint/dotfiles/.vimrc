@@ -2,7 +2,7 @@
 " Shadowed by the host's ~/.vimrc when `make shell` finds one (VIMRC_MOUNT in client/Makefile),
 " so this is what a vim user gets with NO dotfile of their own. Plugins are Fedora rpms
 " (vim-fugitive, vim-commentary, vim-nerdtree, vim-ale, vim-gitgutter) — no plugin manager,
-" nothing fetched at run time. Task: tasks/vim-user-toolkit-in-base-image.md.
+" nothing fetched at run time. Work record: tasks/archive/2026/09/10/vim-user-toolkit-in-base-image.md.
 
 set nocompatible
 syntax on
