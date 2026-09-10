@@ -21,7 +21,7 @@ with the original (the port is near-verbatim by decision), and `make image` bake
 
 - runClaudeInContainer `tasks/reference/minimal-nested-images.md` §2 — the standard and the draft text.
 - This repo's `client/Makefile` `FULL_TOOLCHAIN` line — the reference implementation the convention
-  generalizes; `tasks/minimal-client-image.md` for its decisions.
+  generalizes; `tasks/archive/2026/09/10/minimal-client-image.md` for its decisions.
 - `tasks/reference/architecture.md` › "Conventions machinery — ported": the ported file is trimmed to a
   lean core for the 64k window — add the paragraph, not the reference doc.
 

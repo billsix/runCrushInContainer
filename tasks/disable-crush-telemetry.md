@@ -12,7 +12,7 @@ Crush connected to the local model), leaving only the observation that no traffi
 confirm **no** connection to `data.charm.land` or `api.github.com` while the model still answers.
 Cleared = zero egress to those two hosts. Overlaps `tasks/decide-egress-verification.md` (which
 decides whether a standing check is wanted at all — resolving that may clear or absorb this gate);
-`tasks/minimal-client-image.md` would make the watch runnable in-sandbox.
+the minimal image (`tasks/archive/2026/09/10/minimal-client-image.md`, done — nested `make image` builds it by default) makes the watch runnable in-sandbox.
 
 ## Goal
 

@@ -4,7 +4,7 @@
 (`tasks/reference/dependency-network-audit.md` — findings, D1–D12, flag index), so the decision has
 its numbers. Deferred originally by the maintainer (William Emerison Six <billsix@gmail.com>,
 2026-08-29: "no verification needed for now … a follow up task, to decide if we even need to").
-Note: `tasks/minimal-client-image.md` (proposed) would bake strace+tcpdump into a sandbox-buildable
+Note: the minimal image (`tasks/archive/2026/09/10/minimal-client-image.md`, done) bakes strace+tcpdump into a sandbox-buildable
 minimal image — exactly the environment a runtime egress check would run in; if a check is wanted,
 consider sequencing after that task.
 **Priority:** 6
@@ -41,7 +41,7 @@ Decisions already made, with rationale:
   2. **Enforce:** an `nftables`/`iptables` rule set allowing only the local model endpoint, DROP the
      rest; confirm Crush still works and blocked attempts fail gracefully.
 - Originally judged **real-machine only** (the ~22 GB client image + a live local model). Partly
-  superseded 2026-08-29: if `tasks/minimal-client-image.md` lands (a sandbox-buildable minimal
+  superseded 2026-08-29, now real: the minimal image landed (`tasks/archive/2026/09/10/minimal-client-image.md`; a sandbox-buildable minimal
   image with strace+tcpdump baked in), the observe-mode check can run **in-sandbox** against a
   stub OpenAI endpoint on loopback; only a check against the real Mac-served model stays
   real-machine.

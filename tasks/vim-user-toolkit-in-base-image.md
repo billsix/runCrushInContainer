@@ -20,7 +20,7 @@ else, and `make image` builds.
   `neovim` present). Additions go alphabetically with a one-line reason, per `CLAUDE.md`.
 - `client/entrypoint/dotfiles/` — currently `.config/` and `.extrabashrc`; no `.vimrc`. The
   Dockerfile bakes `dotfiles/` into `/root/`.
-- `tasks/minimal-client-image.md` — `FULL_TOOLCHAIN=0`; editors are arguably part of even the
+- `tasks/archive/2026/09/10/minimal-client-image.md` — `FULL_TOOLCHAIN=0` (the nested default); editors are arguably part of even the
   minimal image, plugins are not.
 - The sibling task in runClaudeInContainer (same slug) — keep the two package lists identical so
   the sandbox and the Crush client feel the same.

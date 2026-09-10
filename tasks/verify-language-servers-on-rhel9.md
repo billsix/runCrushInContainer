@@ -38,7 +38,7 @@ Python project that originally complained.
 
 ### A — the rebuilt Fedora image `[LINUX HOST]` → `[CONTAINER]`
 
-1. `make -C client image` (full toolchain; 22 GB — the reason this isn't done from the sandbox).
+1. ~~`make -C client image`~~ — **done 2026-09-10** (maintainer: the host build "worked, and it seemed like it pulled everything in").
 2. `make -C client shell` with a Python repo mounted **without** a top-level `pyproject.toml`/
    `setup.py`/`.git` at `/work` (the root-marker case that auto-start fails on):
    `command -v ty gopls clangd rust-analyzer bash-language-server glsl_analyzer` → six paths.

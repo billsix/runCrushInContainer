@@ -11,7 +11,8 @@ when it's being built in a nested container … the makefile can enforce it, cor
 NESTED_PODMAN flag is set, which we have it do anyways!"): `FULL_TOOLCHAIN ?= $(if $(filter
 1,$(NESTED_PODMAN)),0,1)` in `client/Makefile`; no language servers in the minimal image; `CLAUDE.md`
 rule + `architecture.md` + runClaudeInContainer's `nested-podman-design.md` updated. Proof below.
-Remaining: the host-side box (a plain `make image` on the maintainer's host still builds full).
+**Done 2026-09-10, archived:** the maintainer's host `make image` (no `NESTED_PODMAN`) built the full
+image ("it worked, and it seemed like it pulled everything in") — the last open box.
 **Priority:** 2
 **Difficulty:** 3
 **Created:** 2026-08-29 (William Emerison Six <billsix@gmail.com>)
@@ -126,8 +127,7 @@ Steps:
       runClaudeInContainer `nested-podman-design.md` PODMAN_RUN_FLAGS section: the idiom applied to a
       build variant (staged there, not committed — no authorization for that repo). README: unchanged
       — it documents the host `make image`, whose behaviour did not change.
-- [ ] Real-machine (maintainer): a plain `make image` on the host still builds the full image — the
-      phase-1 box below, still open, is the same check.
+- [x] Real-machine (maintainer, 2026-09-10): a plain host `make image` built the full image.
 
 ## Plan (phase 1, 2026-08-29)
 
@@ -146,7 +146,7 @@ Steps:
       Crush runs; rg/strace/tcpdump/git/go present; sentinel check confirms the full toolchain was
       skipped. (Built from the vendored tree so it needs no network; `make vendor` in-image is the
       same git+go path, exercised by the build.)
-- [ ] Real-machine: confirm a plain `make image` (defaults) still builds the full image unchanged.
+- [x] Real-machine (2026-09-10): a plain host `make image` built the full image unchanged (maintainer).
 - [x] Docs: CLAUDE.md note (verification builds use `FULL_TOOLCHAIN=0`), `architecture.md` client
       section. README: not updated — it documents `make image` (unchanged default); the minimal
       flag is an agent/verification convenience, noted in CLAUDE.md instead.

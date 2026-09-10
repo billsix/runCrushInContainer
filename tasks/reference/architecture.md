@@ -91,7 +91,7 @@ SSH tunnel:
   same command inside a sandbox (which exports `NESTED_PODMAN=1`) is the ~1.65 GB minimal image
   (`00-install-minimal.sh` only: golang/git/ripgrep + strace/tcpdump, **no language servers** by
   decision, so the crushrc's `lsp add` lines fail to start there). The `PODMAN_RUN_FLAGS` idiom
-  applied to a build flag; `FULL_TOOLCHAIN=0|1` overrides. Record: `tasks/minimal-client-image.md`.
+  applied to a build flag; `FULL_TOOLCHAIN=0|1` overrides. Record: `tasks/archive/2026/09/10/minimal-client-image.md`.
 - Full runClaudeInContainer toolchain (`entrypoint/01-install-base.sh`, verbatim copy) +
   **Crush built from source at image-build time**, pinned `CRUSH_TAG` (default **`v0.89.0`**,
   the latest stable at bring-up; `github.com/charmbracelet/crush`). The build is
@@ -280,7 +280,7 @@ host build there's no such ceiling. See runClaudeInContainer's
 
 Verified: client image builds + `crush v0.89.0` runs + `crushrc` parses; HF download plumbing;
 server serving on Metal (~21 t/s); the `@`-import patch splices live; the provider-suppression fix
-(`crush models` → only the local model, airgapped-verified); nested podman (an inner container ran);
+(`crush models` → only the local model — two since 2026-09-10 — airgapped-verified); nested podman (an inner container ran);
 and the **ported conventions load and steer the model** (a `crush run` answered from the conventions).
 Not formally exercised: a full multi-step *tool-using* Crush edit driving the agent loop end-to-end —
 spot-check when convenient. **Pending on the Mac (2026-09-10):** the Gemma 4 row — `make llama` at

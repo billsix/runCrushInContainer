@@ -31,7 +31,7 @@ CRUSH_TAG ?= v0.89.0
 # combination, runs it against the model, vendors, and hosts a runtime egress check. Override either
 # way: `make image FULL_TOOLCHAIN=1` nested (only with a store that can take 22 GB), or
 # `FULL_TOOLCHAIN=0` on the host. Same CONTAINER_NAME for both (a minimal HOST build replaces the
-# full image until the next full rebuild — accepted). See tasks/minimal-client-image.md.
+# full image until the next full rebuild — accepted). See tasks/archive/2026/09/10/minimal-client-image.md.
 FULL_TOOLCHAIN ?= $(if $(filter 1,$(NESTED_PODMAN)),0,1)
 
 # The ONE language-server pin: `ty` as a wheel, for the RHEL 9 airgap variant only. Fedora gets `ty`

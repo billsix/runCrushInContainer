@@ -10,7 +10,7 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
 # The MINIMAL package set — ALWAYS installed (first, so it's a shared base layer): just
 # what's needed to build Crush from source, run it against the local model, run
 # `make vendor`, and host a runtime egress check (golang, git, ripgrep, strace, tcpdump …).
-# See entrypoint/00-install-minimal.sh and tasks/minimal-client-image.md.
+# See entrypoint/00-install-minimal.sh and tasks/archive/2026/09/10/minimal-client-image.md.
 COPY entrypoint/00-install-minimal.sh /usr/local/bin/
 RUN --mount=type=cache,target=/var/cache/libdnf5 \
     --mount=type=cache,target=/var/lib/dnf \

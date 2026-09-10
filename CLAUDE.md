@@ -202,12 +202,10 @@ lowest priority-number, then lowest difficulty-number):
 - `decide-egress-verification.md` (P6/D3, proposed) — decide whether the audit needs an enforced
   runtime egress check (strace/tcpdump or firewall permitting only the local model endpoint), or
   whether the source-level audit suffices; real-machine if built.
-- `minimal-client-image.md` (P2/D3, phase 1 **implemented 2026-08-29**, phase 2 **2026-09-10**) —
-  `FULL_TOOLCHAIN` splits the image build: the full ~22 GB image on a host, the 1.65 GB minimal image
-  (golang/git/ripgrep + strace/tcpdump, no language servers) **automatically when nested** (see
-  "Conventions" above). Always-run `00-install-minimal.sh` + gated `01-install-base.sh`; same tag
-  for both. Remaining: real-machine confirm a default host `make image` still builds full
-  (unchanged).
+- `tasks/archive/2026/09/10/minimal-client-image.md` (**done 2026-09-10**) — `FULL_TOOLCHAIN` splits the image
+  build: the full ~22 GB image on a host, the 1.65 GB minimal image (golang/git/ripgrep + strace/tcpdump,
+  no language servers) **automatically when nested** (see "Conventions" above). Always-run
+  `00-install-minimal.sh` + gated `01-install-base.sh`; same tag for both; host full build confirmed.
 - `standardize-project-container-template.md` (P5/D5, proposed) — adopt the cross-project
   container-template standard (the `shell`/`shell-exec` pair + `SHELL_RUN_FLAGS`, mount conventions)
   in this repo's docs + `client/`; sibling task in runClaudeInContainer.
@@ -224,6 +222,17 @@ lowest priority-number, then lowest difficulty-number):
 - `crush-at-import-parity.md` (P6/D4) — bring the `@`-import patch to full Claude parity (follow-up).
 - `verify-vendor-pulls-all-quants.md` (P4/D3) — **deferred** (needs the target airgap hardware/quant);
   model-universe research done in `tasks/reference/glimmer-models-and-airgap-quant-selection.md`.
+- `verify-gemma-4-on-the-mac.md` (P3/D2, **blocked**, human-gated) — `make llama` at `b10883`,
+  Gemma `probe`/`smoke` on 8081, Glimmer re-`smoke`, two models in the rebuilt client's `ctrl+l`.
+- `verify-language-servers-on-rhel9.md` (P3/D3, **blocked**, human-gated) — the rebuilt full image
+  (built 2026-09-10; the six-binary check + a `.py` symbol query remain) and the RHEL 9 airgap box
+  (vendored `ty` wheel → uncommented Dockerfile block → offline build → `lsp_*` works).
+- `port-lean-image-nested-convention.md` (P4/D1, proposed) — copy the lean-image-when-nested point 3
+  into the ported conventions file once runClaudeInContainer's umbrella lands its text.
+- `vim-user-toolkit-in-base-image.md` (P5/D2, proposed) — vim + the usual vim-user extras in the base
+  install script (twin task in runClaudeInContainer).
+- `new-hardware-bringup-runbook.md` (P5/D2, in progress) — runbook written + README wired; open on a
+  walk on a real second box.
 - `port-blocked-task-convention.md` (P5/D3) — port the blocked-task convention from runClaudeInContainer.
 
 Completed & archived (see `tasks/archive/2026/08/`): the bring-up, provider-catalog suppression (+ its
@@ -231,7 +240,8 @@ airgapped verification), dotfiles/host-config mounts, context-window sizing, the
 nested-podman support (+ the baked-doc reachability fix), the airgap **source-vendoring** work
 (implementation + the podman+make `vendor.sh` running inside the client image, `hf` flag-gated), the
 **file-tool auto-allow** (crushrc `permissions allow` for file R/W; conservative-ask everything else),
-**multi-quant model vendoring** (`MODEL_FILES` list + opt-in full weights + `check-repo` discovery),
+**multi-quant model vendoring** (`MODEL_FILES` list + opt-in full weights + `check-repo` discovery —
+`MODEL_FILES` became the *extra* set on 2026-09-10, see `architecture.md`),
 the **`hf` install dnf-or-pip fallback** (dnf `python3-huggingface-hub`, else pip — for RHEL9-style repos),
 **Apache-2.0 licensing** of the project (root `LICENSE` + SPDX headers; vendored trees keep theirs), the
 **`make shell-exec`** target (batch twin of `make shell`, shared `SHELL_RUN_FLAGS`; 2026/08/29), and the
@@ -244,4 +254,9 @@ implementation** (thirteen flag-guarded build-time patches, combination-tested b
 the real machine — default-flag image built, Crush connected to the local model; 2026/08/29), and the
 **container file-layout map** (`tasks/reference/container-file-layout.md` + synced baked twin +
 `make manifest`; grew out of an in-container Crush session that had to reverse-engineer its own
-layout — see the archived task's `crush.log`; 2026/08/30).
+layout — see the archived task's `crush.log`; 2026/08/30). **2026/09/10** (`tasks/archive/2026/09/10/`):
+**Gemma 4 alongside Glimmer** (the `MODEL=` model table, fixed ports 8080/8081, `LLAMACPP_TAG` →
+`b10883`, second crushrc provider), **language servers for Crush** (six dnf servers declared
+explicitly; the RHEL 9 `/venv` + `ty`-wheel block, proven offline in a throwaway Stream 9), the
+**minimal client image as the nested default** (`FULL_TOOLCHAIN` auto-defaults from `NESTED_PODMAN`),
+and the `make llama` tag-checkout fix.
