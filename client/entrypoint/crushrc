@@ -73,6 +73,26 @@ model add gemma-4/gemma-4 --name "Gemma 4 26B-A4B" --context-window 65536
 model large muse-glimmer/muse-glimmer
 model small muse-glimmer/muse-glimmer
 
+# --- Language servers: declared explicitly, dnf-installed, one per toolchain Fedora packages ---
+# Crush bundles no servers; without these lines it auto-starts registry-known servers only when
+# they pass four gates (not user-configured, not on its skip list, filetype + a root marker under
+# /work, on PATH) and otherwise answers "no LSP client handles file" — which is what the maintainer
+# saw for Python. An explicit `lsp add` skips every gate: the server starts for its filetypes, full
+# stop. Every binary below comes from dnf in 01-install-base.sh (the airgap rebuild has only a dnf
+# mirror, so no npm/gem/opam/pip servers — maintainer's rule, 2026-09-10); toolchains Fedora ships no
+# server for (JS/TS, Lua, LaTeX, Haskell, Java, OCaml, Ruby, TOML, Markdown, YAML, Dockerfile, Emacs
+# Lisp) deliberately have no line. Capability sets per server and the RHEL 9 variant (a /venv `ty`
+# — same line, different install): tasks/reference/crush-lsp-integration.md.
+# `ruff` is in the image for format.sh only — diagnostics-only and on Crush's skip list, no LSP role.
+lsp add python --command ty --args server --filetypes py --root-markers pyproject.toml setup.py .git
+lsp add go --command gopls --filetypes go --root-markers go.mod go.work .git
+lsp add c --command clangd --filetypes c cpp h hpp --root-markers compile_commands.json CMakeLists.txt Makefile .git
+lsp add rust --command rust-analyzer --filetypes rs --root-markers Cargo.toml .git
+lsp add sh --command bash-language-server --args start --filetypes sh bash --root-markers .git
+# glsl_analyzer (underscore — the Fedora package is glsl-analyzer) offers definition + diagnostics
+# only; enough for mvp's shader trees, and free.
+lsp add glsl --command glsl_analyzer --filetypes glsl vert frag comp --root-markers .git
+
 # --- Permissions: auto-allow file read/write, ask for everything else ---
 # The client is a throwaway container and the constant prompts for FILE ACCESS (read/write) are the
 # real pain — so auto-allow just the file tools. EVERYTHING ELSE stays on ask (Crush's default),

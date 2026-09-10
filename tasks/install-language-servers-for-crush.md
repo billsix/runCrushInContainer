@@ -1,19 +1,19 @@
 # Install the language servers Crush's LSP tools need — Python first, then every toolchain the image ships
 
-**Status:** approved 2026-09-10, no open questions, **not started — three parts** (status table
-below). Part 1 = Fedora image: dnf servers + explicit `lsp add` lines (Python = **dnf `ty`**, the
-earlier "pin via pip" reversed). Part 2 = **RHEL 9 path**: a `/venv` + vendored `ty` wheel, proven in
-a throwaway CentOS Stream 9 container and then left as a **commented-out block in `client/Dockerfile`**
-(maintainer's preferred form, 2026-09-10) so the airgap box can be brought up from the docs alone.
-Part 3 = docs. Research done 2026-09-10 (William Emerison Six <billsix@gmail.com> asked, after Crush
-repeatedly answered "no LSP client handles file" for a Python class on the **airgapped** box — a
-non-fatal complaint: it still rewrote the code).
+**Status:** **Parts 1–3 implemented and staged 2026-09-10; pending the maintainer's image rebuild**
+(`make -C client image` — 22 GB, does not fit the sandbox's 16 GB nested store) and the in-container
+check that `crush_logs` shows the six servers starting. Everything provable off that rebuild was
+proven in throwaway containers (work record below). Archive once the rebuilt image checks out.
+Research 2026-09-10 (William Emerison Six <billsix@gmail.com> asked, after Crush repeatedly answered
+"no LSP client handles file" for a Python class on the **airgapped** box — a non-fatal complaint: it
+still rewrote the code). Decisions: dnf-only; Python = dnf `ty` (the pip pin reversed); RHEL 9 =
+python3.11 `/venv` + vendored `ty` wheel as a commented-out Dockerfile block.
 
 | Part | What | Status |
 |---|---|---|
-| 1 | Fedora: `nodejs-bash-language-server` + `glsl-analyzer` in `01-install-base.sh`; six `lsp add` lines in crushrc; throwaway-`fedora:44` handshake check; image rebuild | not started |
-| 2 | RHEL 9: `python3.11` venv + vendored `ty` wheel, proven in a throwaway `centos:stream9`; commented-out Dockerfile block; wheel in `vendor.sh` | not started |
-| 3 | Docs: `CLAUDE.md`, `architecture.md`, `crush-capabilities.md`, reference-doc table, README RHEL 9 note | not started |
+| 1 | Fedora: `nodejs-bash-language-server` + `glsl-analyzer` in `01-install-base.sh`; six `lsp add` lines in crushrc; throwaway-`fedora:44` handshake check; image rebuild | done except the image rebuild (maintainer) |
+| 2 | RHEL 9: `python3.11` venv + vendored `ty` wheel, proven offline in a throwaway `centos:stream9`; commented-out Dockerfile block; wheel in `make vendor` | **done** |
+| 3 | Docs: `CLAUDE.md`, `architecture.md`, `crush-capabilities.md`, reference-doc table + RHEL 9 section, README RHEL 9 note | **done** |
 **Priority:** 3
 **Difficulty:** 4
 
@@ -182,17 +182,57 @@ wheel is now a fourth vendored artifact, RHEL-only), `tasks/reference/crush-capa
 ("LSP — SUPPORTED" line gets the list), the reference doc's table (§4 "in the image today?" for
 Fedora and RHEL 9 columns), and a README "RHEL 9" one-liner pointing at the Dockerfile block.
 
+## Work record (2026-09-10)
+
+- **Part 1.** `client/entrypoint/01-install-base.sh`: `glsl-analyzer` (before `gmp-devel`) and
+  `nodejs-bash-language-server` (before `npm`), alphabetical, no other change — it stays a verbatim
+  copy of runClaudeInContainer's list *plus two* (the sibling repo does not get them: Crush is the only
+  consumer). `client/entrypoint/crushrc`: one comment block stating the rule and six `lsp add` lines.
+  Proof harness `tasks/adhoc/install-language-servers-for-crush/check_fedora_servers.sh` (+
+  `lsp_handshake.py`, a stdlib-only `initialize` client) in a throwaway `fedora:44`: all six installed
+  (`ty` 0.0.74, `gopls` 0.18.1, `clangd` 22.1.8, `rust-analyzer` 1.98.0, `bash-language-server` 5.6.0,
+  `glsl_analyzer` 1.7.1 — the GLSL binary has an **underscore**, which the crushrc line uses) and all
+  six answered `initialize`; capability sets are in the reference doc §4 (bash lacks callHierarchy,
+  GLSL has definition + diagnostics only; kept anyway — free). The two packages pulled ~60 MB
+  (nodejs24 runtime + glsl-analyzer) into a bare Fedora; in the full image nodejs is already present, so
+  the delta is the two rpms (~16 MB). **Not done here: `make -C client image`** — the sandbox's nested
+  store is 16 GB and the image is 22 GB (2026-08-19 needed a 50 GB remount).
+- **Part 2.** `check_rhel9_ty.sh`: built `quay.io/centos/centos:stream9` + `python3.11
+  python3.11-pip`; `pip download --only-binary=:all: ty` gave
+  `ty-0.0.80-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl` (13,705,988 bytes); then under
+  `--network=none`: `python3.11 -m venv --system-site-packages /venv && /venv/bin/pip install
+  --no-index --find-links /wheels ty` → `ty 0.0.80` on Python 3.11.13, and `ty server` advertised the
+  same seven capabilities as Fedora's. The Dockerfile block is those tested lines, commented out, with
+  `ENV PATH=/venv/bin:$PATH` so the unchanged crushrc line resolves. `client/Makefile`: `TY_VERSION ?=
+  0.0.80` (the proven version) and a second `podman run` in `vendor` doing `pip download
+  --only-binary=:all: --python-version 3.11 -d /vendor/wheels ty==$(TY_VERSION)`;
+  `CRUSH_VENDOR_FLAGS` gains a `$(wildcard)`-guarded `--volume …/vendor/wheels:/vendor/wheels:ro`
+  (verified with `make -n image CRUSH_VENDORED=1` with and without the dir). `client/vendor/` was
+  already gitignored, so the wheel is. The Stream 9 test image was removed afterwards.
+- **Part 3.** `CLAUDE.md` (client bullet + a new "Language servers: dnf only" convention),
+  `tasks/reference/architecture.md` (client section; airgap section: the wheel as a fourth, RHEL-only
+  vendored artifact), `tasks/reference/crush-capabilities.md` (LSP line), the reference doc (§4
+  rewritten as the measured table + "no server" list + the registry rows demoted to a sub-table; new
+  "RHEL 9" section; §5 tail corrected — no pinning on Fedora, no diagnosis run), README (RHEL 9
+  callout in the airgap step 3), `vendor.sh` header.
+- **Checks.** `bash -n` on the install script; `shfmt -d -i 4` clean on the touched scripts and the two
+  adhoc `.sh` (shellcheck clean too); `+x` bits intact (`100755`); no container-absolute paths in
+  anything touched. **Pre-existing, not mine:** `shfmt -d -i 4` also reflows
+  `02-install-vendor-tools.sh` (tab-indented) and `03-build-crush.sh` (aligned `apply_patch` columns)
+  — `format.sh` would rewrite both on its next in-image run; left alone.
+
 ## Verification / done-state
 
-- **Part 1:** the Python `lsp_symbols`/`lsp_definition`/`lsp_rename` tools work on a mounted repo
-  without a root marker at `/work` and without waiting; `crush_logs` shows every declared server
-  starting; the reference doc's table has no "no" in the Fedora "in the image" column for a toolchain
-  Fedora packages a server for; image-size delta recorded here.
-- **Part 2:** the Stream 9 throwaway ran `ty server` from `/venv` installed **offline** from the
-  vendored wheel and answered `initialize` with the same capabilities as Fedora's `ty`; the Dockerfile
-  block is present, commented out, and matches what was run byte-for-byte (copy the tested lines, don't
-  retype); the wheel is in the vendored set with its version recorded here.
-- **Part 3:** the five docs above updated; `format.sh` green.
+- **Part 1:** [ ] **[LINUX HOST]** `make -C client image`, then in `make -C client shell`:
+  `command -v ty gopls clangd rust-analyzer bash-language-server glsl_analyzer` all resolve; open a
+  Python project without a top-level root marker at `/work`, ask Crush for a symbol — no "no LSP
+  client handles file"; `crush_logs` shows the six servers starting. [x] handshake proof in a
+  throwaway `fedora:44` (2026-09-10). [x] reference doc §4 table filled from measurement.
+- **Part 2:** [x] the Stream 9 throwaway ran `ty server` from `/venv` installed **offline** from the
+  vendored wheel and answered `initialize` with the same capabilities as Fedora's `ty` (2026-09-10);
+  [x] Dockerfile block present, commented out, lines copied from the run; [x] wheel in the vendored
+  set, `TY_VERSION=0.0.80` recorded.
+- **Part 3:** [x] docs updated; [x] shfmt clean on touched scripts.
 
 ## Open questions
 

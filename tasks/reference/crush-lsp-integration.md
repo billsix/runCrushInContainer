@@ -4,7 +4,9 @@
 `internal/config`, `internal/shellconfig/lsp.go`) and its bundled server registry
 (`github.com/charmbracelet/x/powernap v0.1.6`, `pkg/config/lsps.json`, 500+ entries), 2026-09-10.
 Explains the "no LSP client handles file" message the maintainer keeps seeing, and what
-"compatible" means for a server we install. The work is `tasks/install-language-servers-for-crush.md`.
+"compatible" means for a server we install. **Implemented 2026-09-10** (§4 has the measured
+capability table, § RHEL 9 the venv variant); the work record is
+`tasks/install-language-servers-for-crush.md` (archived once the image rebuild is confirmed).
 
 ## 1. What Crush does with an LSP client
 
@@ -54,31 +56,89 @@ the first whose `HandlesFile(path)` is true — the file is under the client's c
 returns exactly `no LSP client handles file: <path>` (`lsp_symbols.go:35`,
 `lsp_replace_symbol.go:80`). It is not an error from a server; it means **no server was started**.
 
-## 4. The bundled registry, for the languages this image ships toolchains for
+## 4. What the image ships — six dnf servers, declared explicitly (measured 2026-09-10)
 
-From `lsps.json` (powernap v0.1.6). The command must be on `PATH` **inside the client container**.
+**The rule (maintainer, 2026-09-10): language servers come from dnf only** — the airgap rebuild has
+only a dnf mirror, so an npm/gem/opam/pip server would silently vanish there. The baked crushrc
+declares each one with `lsp add` (bypassing all four gates in §2); a toolchain Fedora packages no
+server for gets **no** server, and that is documented rather than faked. Measured with one
+`initialize` handshake per binary in a throwaway `fedora:44`
+(`tasks/adhoc/install-language-servers-for-crush/check_fedora_servers.sh` + `lsp_handshake.py`):
 
-| Language | Registry name → command | Root markers | In the client image today? |
-|---|---|---|---|
-| Python | `ty` → `ty server` | `ty.toml`, `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt`, `.git` | **yes** (`ty` via dnf) — advertises every capability in §1 (verified with ty 0.0.74 in the sandbox) |
-| Python | `basedpyright` → `basedpyright-langserver --stdio`; `pyright`; `pylsp`; `jedi_language_server`; `pyrefly` | `pyproject.toml`, `setup.py`, `.git`, … | no |
-| Python | `ruff` → `ruff server` | | yes, **but in the skip list** — diagnostics-only anyway |
-| Go | `gopls` | `go.work`, `go.mod`, `.git` | **yes** |
-| C/C++ | `clangd` | `.clangd`, `compile_commands.json`, `.git` | **yes** (`clang-tools-extra`) |
-| Rust | `rust_analyzer` → `rust-analyzer` | (none) | **yes** |
-| JS/TS | `vtsls --stdio`; `denols` (skip list) | (none) | no — `nodejs`/`npm` are present, so `npm i -g @vtsls/language-server typescript` is one line |
-| Bash | `bashls` → `bash-language-server start` | `.git` | no (npm) |
-| Lua | `lua_ls` → `lua-language-server` | `.luarc.json`, `.git` | no (Fedora `lua-language-server` rpm exists) |
-| Java | `java_language_server`; (`jdtls` is a separate entry) | `build.gradle`, `pom.xml`, `.git` | no (`java-25-openjdk` present) |
-| Haskell | `hls` → `haskell-language-server-wrapper --lsp` | `hie.yaml`, `stack.yaml`, `.git` | no (`ghc` present) |
-| OCaml | `ocamllsp` | `dune-project`, `.opam`, `.git` | no (`ocaml` present; `opam install ocaml-lsp-server`) |
-| Ruby | `solargraph stdio`; `rubocop --lsp` (skip list) | `Gemfile`, `.git` | no (`ruby` present; gem) |
-| CMake | `cmake` → `cmake-language-server`; `neocmakelsp` | `CMakePresets.json`, `.git` | no (pip) |
-| TOML / Markdown / YAML / Dockerfile | `taplo`, `tombi`; `marksman`; `ansiblels`/`azure_pipelines_ls`; `dockerls`, `docker_language_server` | various | no |
-| LaTeX | `texlab`; `ltex` | `.git`, `.latexmkrc` | no (Fedora `texlab` rpm exists) |
-| Makefile | `autotools_ls` | (none) | no |
-| Emacs Lisp | — **no entry in the registry** | | n/a |
-| Scheme/Racket | `racket_langserver` → `racket --lib racket-langserver` | `.git` | no |
+| Language | dnf package → binary (Fedora 44 version) | crushrc line | definition | references | rename | documentSymbol | callHierarchy | diagnostics |
+|---|---|---|---|---|---|---|---|---|
+| Python | `ty` → `ty` (0.0.74) | `lsp add python --command ty --args server --filetypes py --root-markers pyproject.toml setup.py .git` | yes | yes | yes | yes | yes | pull + push |
+| Go | `gopls` → `gopls` (0.18.1) | `lsp add go --command gopls --filetypes go --root-markers go.mod go.work .git` | yes | yes | yes | yes | yes | push |
+| C/C++ | `clang-tools-extra` → `clangd` (22.1.8) | `lsp add c --command clangd --filetypes c cpp h hpp --root-markers compile_commands.json CMakeLists.txt Makefile .git` | yes | yes | yes | yes | yes | push |
+| Rust | `rust-analyzer` → `rust-analyzer` (1.98.0) | `lsp add rust --command rust-analyzer --filetypes rs --root-markers Cargo.toml .git` | yes | yes | yes | yes | yes | pull + push |
+| Bash | `nodejs-bash-language-server` → `bash-language-server` (5.6.0) | `lsp add sh --command bash-language-server --args start --filetypes sh bash --root-markers .git` | yes | yes | yes | yes | **no** | push |
+| GLSL | `glsl-analyzer` → `glsl_analyzer` (1.7.1; note the underscore) | `lsp add glsl --command glsl_analyzer --filetypes glsl vert frag comp --root-markers .git` | yes | **no** | **no** | **no** | **no** | push |
+
+"push" = `textDocumentSync` advertised, so `publishDiagnostics` flows; "pull" = the newer
+`diagnosticProvider` too. GLSL is definition-and-diagnostics only — kept because it is free and
+mvp's shader trees get something rather than nothing.
+
+**Toolchains in the image with NO server, and why (Fedora 44 `dnf repoquery`/`search`, 2026-09-10):**
+JS/TS (`vtsls`/`typescript-language-server` are npm-only), Lua (`lua-language-server`), LaTeX
+(`texlab`), Haskell (`haskell-language-server`), Java (`jdtls`), OCaml (`ocaml-lsp`), Ruby
+(`solargraph`), TOML (`taplo`), Markdown (`marksman`), YAML, Dockerfile — none packaged by Fedora.
+Emacs Lisp has no registry entry at all. `ruff` is present for `format.sh` only: diagnostics-only
+and on Crush's skip list. `python3-lsp-server` (pylsp) is the dnf alternative to `ty` if it ever
+disappoints; don't install both. Re-run the query at each Fedora bump — packages appear.
+
+### The registry rows these lines replace (powernap v0.1.6 `lsps.json`)
+
+Kept for reference — what auto-start *would* have used. Root markers are the registry's, which is
+why the explicit lines above carry their own.
+
+| Language | Registry name → command | Registry root markers |
+|---|---|---|
+| Python | `ty` → `ty server`; also `basedpyright`, `pyright`, `pylsp`, `jedi_language_server`, `pyrefly`; `ruff` → `ruff server` (skip list) | `ty.toml`, `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt`, `.git` |
+| Go | `gopls` | `go.work`, `go.mod`, `.git` |
+| C/C++ | `clangd` | `.clangd`, `compile_commands.json`, `.git` |
+| Rust | `rust_analyzer` → `rust-analyzer` | (none) |
+| Bash | `bashls` → `bash-language-server start` | `.git` |
+| JS/TS | `vtsls --stdio`; `denols` (skip list) | (none) |
+| Lua / Java / Haskell / OCaml / Ruby / CMake / TOML / Markdown / YAML / Dockerfile / LaTeX / Makefile / Scheme | `lua_ls`; `java_language_server`, `jdtls`; `hls`; `ocamllsp`; `solargraph stdio`; `cmake`, `neocmakelsp`; `taplo`, `tombi`; `marksman`; `ansiblels`; `dockerls`; `texlab`, `ltex`; `autotools_ls`; `racket_langserver` | various |
+
+## RHEL 9 — no packaged Python LSP; the `/venv` + vendored-wheel variant (proven 2026-09-10)
+
+The airgap box is RHEL 9-class. Queried via `dnf repoquery --repofrompath` against CentOS Stream 9
+AppStream/BaseOS (the public proxy for RHEL 9) and EPEL 9: **no `ty`, `python3-lsp-server`,
+`pyright` or `jedi-language-server` anywhere**; EPEL 9 has only `python3-jedi` (a library) and,
+usefully, `golang-x-tools-gopls`; AppStream has `rust-analyzer`, `clang-tools-extra` (clangd),
+`python3.11`/`python3.12` with pip, `nodejs` 16, `golang` 1.26. Re-check on the box itself
+(RHEL's real repos need a subscription): `dnf repoquery '*lsp*' '*language-server*' ty
+python3-lsp-server`.
+
+So RHEL 9 is the dnf-only rule's one exception ("unless it's python, and then make a venv, like
+geometricalgebra does"). The variant, kept as a **commented-out block in `client/Dockerfile`**:
+
+```
+RUN dnf install -y python3.11 python3.11-pip && dnf clean all
+RUN python3.11 -m venv --system-site-packages /venv && \
+    /venv/bin/pip install --no-index --find-links /vendor/wheels ty
+ENV PATH=/venv/bin:$PATH
+```
+
+- **`ty`, not pylsp/pyright**: a single prebuilt Rust binary shipped as a `py3-none-manylinux_2_17`
+  wheel (13.7 MB; RHEL 9's glibc 2.34 ≫ 2.17), no dependencies, and the **same crushrc line** as
+  Fedora — `/venv/bin` on `PATH` is the whole integration. pylsp drags jedi/rope/pluggy wheels;
+  pyright needs Node ≥ 18 (RHEL 9 ships 16).
+- **python3.11** (maintainer's choice; 3.12 would also work): BaseOS `python3` is 3.9, below what
+  `ty`'s wheel targets.
+- **The wheel is the one pinned server** — `TY_VERSION` in `client/Makefile` (0.0.80 at proof time),
+  downloaded by `make -C client vendor` into `client/vendor/wheels/` (gitignored, rides in the airgap
+  tarball) and mounted read-only at `/vendor/wheels` by `make image CRUSH_VENDORED=1` when the dir
+  exists. Fedora's `ty` stays unpinned dnf; pinning applies only where there is no mirror to defer to.
+- **Proof** (`tasks/adhoc/install-language-servers-for-crush/check_rhel9_ty.sh`): a throwaway
+  `quay.io/centos/centos:stream9` + `python3.11` image; the wheel `pip download`ed online; then, under
+  `podman run --network=none`, the venv + `--no-index` install succeeded (`ty 0.0.80`, Python
+  3.11.13) and `ty server` answered `initialize` with the full capability row above. That offline run
+  is the airgap evidence.
+- Everything else in `01-install-base.sh` is Fedora's list and does not apply as-is on RHEL 9; the
+  Dockerfile block says so. Go there is EPEL's `golang-x-tools-gopls`; the Bash and GLSL servers do
+  not exist there.
 
 ## 5. Why Python failed for the maintainer — the candidates, in order of likelihood
 
@@ -94,8 +154,10 @@ From `lsps.json` (powernap v0.1.6). The command must be on `PATH` **inside the c
 
 The deterministic fix does not depend on which: **declare the servers explicitly in the baked
 crushrc** (`lsp add python --command ty --args server --filetypes py`), which bypasses the skip list,
-the root-marker check and the PATH rescan latency (gate 1), and **pin the server versions in the
-image** rather than trusting the distro's. Diagnose first, though: `option debug-lsp true` (or
+the root-marker check and the PATH rescan latency (gate 1). (The first draft also said "pin the
+server versions in the image"; the dnf-only rule reversed that — Fedora's `ty` is whatever dnf
+ships, and only the RHEL 9 wheel is pinned.) The diagnosis was never run: the failing project is on
+the airgapped box and the complaint is non-fatal. If ever wanted there: `option debug-lsp true` (or
 `debug true`) and read the `crush_logs` tool output for "LSP server not installed" vs
 "initialization failed".
 

@@ -61,10 +61,17 @@ Three environments are in play; label instructions so it's unambiguous:
   only ingress is the SSH tunnel. Keep it that way.
 - **The client image reuses runClaudeInContainer's full toolchain** (`01-install-base.sh`,
   sorted, maximal — don't prune) and bakes: **Crush built from source** (patched with the
-  `@`-import diff when `CRUSH_AT_IMPORT=1`), the **`crushrc`** (pinned model + catalog suppression),
-  and **dotfiles** (`entrypoint/dotfiles/.extrabashrc`). It **omits** the auth/config-layering
+  `@`-import diff when `CRUSH_AT_IMPORT=1`), the **`crushrc`** (pinned models + catalog suppression
+  + six explicit `lsp add` lines), and **dotfiles** (`entrypoint/dotfiles/.extrabashrc`). It **omits** the auth/config-layering
   machinery for now (see below). The Makefile also conditionally mounts host `~/.tmux.conf` /
   `~/.gitconfig` / `~/.gnupg`.
+- **Language servers: dnf only, declared explicitly (2026-09-10).** Crush's `lsp_*` tools need a
+  server on `PATH`; the crushrc `lsp add`s one per toolchain Fedora packages (python `ty`, go, c,
+  rust, sh, glsl — all dnf, `01-install-base.sh`), so auto-detection's four gates never decide.
+  No npm/gem/opam/pip servers: the airgap rebuild has only a dnf mirror. The one exception is the
+  **RHEL 9** variant, which packages no Python LSP: a commented-out block in `client/Dockerfile`
+  installs the `ty` wheel (`TY_VERSION`, the one pinned server; vendored by `make vendor`) into a
+  python3.11 `/venv`. Which server offers what: `tasks/reference/crush-lsp-integration.md` §4.
 - **Verify model/tool identifiers before hardcoding them.** GGUF filenames, the HF repo path,
   and good llama.cpp / Crush tags came from a 2026-08-18 web search and drift; confirm against
   Hugging Face and the upstream release pages at implementation time.

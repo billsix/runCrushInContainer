@@ -10,6 +10,7 @@
 #
 # Populates (all gitignored, all fetched from the public internet):
 #   client/vendor/crush     Crush repo @ CRUSH_TAG, @-import patch applied, `go mod vendor`ed
+#   client/vendor/wheels    the `ty` wheel (TY_VERSION) — used ONLY by the RHEL 9 Dockerfile block
 #   server/llama.cpp        llama.cpp full history @ LLAMACPP_TAG
 #   server/models/<gguf…>   both models' GGUFs (the server/Makefile model table); more with FULL=1
 #

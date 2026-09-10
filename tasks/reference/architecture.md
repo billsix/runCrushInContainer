@@ -88,6 +88,13 @@ SSH tunnel:
   `entrypoint/03-build-crush.sh`: a clone (or the pre-vendored tree) + `go mod vendor` +
   flag-guarded patches + offline `go build -mod=vendor` — see "The egress patch/flag system"
   below; plain `go install …@tag` is not used.
+- **Language servers (2026-09-10): dnf-installed, declared explicitly in the crushrc.** Six `lsp add`
+  lines — python (`ty server`), go (`gopls`), c (`clangd`), rust (`rust-analyzer`), sh
+  (`bash-language-server start`), glsl (`glsl_analyzer`) — every binary from dnf via
+  `01-install-base.sh` (added `nodejs-bash-language-server`, `glsl-analyzer`). Explicit config
+  bypasses Crush's four auto-start gates, which is what produced "no LSP client handles file" for
+  Python. Rule: **dnf only** (the airgap mirror is dnf); toolchains Fedora ships no server for get
+  none. Capability table + the RHEL 9 venv variant: `crush-lsp-integration.md` §4 and § RHEL 9.
 - **Crush config is `crushrc`, NOT `crush.json`** (`client/entrypoint/crushrc`; global path
   `~/.config/crush/crushrc`). `crush.json` is deprecated. The baked config declares exactly two
   **`llamacpp`**-type providers — `muse-glimmer` on `8080` and `gemma-4` on `8081` (2026-09-10),
@@ -225,7 +232,11 @@ vendoring only guarantees the sources are present and offline-buildable. `server
   GGUF and never downloads. `server/Makefile`'s `pull` prefers the system `hf` (in-image) and falls back
   to a venv for standalone macOS.
 - **Server (llama.cpp + GGUF):** `make vendor` (ONLINE) full-clones llama.cpp @ `LLAMACPP_TAG` into
-  `server/llama.cpp` and `make pull`s both GGUFs into `server/models`. `make llama` now full-clones
+  `server/llama.cpp` and `make pull`s both GGUFs into `server/models`.
+- **A fourth vendored artifact, RHEL-only (2026-09-10):** `make -C client vendor` also
+  `pip download`s the `ty` wheel (`TY_VERSION`) into `client/vendor/wheels/`, and `make image
+  CRUSH_VENDORED=1` mounts it at `/vendor/wheels` when present. Only the commented-out RHEL 9 block
+  in `client/Dockerfile` consumes it (RHEL 9 packages no Python LSP); a Fedora build ignores it. `make llama` now full-clones
   (dropped `--depth 1`) and reuses an existing checkout, so on the airgap Mac it builds the vendored
   tree in place; `make serve MODEL=glimmer|gemma` reads the vendored GGUF.
 - **Transport:** the repo directory itself is the unit — after `make vendor` on both sides, zip/tar the

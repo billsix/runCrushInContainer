@@ -119,7 +119,9 @@ v0.89.0-specific (several absent features are on Crush's in-repo `docs/*/FUTURE.
   `$CRUSH_TOOL_INPUT_COMMAND`. runCrush uses `permissions allow` for the file tools (see
   `architecture.md` "Permissions").
 - **MCP — SUPPORTED:** stdio/sse/http transports, per-server tool allow/deny, OAuth for http.
-- **LSP — SUPPORTED, first-class:** `lsp add …`, `option auto-lsp`, LSP-backed edit/view tools.
+- **LSP — SUPPORTED, first-class:** `lsp add …`, `option auto-lsp`, LSP-backed edit/view tools. The
+  baked crushrc declares six dnf-installed servers (python/go/c/rust/sh/glsl) explicitly — see
+  `crush-lsp-integration.md` §4 for which capability each offers.
 - **Sessions — SUPPORTED:** SQLite `crush.db`; `--continue`/`-C`, `--session`/`-s`;
   `option auto-summarize` for compaction.
 - **Context window & compaction:** the effective context is `min(server -c, model context_window)`.

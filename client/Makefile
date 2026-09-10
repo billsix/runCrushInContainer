@@ -30,6 +30,13 @@ CRUSH_TAG ?= v0.89.0
 # rebuild — accepted). See tasks/minimal-client-image.md.
 FULL_TOOLCHAIN ?= 1
 
+# The ONE language-server pin: `ty` as a wheel, for the RHEL 9 airgap variant only. Fedora gets `ty`
+# from dnf (01-install-base.sh, unpinned like every other tool); RHEL 9 packages no Python LSP at all,
+# so its (commented-out) Dockerfile block installs this wheel into /venv with `--no-index` from
+# $(VENDOR_DIR)/wheels — `make vendor` downloads it. It is pinned because there is no dnf mirror to
+# defer to. Bump deliberately: tasks/reference/crush-lsp-integration.md § RHEL 9.
+TY_VERSION ?= 0.0.80
+
 # Apply the local `@`-import patch to Crush at build time (client/patches/, see
 # tasks/archive/2026/08/21/patch-crush-for-at-imports.md): makes a `@path` on its own line in a context file
 # (CLAUDE.md/AGENTS.md/CRUSH.md) recursively splice that file's contents in. Default ON here;
@@ -99,7 +106,10 @@ VENDOR_TOOLS   ?= 0
 ifeq ($(CRUSH_VENDORED),1)
 # --volume mounts the vendored checkout into every build RUN step; :ro keeps it read-only. If an
 # enforcing-SELinux host denies the mount, add ,z (e.g. :ro,z).
-CRUSH_VENDOR_FLAGS := --volume $(VENDOR_DIR)/crush:/vendor/crush:ro --build-arg CRUSH_VENDORED=1
+CRUSH_VENDOR_FLAGS := --volume $(VENDOR_DIR)/crush:/vendor/crush:ro --build-arg CRUSH_VENDORED=1 \
+    $(if $(wildcard $(VENDOR_DIR)/wheels),--volume $(VENDOR_DIR)/wheels:/vendor/wheels:ro)
+# ^ the second volume (only when `make vendor` produced it) is for the RHEL 9 Dockerfile block's
+#   offline `pip install --no-index --find-links /vendor/wheels ty`; unused by the Fedora build.
 else
 CRUSH_VENDOR_FLAGS :=
 endif
@@ -209,7 +219,7 @@ image: ## build the client image: full toolchain + Crush built from source (pinn
 		$(CRUSH_VENDOR_FLAGS) .
 
 .PHONY: vendor
-vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/crush for an offline (CRUSH_VENDORED=1) rebuild
+vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/crush (+ the RHEL 9 ty wheel into $(VENDOR_DIR)/wheels) for an offline (CRUSH_VENDORED=1) rebuild
 	@mkdir -p $(VENDOR_DIR)
 	$(CONTAINER_CMD) run --rm --entrypoint /bin/bash \
 		$(PODMAN_RUN_FLAGS) \
@@ -218,7 +228,16 @@ vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/cr
 		-v $(VENDOR_DIR):/vendor:Z \
 		$(CONTAINER_NAME) \
 		-c '/usr/local/bin/vendor/vendor-crush.sh /vendor/crush'
-	@echo "vendored Crush into $(VENDOR_DIR)/crush — carry the repo (with ./vendor and server/) to the airgap box, then: make image CRUSH_VENDORED=1"
+	@# The RHEL 9 `ty` wheel (see TY_VERSION). `--only-binary` refuses a source build — ty is a prebuilt
+	@# Rust binary and must arrive as a manylinux wheel; `--python-version 3.11` targets RHEL 9's
+	@# AppStream interpreter (the wheel is py3-none, so this is a guard, not a selector).
+	$(CONTAINER_CMD) run --rm --entrypoint /bin/bash \
+		$(PODMAN_RUN_FLAGS) \
+		$(SELINUX_OPT) \
+		-v $(VENDOR_DIR):/vendor:Z \
+		$(CONTAINER_NAME) \
+		-c 'python3 -m pip download --only-binary=:all: --python-version 3.11 -d /vendor/wheels ty==$(TY_VERSION)'
+	@echo "vendored Crush into $(VENDOR_DIR)/crush + the ty $(TY_VERSION) wheel into $(VENDOR_DIR)/wheels — carry the repo (with ./vendor and server/) to the airgap box, then: make image CRUSH_VENDORED=1"
 
 # --- shell / shell-exec share ONE container invocation, defined here so the two
 # targets can never drift. Scoped to this pair ONLY. See runClaudeInContainer

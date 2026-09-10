@@ -214,6 +214,11 @@ cd client && make image CRUSH_VENDORED=1
 > `CRUSH_VENDOR_FLAGS` in `client/Makefile` to `:ro,z`. The airgap build installs no `hf` (it's gated
 > behind `VENDOR_TOOLS`, online-only), so the airgap dnf mirror needs nothing beyond the base packages.
 
+> **RHEL 9 base?** RHEL 9 packages no Python language server, so Crush's `lsp_*` tools would have
+> nothing for `.py`. `client/Dockerfile` carries a commented-out block that installs the vendored `ty`
+> wheel (`./vendor.sh` fetches it; `TY_VERSION` in `client/Makefile`) into a python3.11 `/venv` —
+> uncomment it there. Details: `tasks/reference/crush-lsp-integration.md` › "RHEL 9".
+
 The **server** side you build and run to suit your hardware from the vendored `server/llama.cpp` source
 (e.g. `cmake -DGGML_CUDA=ON` for NVIDIA) and the vendored `server/models/` GGUF — that part is yours to
 set up. `server/`'s Makefile targets (`make llama`/`serve`) are Metal/macOS for the maintainer's dev box,

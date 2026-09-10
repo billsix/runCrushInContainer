@@ -127,6 +127,7 @@ dnf install -y \
     glib \
     glib2-devel \
     glibc-static \
+    glsl-analyzer \
     gmp-devel \
     gnupg2 \
     gnuplot \
@@ -270,6 +271,7 @@ dnf install -y \
     nmap \
     nmap-ncat \
     nodejs \
+    nodejs-bash-language-server \
     npm \
     nss-tools \
     ocaml \

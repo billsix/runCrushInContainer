@@ -28,6 +28,27 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
     --mount=type=cache,target=/var/lib/dnf \
     if [ "$FULL_TOOLCHAIN" = "1" ]; then /usr/local/bin/01-install-base.sh; fi
 
+# --- RHEL 9 variant (UBI 9 / CentOS Stream 9 base): the Python language server from a /venv ---
+# Kept COMMENTED OUT on purpose: this image is Fedora, where `ty` comes from dnf (01-install-base.sh)
+# like every other language server the crushrc declares. RHEL 9 packages NO Python LSP at all — no
+# ty, python3-lsp-server, pyright or jedi-language-server in AppStream/BaseOS or EPEL 9 (checked
+# against CentOS Stream 9 + EPEL 9, 2026-09-10) — so on that base the dnf-only rule hits its one
+# exception: a venv, geometricalgebra-style. `ty` is a prebuilt Rust binary shipped as a py3-none
+# manylinux wheel; `make vendor` downloads it into ./vendor/wheels (TY_VERSION in the Makefile, the
+# one pinned server) and `make image CRUSH_VENDORED=1` mounts that dir at /vendor/wheels, so the
+# install is OFFLINE. Proven 2026-09-10 in a throwaway quay.io/centos/centos:stream9 with
+# `--network=none`: python3.11 (AppStream; BaseOS 3.9 is too old for ty) + the ty 0.0.80 wheel
+# answered `initialize` with the same capability set as Fedora's dnf ty
+# (tasks/adhoc/install-language-servers-for-crush/check_rhel9_ty.sh). The crushrc line
+# (`lsp add python --command ty --args server …`) is unchanged; PATH makes /venv/bin/ty resolve.
+# To use on RHEL 9: swap FROM to a RHEL 9 base, replace the Fedora package lists (01-install-base.sh
+# does NOT apply as-is — rust-analyzer and clangd exist on RHEL 9, gopls is EPEL's
+# golang-x-tools-gopls, the bash/glsl servers don't exist there), and uncomment these three:
+# RUN dnf install -y python3.11 python3.11-pip && dnf clean all
+# RUN python3.11 -m venv --system-site-packages /venv && \
+#     /venv/bin/pip install --no-index --find-links /vendor/wheels ty
+# ENV PATH=/venv/bin:$PATH
+
 # Vendoring-only tools (the `hf` CLI), gated behind VENDOR_TOOLS (default 0 — Makefile turns it
 # ON only for `make vendor`). These are needed ONLY to run `make vendor` inside this image while
 # ONLINE; the image itself and the OFFLINE airgap rebuild do not use them, so a normal/airgap
