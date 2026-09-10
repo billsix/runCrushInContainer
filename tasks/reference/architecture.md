@@ -5,26 +5,46 @@ during bring-up. Not a task; update in place. Last updated 2026-08-29.
 
 ## What this is
 
-A local coding LLM (Meta **Muse Glimmer 30B**) served on a Mac, driven by **Crush** (Charm's
+A local coding LLM (Meta **Muse Glimmer 30B**, or Google **Gemma 4 26B-A4B** — one at a time, on
+fixed ports 8080 / 8081) served on a Mac, driven by **Crush** (Charm's
 terminal agent, `github.com/charmbracelet/crush`) from a disposable Linux container — a tool for
 developing your codebases with a private local assistant, and a fork-friendly sibling of
 `github.com/billsix/runClaudeInContainer` (swap the model/agent via Makefile vars). Two machines, one
 SSH tunnel:
 
 ```
-[MAC]  llama.cpp (Metal) → llama-server on 127.0.0.1:8080 (OpenAI /v1)
-          ▲  ssh -N -L 8080:127.0.0.1:8080 you@mac      (run ON the Linux host)
-[LINUX HOST]  localhost:8080
-[CONTAINER]  crush → http://127.0.0.1:8080  (podman run --network=host)
+[MAC]  llama.cpp (Metal) → llama-server on 127.0.0.1:8080 (Glimmer) or :8081 (Gemma 4), OpenAI /v1
+          ▲  ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac   (run ON the Linux host)
+[LINUX HOST]  localhost:8080 / :8081
+[CONTAINER]  crush → http://127.0.0.1:8080 | :8081  (podman run --network=host)
 ```
 
 ## Server (`server/`, macOS-native — NOT containerized)
 
 - **llama.cpp pinned** via `LLAMACPP_TAG` (`server/Makefile`). Muse Glimmer support landed in
-  release **`b10353`** (2026-08-10) — that's the floor. Decision: pin the newest *known-good*
-  tag ≥ that, chosen when building on the Mac (a tag isn't "known-good" until it builds+serves
-  there). Build is `cmake -DGGML_METAL=ON` — Metal.
-- **Model + quant.** Repo `meta-models/Muse-Glimmer-30B-GGUF`. Default **Q4_K_M** (~16.8 GB) —
+  release **`b10353`** (2026-08-10) — that's the Glimmer floor; Gemma 4 needs the conversion fix
+  (PR #26882, 2026-08-12) and the vision handling (PR #28335, 2026-09-04). Decision: pin the newest
+  *known-good* tag ≥ those, chosen when building on the Mac (a tag isn't "known-good" until it
+  builds+serves there). **Bumped `b10353` → `b10883`** (2026-09-09 release) on 2026-09-10 for Gemma 4
+  (maintainer's decision, `tasks/add-gemma-4-alongside-glimmer.md`); its first Mac build+`smoke`
+  for both models is the pending verification. Build is `cmake -DGGML_METAL=ON` — Metal.
+- **Two models, one `MODEL=` switch, fixed ports (2026-09-10).** The Makefile carries a two-row
+  table (`MODELS := glimmer gemma`; per row `MODEL_REPO_<m>`, `MODEL_FILE_<m>`, `MODEL_ALIAS_<m>`,
+  `MODEL_PORT_<m>`). `MODEL=glimmer` (default) or `MODEL=gemma` selects the row for
+  `serve`/`probe`/`smoke`/`check-repo`; `pull`/`vendor` walk both rows. The port is `override`-fixed
+  per row — **Glimmer 8080, Gemma 8081, not configurable** — because the client crushrc's two
+  `--base-url`s and the one two-`-L` SSH tunnel hardcode them; the maintainer wanted "one way to run a
+  server, two models, different ports, non-configurable" so nothing downstream ever has to be told
+  which model is where. An unknown `MODEL=` is a `$(error …)` naming the two valid values. One model
+  at a time on a 36 GB Mac (~31 GB of weights for both). Research + trade-offs:
+  `tasks/reference/gemma-4-alongside-glimmer.md`.
+- **Gemma 4 row.** Repo `google/gemma-4-26B-A4B-it-qat-q4_0-gguf`, file `gemma-4-26B_q4_0-it.gguf`
+  (~14.4 GB, Google's official QAT Q4_0), alias `gemma-4`. The 26B-A4B MoE (3.8B active) over the 31B
+  dense: faster per token and leaves room next to Glimmer. The repo's `gemma-4-26B-it-mmproj.gguf`
+  (vision) is not needed for a coding agent (`make pull MODEL=gemma MODEL_FILES="*mmproj*"` adds it).
+  Apache-2.0 — Gemma 1–3 are NOT, never substitute a gemma-3 repo. Filenames verified via the HF API
+  2026-09-10. MLX (`serve-mlx`) is Glimmer-only; the target refuses `MODEL=gemma`.
+- **Glimmer row + quant.** Repo `meta-models/Muse-Glimmer-30B-GGUF`. Default **Q4_K_M** (~16.8 GB) —
   the file `Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf`. Quant ladder for a 36 GB unified-memory
   Mac (weights + KV-cache + OS share one pool; Metal wires ~24–28 GB by default,
   `sudo sysctl iogpu.wired_limit_mb=` raises it):
@@ -52,7 +72,9 @@ SSH tunnel:
 - **Alternative backend:** MLX (`make serve-mlx`, `RadixArk/Muse-Glimmer-q4-MLX`) is often
   faster on Apple Silicon — documented, not default.
 - **Download path is portable** (`make venv` + `make pull`, plain python3 + `huggingface_hub`),
-  verified on Linux; only the Metal build/serve need the Mac.
+  verified on Linux; only the Metal build/serve need the Mac. `pull` fetches both rows' GGUFs;
+  `MODEL_FILES` (empty by default) adds extra `--include` patterns from the *selected* row's repo
+  (`"*.gguf"` = every Glimmer quant, the `vendor.sh FULL=1` preset).
 
 ## Client (`client/`, Linux container)
 
@@ -67,20 +89,23 @@ SSH tunnel:
   flag-guarded patches + offline `go build -mod=vendor` — see "The egress patch/flag system"
   below; plain `go install …@tag` is not used.
 - **Crush config is `crushrc`, NOT `crush.json`** (`client/entrypoint/crushrc`; global path
-  `~/.config/crush/crushrc`). `crush.json` is deprecated. The baked config declares a single
-  **`llamacpp`**-type provider. **`base_url` is the bare root** (`http://127.0.0.1:8080`, no `/v1`) —
+  `~/.config/crush/crushrc`). `crush.json` is deprecated. The baked config declares exactly two
+  **`llamacpp`**-type providers — `muse-glimmer` on `8080` and `gemma-4` on `8081` (2026-09-10),
+  Glimmer preselected in both `large`/`small` slots, Gemma 4 reachable through the models dialog
+  (`ctrl+l`). **`base_url` is the bare root** (`http://127.0.0.1:8080`, no `/v1`) —
   Crush appends `/v1/models` itself (`internal/discover/llamacpp.go`). A trailing `/v1` would
   double-path.
 - **Provider config: `disable_default_providers` + explicit pinned model (2026-08-20).** The crushrc
-  sets `option default-providers false` (so Crush offers ONLY this provider, never its built-in
-  ~15-20-model Catwalk catalog) and pins the model explicitly with `model add
-  muse-glimmer/muse-glimmer --context-window 32768` + `model large|small` selections, rather than
+  sets `option default-providers false` (so Crush offers ONLY these providers, never its built-in
+  ~15-20-model Catwalk catalog) and pins each model explicitly with `model add
+  muse-glimmer/muse-glimmer` / `model add gemma-4/gemma-4` (`--context-window 65536`) + `model
+  large|small` selections, rather than
   relying on runtime auto-discovery. **Why the change from the original auto-discovery design:**
   auto-discovery hits `/v1/models` with a 3s timeout at startup; if the tunnel/server isn't up, Crush
   deletes the provider and falls back to its onboarding catalog (the "15-20 models" symptom). An
   explicit model has no such dependency and works offline/airgapped. The server pins a matching stable
-  ID via `--alias $(MODEL_ALIAS)` (`server/Makefile`), so `/v1/models` reports `muse-glimmer` instead
-  of the raw GGUF path. Full rationale + the `crush models` before/after (1532 → 1):
+  ID via `--alias $(MODEL_ALIAS)` (`server/Makefile`, per model row), so `/v1/models` reports
+  `muse-glimmer` / `gemma-4` instead of the raw GGUF path. Full rationale + the `crush models` before/after (1532 → 1):
   `tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md`.
 - **Permissions: auto-allow file read/write, ask for everything else (2026-08-22).** The client is a
   throwaway container and the constant FILE-ACCESS prompts were the real pain, so the crushrc
@@ -178,8 +203,9 @@ vendoring only guarantees the sources are present and offline-buildable. `server
   `make -C client vendor` (image + Crush) then `podman run … <image> make vendor` against a bind-mounted
   `server/` (llama.cpp + GGUF). Reads `CONTAINER_NAME` from `client/Makefile`. The base OS/dnf are still
   the airgap system's own; only the three internet-sourced artifacts are vendored.
-  - **Model scope:** `./vendor.sh` = one Q4_K_M quant (default); **`FULL=1 ./vendor.sh`** = all quant
-    GGUFs + the full-precision weights. `vendor.sh` forwards `MODEL_FILES`/`FULL_MODEL_FILES`/
+  - **Model scope:** `./vendor.sh` = one GGUF per model (Glimmer Q4_K_M + Gemma 4 Q4_0, default);
+    **`FULL=1 ./vendor.sh`** = those + all Glimmer quant GGUFs + Glimmer's full-precision weights.
+    `vendor.sh` forwards `MODEL_FILES`/`FULL_MODEL_FILES`/
     `FULL_MODEL_REPO` (set explicitly, or preset by `FULL=1`) to the server `make vendor` → `pull` (see
     the multi-quant record: `tasks/archive/2026/08/22/vendor-multiple-glimmer-quants.md`).
 - **Client (Crush):** `make vendor` (ONLINE) runs `client/entrypoint/vendor/vendor-crush.sh` inside
@@ -199,9 +225,9 @@ vendoring only guarantees the sources are present and offline-buildable. `server
   GGUF and never downloads. `server/Makefile`'s `pull` prefers the system `hf` (in-image) and falls back
   to a venv for standalone macOS.
 - **Server (llama.cpp + GGUF):** `make vendor` (ONLINE) full-clones llama.cpp @ `LLAMACPP_TAG` into
-  `server/llama.cpp` and `make pull`s the GGUF into `server/models`. `make llama` now full-clones
+  `server/llama.cpp` and `make pull`s both GGUFs into `server/models`. `make llama` now full-clones
   (dropped `--depth 1`) and reuses an existing checkout, so on the airgap Mac it builds the vendored
-  tree in place; `make serve` reads the vendored GGUF.
+  tree in place; `make serve MODEL=glimmer|gemma` reads the vendored GGUF.
 - **Transport:** the repo directory itself is the unit — after `make vendor` on both sides, zip/tar the
   repo (its gitignored `client/vendor/`, `server/llama.cpp`, `server/models` ride along) and move it.
 - **Verified:** the `go mod vendor` + `GOPROXY=off go build -mod=vendor` mechanism (Crush builds with no
@@ -209,11 +235,14 @@ vendoring only guarantees the sources are present and offline-buildable. `server
 
 ## Connecting
 
-- On the **Linux host**: `ssh -N -L 8080:127.0.0.1:8080 you@mac`. **`-N` makes it look hung —
-  that's correct** (foreground tunnel, no prompt); use another terminal, or `-fN` to background.
-- **Pre-flight** (second terminal, host): `curl -s http://127.0.0.1:8080/v1/models` → JSON means
-  wired end-to-end. The forward is *lazy* (connects to the Mac only when used).
-- Order: server up → tunnel up → *then* `crush` (it discovers models at startup).
+- On the **Linux host**: `ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac` — both
+  model ports in one command, so switching models never touches the tunnel. **`-N` makes it look
+  hung — that's correct** (foreground tunnel, no prompt); use another terminal, or `-fN` to background.
+- **Pre-flight** (second terminal, host): `curl -s http://127.0.0.1:808{0,1}/v1/models` → JSON means
+  wired end-to-end for that model. The forward is *lazy* (connects to the Mac only when used), so
+  forwarding the port of a model you aren't serving is harmless.
+- Order: server up → tunnel up → *then* `crush`. The models are pinned in crushrc, so Crush starts
+  either way; a provider whose server is down just fails when you pick it.
 
 ## Nested-build gotcha (if you build the client image nested)
 
@@ -224,14 +253,17 @@ exceeds the final size. A 32 GB store overflowed; `mount -o remount,size=50g
 host build there's no such ceiling. See runClaudeInContainer's
 `tasks/reference/nested-podman-design.md` and its `dir-backed-nested-podman-storage.md`.
 
-## Verification status (updated 2026-08-21)
+## Verification status (updated 2026-09-10)
 
 Verified: client image builds + `crush v0.89.0` runs + `crushrc` parses; HF download plumbing;
 server serving on Metal (~21 t/s); the `@`-import patch splices live; the provider-suppression fix
 (`crush models` → only the local model, airgapped-verified); nested podman (an inner container ran);
 and the **ported conventions load and steer the model** (a `crush run` answered from the conventions).
 Not formally exercised: a full multi-step *tool-using* Crush edit driving the agent loop end-to-end —
-spot-check when convenient.
+spot-check when convenient. **Pending on the Mac (2026-09-10):** the Gemma 4 row — `make llama` at
+the bumped `b10883`, then `make serve MODEL=gemma` + `make smoke MODEL=gemma` (and a Glimmer
+re-`smoke` at the new tag); off the Mac, `make -n` for every target/MODEL, `make check-repo
+MODEL=gemma`, and the Gemma 4 `pull` were exercised (`tasks/add-gemma-4-alongside-glimmer.md`).
 
 ## Conventions machinery — ported (2026-08-21)
 

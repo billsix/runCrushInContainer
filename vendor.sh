@@ -4,18 +4,19 @@
 # Vendor everything for an OFFLINE / airgap rebuild. Runs the vendoring INSIDE the client
 # image, so this online host needs only **podman + make** — no host go/git/python3.
 #
-#   ./vendor.sh            DEFAULT: Crush + llama.cpp source + ONE model quant (Q4_K_M)
-#   FULL=1 ./vendor.sh     FULL:    the above + ALL quant GGUFs + the full-precision weights
+#   ./vendor.sh            DEFAULT: Crush + llama.cpp source + BOTH models, one GGUF each
+#                                   (Glimmer Q4_K_M ~16.8 GB, Gemma 4 26B-A4B Q4_0 ~14.4 GB)
+#   FULL=1 ./vendor.sh     FULL:    the above + ALL Glimmer quant GGUFs + Glimmer's full-precision weights
 #
 # Populates (all gitignored, all fetched from the public internet):
 #   client/vendor/crush     Crush repo @ CRUSH_TAG, @-import patch applied, `go mod vendor`ed
 #   server/llama.cpp        llama.cpp full history @ LLAMACPP_TAG
-#   server/models/<gguf…>   the model — one Q4_K_M by default; all quants + full weights with FULL=1
+#   server/models/<gguf…>   both models' GGUFs (the server/Makefile model table); more with FULL=1
 #
 # Finer control (instead of FULL=1): set MODEL_FILES / FULL_MODEL_FILES / FULL_MODEL_REPO in the env
-# and they're forwarded to the server vendor step (same meaning as in server/Makefile). Verify the
-# repo/filenames on Hugging Face — the model repo path is a best-effort default. `make check-repo`
-# (in server/) lists the repo's real GGUF filenames.
+# and they're forwarded to the server vendor step (same meaning as in server/Makefile: extra files
+# from the Glimmer repo, on top of the two defaults). Verify the repo/filenames on Hugging Face —
+# `make check-repo [MODEL=gemma]` (in server/) lists a repo's real GGUF filenames.
 #
 # The client image is the toolbox: it already ships go, git, python3 and (baked)
 # huggingface_hub, so both the client and server vendoring run in it. You CANNOT carry the
@@ -35,10 +36,10 @@ name="$(sed -n 's/^CONTAINER_NAME *[:?]*= *//p' "$here/client/Makefile" | head -
 : "${name:?could not read CONTAINER_NAME from client/Makefile}"
 
 # Model selection for the server vendor step. FULL=1 is the easy "everything" switch; otherwise the
-# server/Makefile defaults apply (one Q4_K_M quant). Explicit MODEL_FILES/FULL_MODEL_FILES/
-# FULL_MODEL_REPO in the env still win over the FULL=1 presets.
+# server/Makefile defaults apply (one GGUF per model: Glimmer Q4_K_M + Gemma 4 Q4_0). Explicit
+# MODEL_FILES/FULL_MODEL_FILES/FULL_MODEL_REPO in the env still win over the FULL=1 presets.
 if [ "${FULL:-0}" = "1" ]; then
-	MODEL_FILES="${MODEL_FILES:-*.gguf}"                               # all quant GGUFs
+	MODEL_FILES="${MODEL_FILES:-*.gguf}"                               # all Glimmer quant GGUFs (MODEL=glimmer is the Makefile default)
 	FULL_MODEL_FILES="${FULL_MODEL_FILES:-*.safetensors}"              # full-precision weights
 	FULL_MODEL_REPO="${FULL_MODEL_REPO:-meta-models/Muse-Glimmer-30B}" # base (non-GGUF) repo; verify on HF
 fi
@@ -60,8 +61,8 @@ make -C "$here/client" vendor VENDOR_TOOLS=1
 # 2) Server: vendor llama.cpp (full history) + the GGUF INSIDE the same image, writing to the
 #    bind-mounted server/ tree. server/Makefile's `vendor` uses the image's baked `hf` (no
 #    venv/pip) and git. label=disable matches how the client runs (avoids SELinux mount denials).
-echo ">> [server] vendoring llama.cpp + the model -> server/ (inside the client image)"
-if [ "${FULL:-0}" = "1" ]; then echo "   FULL=1: all quant GGUFs + full-precision weights"; fi
+echo ">> [server] vendoring llama.cpp + both models -> server/ (inside the client image)"
+if [ "${FULL:-0}" = "1" ]; then echo "   FULL=1: all Glimmer quant GGUFs + full-precision weights (plus the Gemma 4 default)"; fi
 podman run --rm \
 	--security-opt label=disable \
 	-v "$here/server":/server:Z \

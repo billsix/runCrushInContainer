@@ -9,7 +9,8 @@ working-method machinery is now ported (see "What's in use" below); remaining it
 **What this repo is for.** Like `github.com/billsix/runClaudeInContainer`, this is a **tool for
 running a coding assistant in a disposable container to develop your *other* codebases** — here the
 assistant is **Crush** (Charm's terminal agent, `github.com/charmbracelet/crush`) driving a **local
-coding LLM** (Meta's **Muse Glimmer 30B**) served on the Mac. Its job is two-fold: **run the agent**
+coding LLM** (Meta's **Muse Glimmer 30B**, or Google's **Gemma 4 26B-A4B** — both Apache-2.0,
+`make serve MODEL=glimmer|gemma`) served on the Mac. Its job is two-fold: **run the agent**
 (in a throwaway container, pointed at the project mounted at `/work`), and **deliver to the agent the
 conventions** that teach it how your projects are structured and built — the ported working-method
 machinery (see "What's in use"). It is **fork-friendly** — model, quant, and pinned tool versions are
@@ -22,15 +23,17 @@ to its purpose.
 ## Two parts, two machines
 
 - **`server/` — macOS, native (NOT containerized).** llama.cpp built for Apple Silicon
-  (Metal) on a 36 GB Mac Studio, serving Muse Glimmer over an OpenAI-compatible HTTP endpoint
-  bound to **loopback only** (`127.0.0.1`). A `Makefile` handles: build llama.cpp at a pinned
-  tag (≥ `b10353`, the first release with Muse Glimmer support), pull the GGUF from Hugging
-  Face, and `serve`. An MLX serve target is documented as the faster-on-Apple-Silicon
-  alternative.
+  (Metal) on a 36 GB Mac Studio, serving **one of two models** over an OpenAI-compatible HTTP
+  endpoint bound to **loopback only** (`127.0.0.1`): Muse Glimmer on the **fixed** port `8080`,
+  Gemma 4 on the **fixed** port `8081` (`make serve MODEL=glimmer|gemma`; the ports are deliberately
+  not knobs). A `Makefile` handles: build llama.cpp at a pinned tag (`b10883`; floors `b10353` for
+  Glimmer, PR #28335 for Gemma 4), pull both GGUFs from Hugging Face, and `serve`. An MLX serve
+  target is documented as the faster-on-Apple-Silicon alternative (Glimmer only).
 - **`client/` — Linux, containerized.** A Podman image = the **full runClaudeInContainer
   toolchain** (~430 packages) plus **Crush built from source at a pinned tag at image-build
   time**. It reaches the Mac through an **SSH port-forward** (`ssh -L`) run on the Linux host,
-  with `podman run --network=host` so `127.0.0.1:8080` in the container is the forwarded port.
+  with `podman run --network=host` so `127.0.0.1:8080` / `:8081` in the container are the
+  forwarded ports (one tunnel command forwards both).
 
 See `README.md` for the user-facing overview and the exact SSH recipe.
 
@@ -45,11 +48,14 @@ Three environments are in play; label instructions so it's unambiguous:
 ## Conventions for changing this repo
 
 - **Pin versions/knobs in Makefile variables, never hardcode inline.** Server: `LLAMACPP_TAG`,
-  `MODEL_REPO`, `MODEL_FILE`, `MODEL_ALIAS`, `PORT`, `CTX`, `NGL`, `NP`. Client: `CRUSH_TAG`,
+  the model table (`MODELS`, and per row `MODEL_REPO_<m>` / `MODEL_FILE_<m>` / `MODEL_ALIAS_<m>` /
+  `MODEL_PORT_<m>`; `MODEL=` selects a row), `CTX`, `NGL`, `NP`. **`PORT` is NOT a knob** — it is
+  `override`-fixed per row so crushrc and the tunnel never need telling. Client: `CRUSH_TAG`,
   `CRUSH_AT_IMPORT`, `CRUSH_VENDORED` (offline build from `client/vendor/crush`), `VENDOR_TOOLS`
-  (bake the vendoring-only `hf`; default off). The template value is swapping these. Two cross-file
-  couplings to keep in sync:
-  server `MODEL_ALIAS` ↔ the crushrc's pinned model ID, and server `CTX` ↔ the crushrc's
+  (bake the vendoring-only `hf`; default off). The template value is swapping these. Three cross-file
+  couplings to keep in sync: server `MODEL_ALIAS_<m>` ↔ the crushrc's pinned model IDs
+  (`muse-glimmer`, `gemma-4`), server `MODEL_PORT_<m>` ↔ the crushrc `--base-url` ports (+ the
+  tunnel lines in `README.md` and `client/entrypoint/shell.sh`), and server `CTX` ↔ the crushrc's
   `--context-window`.
 - **The server binds loopback only.** Never bind llama-server to `0.0.0.0` / the LAN; the
   only ingress is the SSH tunnel. Keep it that way.

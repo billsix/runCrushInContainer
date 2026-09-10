@@ -148,9 +148,11 @@ set (`provider.go:175,186` short-circuit to custom-only). Two behaviors that sur
   the provider is **deleted** (`load.go:471`), leaving zero providers → onboarding → the catalog appears.
   This is why an offline `crushrc` that relied on discovery showed ~15-20 models.
 
-**To offer only a local model** (crushrc): `option default-providers false` (inverted → sets
-`disable_default_providers`, `options.go:191`) **plus** an explicit `model add <provider>/<id>` so the
-provider survives without discovery. runCrushInContainer's baked `crushrc` does exactly this — verified
+**To offer only local models** (crushrc): `option default-providers false` (inverted → sets
+`disable_default_providers`, `options.go:191`) **plus** an explicit `model add <provider>/<id>` per
+provider so each survives without discovery. runCrushInContainer's baked `crushrc` does exactly this
+for its two providers (`muse-glimmer` on 8080, `gemma-4` on 8081, Glimmer preselected; the models
+dialog `ctrl+l` switches) — verified
 `crush models` drops from **1532 → 1**. Full history + before/after:
 `tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md`.
 

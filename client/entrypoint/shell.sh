@@ -16,8 +16,9 @@ cd /work 2>/dev/null || cd /
 if [ "$#" -eq 0 ]; then
     printf '\n\033[36m[runCrushInContainer]\033[0m Crush is on your PATH. Before starting it, make\n'
     printf '  sure the SSH tunnel to the Mac is up \033[33mon the host\033[0m:\n'
-    printf '    \033[36mssh -N -L 8080:127.0.0.1:8080 you@mac-studio\033[0m\n'
-    printf '  then run:  \033[36mcrush\033[0m   (it auto-discovers the served model)\n\n'
+    printf '    \033[36mssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac-studio\033[0m\n'
+    printf '  (8080 = Muse Glimmer, 8081 = Gemma 4; forward both, serve whichever you like)\n'
+    printf '  then run:  \033[36mcrush\033[0m   (Glimmer is preselected; ctrl+l switches to Gemma 4)\n\n'
 fi
 
 # No args -> interactive shell (as before). Args (a `-c '...'` payload from

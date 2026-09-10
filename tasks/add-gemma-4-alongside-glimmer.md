@@ -1,10 +1,12 @@
 # Add Google Gemma 4 (Apache-2.0) alongside Muse Glimmer — one server, two models, two fixed ports
 
-**Status:** approved 2026-09-10, no open questions — **Gemma 4 26B-A4B**, and **bump `LLAMACPP_TAG`**
-to the newest release after 2026-09-04 (both the maintainer's decisions). Not started. Order of work:
-this task first among the 2026-09-10 batch — everything but `make serve`/`make smoke` can be done
-off the Mac; those two are the maintainer's final step. Created 2026-09-10 from
-the maintainer's request (William Emerison Six <billsix@gmail.com>).
+**Status:** **implemented and staged 2026-09-10** (all off-Mac work: `server/Makefile` model table,
+`LLAMACPP_TAG` → `b10883`, crushrc second provider, `vendor.sh`/`shell.sh`/README/CLAUDE.md/reference
+docs); **pending the maintainer's Mac run** — `make llama` at the new tag, `make serve MODEL=gemma` +
+`make smoke MODEL=gemma`, and a Glimmer re-`smoke` (§ Verification). Archive once those pass.
+Decisions: **Gemma 4 26B-A4B**, and **bump `LLAMACPP_TAG`** to the newest release after 2026-09-04
+(both the maintainer's, 2026-09-10). Created 2026-09-10 from the maintainer's request
+(William Emerison Six <billsix@gmail.com>).
 **Priority:** 4
 **Difficulty:** 4
 
@@ -98,15 +100,59 @@ comment and the tunnel line (§4).
 `CLAUDE.md` (server knobs list, the two ports), `tasks/reference/architecture.md` (server section
 + verification status), `tasks/reference/crush-capabilities.md` (two providers now), this task.
 
+## Work record (2026-09-10, off the Mac)
+
+What changed, and what each check proved — the Mac steps are listed under Verification.
+
+- **`server/Makefile`.** The single-model knobs became the two-row table (`MODELS := glimmer gemma`;
+  `MODEL_REPO_<m>`/`MODEL_FILE_<m>`/`MODEL_ALIAS_<m>`/`MODEL_PORT_<m>`), selected by `MODEL ?= glimmer`
+  into the old names `MODEL_REPO`/`MODEL_FILE`/`MODEL_ALIAS`, so every recipe and doc reference kept
+  its spelling. **`PORT` is `override`-assigned** from the row — `make serve PORT=9999` still serves
+  on 8080 (checked with `make -n`), which is the "non-configurable" the maintainer asked for. Unknown
+  `MODEL=` → `Makefile: *** MODEL=bogus is not one of: glimmer gemma. Stop.` `pull` walks both rows
+  with a `$(foreach)` (make-time expansion; a shell `eval` trick was tried first and replaced). `MLX`
+  (`serve-mlx`) refuses `MODEL=gemma` with a one-line message rather than serving Glimmer's MLX repo on
+  Gemma's port. `LLAMACPP_TAG` `b10353` → `b10883` (newest release, 2026-09-09) with the floors and the
+  per-invocation rollback (`make llama LLAMACPP_TAG=b10353`) in the comment.
+- **`MODEL_FILES` changed meaning** (the one behaviour change a reader could trip on): it was *the*
+  download set with `MODEL_FILE` = its first entry; it is now an **empty-by-default extra set** pulled
+  from the *selected* row's repo on top of the two defaults. `vendor.sh FULL=1` still presets it to
+  `*.gguf` and gets the same result as before (every Glimmer quant) plus the Gemma default.
+  `FULL_MODEL_*` stays Glimmer-only (`FULL_MODEL_REPO` defaults to the Glimmer row). `make serve
+  MODEL_FILE=<file>` still works (command-line beats `:=`).
+- **`client/entrypoint/crushrc`.** `provider add gemma-4` on `127.0.0.1:8081` + `model add
+  gemma-4/gemma-4 --context-window 65536`; Glimmer stays `large`/`small`; header rewritten for two
+  fixed ports. `shell.sh` prints the two-`-L` tunnel and no longer claims auto-discovery (the models
+  have been pinned since 2026-08-20). `vendor.sh` header/echo lines say both models.
+- **Docs.** README (diagram, "The models" table + one-at-a-time RAM caveat, Server block with
+  `MODEL=`, download section, Connecting rewritten around the two-port tunnel, client paragraph,
+  Airgapped rebuild), `CLAUDE.md` (server description, knob list — `PORT` explicitly not a knob, the
+  three cross-file couplings), `tasks/reference/architecture.md` (server section, client provider
+  config, airgap scope, Connecting, verification status), `tasks/reference/crush-capabilities.md`
+  (two providers).
+- **Checks run here (Linux sandbox).** `make -n serve|probe|pull|vendor|serve-mlx` for both
+  `MODEL`s and for `MODEL=bogus`; `make help`; `make venv` then **`make check-repo MODEL=gemma` →
+  `repo OK: google/gemma-4-26B-A4B-it-qat-q4_0-gguf (2 GGUFs)`: `gemma-4-26B-it-mmproj.gguf`,
+  `gemma-4-26B_q4_0-it.gguf`** (the filenames in the table are right); `make pull MODELS=gemma
+  MODEL=gemma` (overriding the table to the one row, so the sandbox fetched only the 14.4 GB Gemma
+  file: **exit 0, `server/models/gemma-4-26B_q4_0-it.gguf` = 14,439,363,584 bytes ≈ 14.4 GB**, gitignored); `shfmt -d -i 4` on `shell.sh` and `shfmt -d` on `vendor.sh` clean; `+x` bits
+  intact; no container-absolute paths in anything touched.
+
 ## Verification / done-state
 
-- `make check-repo MODEL=gemma` lists `gemma-4-26B_q4_0-it.gguf`; `make pull MODEL=gemma` (and
-  plain `make pull`) fetches it; `./vendor.sh` leaves both GGUFs in `server/models/`.
-- `make serve MODEL=gemma` answers `make probe MODEL=gemma` on 8081 with alias `gemma-4`, and
-  `make smoke MODEL=gemma` generates. Same for `glimmer` on 8080, unchanged.
-- In the client, `ctrl+l` shows exactly two models; selecting Gemma routes a chat to 8081 (watch
-  the llama-server log). No catalog entries appear.
-- `client/entrypoint/format.sh` green; `make -C client image` builds.
+- [x] `make check-repo MODEL=gemma` lists `gemma-4-26B_q4_0-it.gguf` (2026-09-10, sandbox).
+- [x] `make pull` fetches it (2026-09-10, sandbox, Gemma row only via `MODELS=gemma` — see the
+      work record). `./vendor.sh` leaving both GGUFs in `server/models/` follows from the same target.
+- [ ] **[MAC]** `make llama` builds at `b10883`; `make serve MODEL=gemma` answers `make probe
+      MODEL=gemma` on 8081 with alias `gemma-4`, and `make smoke MODEL=gemma` generates. Then
+      `make serve` + `make smoke` for Glimmer on 8080 at the new tag (a regression check on the
+      bump — if it misbehaves, `make llama LLAMACPP_TAG=b10353` is the rollback).
+- [ ] **[MAC]** watch the serve log's memory line: 26B-A4B Q4_0 + 64k KV should fit 36 GB alone; if
+      it doesn't, `make serve MODEL=gemma CTX=32768` and record the number in
+      `tasks/reference/new-hardware-bringup.md`.
+- [ ] **[CONTAINER]** rebuilt client (`make -C client image`): `ctrl+l` shows exactly two models;
+      selecting Gemma routes a chat to 8081 (watch the llama-server log). No catalog entries appear.
+- [x] `shfmt` (the `client/entrypoint/format.sh` check) clean on `shell.sh` (2026-09-10).
 
 ## Open questions
 

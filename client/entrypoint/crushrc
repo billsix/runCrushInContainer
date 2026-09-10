@@ -2,14 +2,18 @@
 # SPDX-License-Identifier: Apache-2.0
 # ~/.config/crush/crushrc — baked default for the runCrushInContainer client.
 #
-# Declares a single provider: the local Muse Glimmer model served by llama.cpp on the Mac,
-# reached through the host's SSH tunnel. The model is pinned EXPLICITLY (not auto-discovered)
-# and the built-in provider catalog is suppressed — see the provider/model block below.
+# Declares exactly two providers -- the local models served by llama.cpp on the Mac, reached
+# through the host's SSH tunnel: Muse Glimmer on port 8080 and Gemma 4 on port 8081. Both models
+# are pinned EXPLICITLY (not auto-discovered) and the built-in provider catalog is suppressed --
+# see the provider/model blocks below. Glimmer is preselected; switch with Crush's model dialog
+# (ctrl+l) like any other provider.
 #
-# Reachability: the client runs with `podman run --network=host`, so 127.0.0.1:8080 inside
-# the container is the host's forwarded port. On the host, keep the tunnel open:
-#     ssh -N -L 8080:127.0.0.1:8080 you@mac-studio
-# If you serve on a different port (server Makefile PORT), change the base-url below to match.
+# Reachability: the client runs with `podman run --network=host`, so 127.0.0.1:8080/8081 inside
+# the container are the host's forwarded ports. On the host, keep the tunnel open (both ports):
+#     ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac-studio
+# The ports are FIXED per model in server/Makefile (MODEL_PORT_glimmer / MODEL_PORT_gemma), on
+# purpose: this file and the tunnel never have to be told which model is where. Keep the three
+# in sync if a port ever changes.
 #
 # NOTE: crushrc runs as a full shell script at load time — treat it as trusted code.
 
@@ -52,7 +56,20 @@ provider add muse-glimmer \
 # up (see tasks/archive/2026/08/20/context-window-sizing.md).
 model add muse-glimmer/muse-glimmer --name "Muse Glimmer 30B" --context-window 65536
 
-# Preselect it for both slots so Crush uses it immediately — no model picker at all.
+# The second model: Google's Gemma 4 26B-A4B (Apache-2.0), served by `make serve MODEL=gemma` on
+# its fixed port 8081 with `--alias gemma-4` (server/Makefile MODEL_ALIAS_gemma). Same explicit-pin
+# reasoning as above; same CTX (65536). Rationale and the licence check that let it in:
+# tasks/reference/gemma-4-alongside-glimmer.md.
+provider add gemma-4 \
+  --name "Gemma 4 26B-A4B (local llama.cpp)" \
+  --type llamacpp \
+  --base-url "http://127.0.0.1:8081" \
+  --api-key "local-no-key-needed"
+
+model add gemma-4/gemma-4 --name "Gemma 4 26B-A4B" --context-window 65536
+
+# Preselect Glimmer for both slots so Crush uses it immediately — no model picker at startup.
+# Gemma 4 is one ctrl+l away (the models dialog lists both providers).
 model large muse-glimmer/muse-glimmer
 model small muse-glimmer/muse-glimmer
 

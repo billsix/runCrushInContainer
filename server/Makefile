@@ -4,16 +4,21 @@
 
 # ============================================================================
 #  runCrushInContainer — SERVER side.  Runs NATIVELY on macOS (Apple Silicon),
-#  NOT in a container.  Builds llama.cpp for Metal, pulls the Muse Glimmer GGUF
-#  from Hugging Face, and serves an OpenAI-compatible endpoint on loopback.
+#  NOT in a container.  Builds llama.cpp for Metal, pulls the model GGUFs from
+#  Hugging Face, and serves an OpenAI-compatible endpoint on loopback.
 #
-#    make deps      [MAC] check Xcode CLT + cmake are present
-#    make llama     [MAC] clone + build llama.cpp for Metal (pinned)
-#    make vendor    [ONLINE] pre-fetch llama.cpp (full history) + the GGUF for an offline rebuild
-#    make pull      download the GGUF from Hugging Face (portable: needs only python3)
-#    make serve     [MAC] run llama-server on 127.0.0.1 (OpenAI /v1)
-#    make serve-mlx [MAC] run the MLX backend instead (often faster on Apple Silicon)
-#    make probe     curl the running server to confirm it answers
+#  TWO models, ONE way to run them: `MODEL=glimmer` (default) or `MODEL=gemma`.
+#  Each has a FIXED, non-configurable port -- Glimmer 8080, Gemma 8081 -- so the
+#  client crushrc and the SSH tunnel never have to be told which is which.
+#
+#    make deps               [MAC] check Xcode CLT + cmake are present
+#    make llama              [MAC] clone + build llama.cpp for Metal (pinned)
+#    make vendor             [ONLINE] pre-fetch llama.cpp (full history) + BOTH GGUFs for an offline rebuild
+#    make pull               download BOTH GGUFs from Hugging Face (portable: needs only python3)
+#    make serve MODEL=<m>    [MAC] run llama-server for one model on 127.0.0.1:<its port> (OpenAI /v1)
+#    make serve-mlx          [MAC] run the MLX backend instead (Glimmer only; often faster on Apple Silicon)
+#    make probe MODEL=<m>    curl that model's server to confirm it answers
+#    make smoke MODEL=<m>    one chat round-trip -- confirms it GENERATES
 #
 #  Only `deps`, `llama`, `serve`, `serve-mlx` require macOS/Metal.  `pull` and the
 #  venv it uses are plain python3 and run anywhere (handy for testing the download).
@@ -21,51 +26,80 @@
 
 # ---- Template knobs (override on the command line, e.g. `make serve CTX=32768`) ----
 
-# llama.cpp: pin the NEWEST known-good release >= b10353 (the first release with Muse
-# Glimmer support, merged 2026-08-10).  Decision (2026-08-18): a later known-good tag,
-# not the b10353 floor.  Confirm the concrete tag against the llama.cpp releases page
-# before trusting it — this value drifts.
-LLAMACPP_TAG  ?= b10353
+# llama.cpp: pin the NEWEST known-good release.  Floors: b10353 (2026-08-10, first Muse
+# Glimmer support) and, for Gemma 4, anything after PR #28335 (2026-09-04, Gemma 4 vision
+# handling; the Gemma 4 conversion fix #26882 is 2026-08-12).  Bumped b10353 -> b10883
+# (2026-09-09, newest at the time) on 2026-09-10 for Gemma 4 -- the maintainer's decision
+# (tasks/add-gemma-4-alongside-glimmer.md).  "Known-good" means it built and `make smoke`d
+# on the Mac for BOTH models; until that run, roll back per-invocation with
+# `make llama LLAMACPP_TAG=b10353` if Glimmer misbehaves.  Confirm the concrete tag against
+# the llama.cpp releases page before trusting it -- this value drifts.
+LLAMACPP_TAG  ?= b10883
 LLAMACPP_REPO ?= https://github.com/ggml-org/llama.cpp
 LLAMACPP_DIR  ?= ./llama.cpp
 SERVER_BIN    ?= $(LLAMACPP_DIR)/build/bin/llama-server
 
-# The model(s).  MODEL_FILES is the DOWNLOAD set (space-separated; each entry is passed to
-# `hf download --include`, so an entry may be an exact filename OR a glob like '*Q5_K_M*.gguf').
-# Default is the single Q4_K_M GGUF, so behavior is unchanged unless you add more.  To vendor a
-# quant ladder, list several — run `make check-repo` FIRST to see the repo's real GGUF filenames
-# (don't guess; the repo path/names came from a web search — VERIFY on Hugging Face).  The quant
-# ladder is documented in tasks/reference/architecture.md.  mmproj (vision) / dflash (drafter) are
-# not needed for a coding agent.
-MODEL_REPO  ?= meta-models/Muse-Glimmer-30B-GGUF
-MODEL_FILES ?= Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf
+# ---- The two models: a table keyed by MODEL (glimmer | gemma) ----
+# `MODEL=` selects ONE row for serve/probe/smoke/check-repo; pull/vendor walk BOTH rows.
+# Per row: the Hugging Face repo, the exact GGUF filename (an `hf download --include` pattern),
+# the alias llama-server reports at /v1/models, and the FIXED port.  Ports are deliberately
+# not knobs: the client crushrc hardcodes them and the SSH tunnel forwards both, so nobody
+# ever has to remember which model is on which port.  KEEP IN SYNC with
+# client/entrypoint/crushrc (base-url ports + model IDs) and client/entrypoint/shell.sh.
+#
+# glimmer: Meta's Muse Glimmer 30B, Q4_K_M (~16.8 GB), Apache-2.0.  Repo path/filename came
+#          from a web search -- VERIFY on Hugging Face (`make check-repo`); the quant ladder is
+#          documented in tasks/reference/architecture.md.  mmproj/dflash extras not needed.
+# gemma:   Google's Gemma 4 26B-A4B (MoE, 3.8B active), the OFFICIAL QAT Q4_0 GGUF (~14.4 GB),
+#          Apache-2.0 (Gemma 1-3 are NOT -- never substitute a gemma-3 repo).  Chosen 2026-09-10
+#          over the 31B dense for speed and for fitting beside Glimmer; the mmproj (vision) file
+#          in the same repo is not needed for a coding agent.  Filenames verified via the HF API
+#          on 2026-09-10 (tasks/reference/gemma-4-alongside-glimmer.md).
+MODELS := glimmer gemma
+MODEL  ?= glimmer
+
+MODEL_REPO_glimmer  := meta-models/Muse-Glimmer-30B-GGUF
+MODEL_FILE_glimmer  := Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf
+MODEL_ALIAS_glimmer := muse-glimmer
+MODEL_PORT_glimmer  := 8080
+
+MODEL_REPO_gemma  := google/gemma-4-26B-A4B-it-qat-q4_0-gguf
+MODEL_FILE_gemma  := gemma-4-26B_q4_0-it.gguf
+MODEL_ALIAS_gemma := gemma-4
+MODEL_PORT_gemma  := 8081
+
+# Guard: an unknown MODEL= names the two valid values instead of silently serving nothing.
+ifeq ($(filter $(MODEL),$(MODELS)),)
+$(error MODEL=$(MODEL) is not one of: $(MODELS))
+endif
+
+# The selected row.  These are the names the rest of the file (and the docs) use.  A
+# command-line override still wins over `:=`, so `make serve MODEL_FILE=<other downloaded
+# quant>` serves a different Glimmer quant under the same alias/port (must be an exact filename).
+MODEL_REPO  := $(MODEL_REPO_$(MODEL))
+MODEL_FILE  := $(MODEL_FILE_$(MODEL))
+MODEL_ALIAS := $(MODEL_ALIAS_$(MODEL))
+override PORT := $(MODEL_PORT_$(MODEL))
 MODEL_DIR   ?= ./models
-# Which downloaded file to SERVE (single).  Defaults to the first of MODEL_FILES; override to serve a
-# different quant you vendored, e.g. `make serve MODEL_FILE=<file>`.  (Must be an exact filename, not a
-# glob.)  The --alias is constant regardless of quant, so the client crushrc still matches.
-MODEL_FILE  ?= $(firstword $(MODEL_FILES))
 
-# OPT-IN full-precision weights (OFF by default — leave FULL_MODEL_FILES empty).  Set it to also vendor
-# the full/unquantized model (F16/BF16 GGUF and/or the original BF16 safetensors), from FULL_MODEL_REPO
-# if the full weights live in a different repo than the GGUFs (e.g. the base `…-30B` repo vs `…-GGUF`).
-# These are archival/conversion artifacts; whether any given precision can be SERVED is the operator's
-# concern on their hardware. See tasks/vendor-multiple-glimmer-quants.md.
-FULL_MODEL_REPO  ?= $(MODEL_REPO)
+# OPT-IN extra downloads from the SELECTED model's repo (empty by default): exact filenames or
+# `hf --include` globs, pulled in addition to the row's GGUF.  `make pull MODEL_FILES="*.gguf"`
+# grabs every Glimmer quant (the vendor.sh FULL=1 preset); `make pull MODEL=gemma
+# MODEL_FILES="*mmproj*"` adds Gemma's vision projector.  `make check-repo` lists real filenames.
+MODEL_FILES ?=
+
+# OPT-IN full-precision weights (OFF by default -- leave FULL_MODEL_FILES empty).  Set it to also
+# vendor the full/unquantized model (F16/BF16 GGUF and/or the original BF16 safetensors), from
+# FULL_MODEL_REPO if the full weights live in a different repo than the GGUFs (e.g. the base
+# `...-30B` repo vs `...-GGUF`).  These are archival/conversion artifacts; whether any given
+# precision can be SERVED is the operator's concern on their hardware.  Glimmer-only today.
+FULL_MODEL_REPO  ?= $(MODEL_REPO_glimmer)
 FULL_MODEL_FILES ?=
-
-# Stable model ID reported at /v1/models. WITHOUT --alias, llama-server reports the raw -m
-# path (e.g. "./models/Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf"), which changes whenever
-# MODEL_FILE changes and is awkward to reference. --alias pins a clean, constant ID so the
-# client's crushrc can hardcode `model add muse-glimmer/$(MODEL_ALIAS)` without re-editing on
-# a quant/file swap. Keep this in sync with client/entrypoint/crushrc.
-MODEL_ALIAS ?= muse-glimmer
-
 # MLX alternative backend (Apple-Silicon-only).
 MLX_REPO ?= RadixArk/Muse-Glimmer-q4-MLX
 
-# Serving.
+# Serving.  (PORT is NOT a knob -- it comes from the MODEL row above.)
 HOST ?= 127.0.0.1
-PORT ?= 8080
 CTX  ?= 65536        # KV-cache / context window. Raised 32768 -> 65536 (2026-08-21) so the
                      # always-loaded conventions + Crush's own ~18k-token system prompt/tools leave
                      # comfortable room for an actual coding session (the 32k window overflowed —
@@ -112,14 +146,14 @@ llama: ## [MAC] clone + build llama.cpp for Metal, pinned to LLAMACPP_TAG
 	@echo "built $(SERVER_BIN)"
 
 .PHONY: vendor
-vendor: ## [ONLINE] pre-fetch llama.cpp (full history @ LLAMACPP_TAG) + the GGUF, for an offline rebuild/serve
+vendor: ## [ONLINE] pre-fetch llama.cpp (full history @ LLAMACPP_TAG) + BOTH models' GGUFs, for an offline rebuild/serve
 	@# Populates the two server-side internet-sourced artifacts WITHOUT building (the Metal build
 	@# happens later on the airgap Mac via `make llama`, which reuses this checkout). See
 	@# tasks/vendor-build-sources-for-airgap-rebuild.md.
 	@test -d $(LLAMACPP_DIR) || git clone --branch $(LLAMACPP_TAG) $(LLAMACPP_REPO) $(LLAMACPP_DIR)
 	$(MAKE) pull
-	@echo "vendored: $(LLAMACPP_DIR) (full history @ $(LLAMACPP_TAG)) + $(MODEL_DIR)/: $(MODEL_FILES) $(FULL_MODEL_FILES)"
-	@echo "carry the repo (server/llama.cpp + server/models) to the airgap box; build llama.cpp there for your backend + serve the GGUF (your hardware, your call)"
+	@echo "vendored: $(LLAMACPP_DIR) (full history @ $(LLAMACPP_TAG)) + $(MODEL_DIR)/: $(MODEL_FILE_glimmer) $(MODEL_FILE_gemma) $(FULL_MODEL_FILES)"
+	@echo "carry the repo (server/llama.cpp + server/models) to the airgap box; build llama.cpp there for your backend + serve either GGUF with make serve MODEL=glimmer|gemma (your hardware, your call)"
 
 # The venv holds the `hf` CLI (huggingface_hub).  Built once; `pull` depends on it.
 $(HF):
@@ -130,9 +164,12 @@ $(HF):
 venv: $(HF) ## create the python venv with the Hugging Face CLI (huggingface_hub)
 
 .PHONY: pull
-pull: $(if $(SYS_HF),,venv) ## download MODEL_FILES (+ opt-in FULL_MODEL_FILES) into MODEL_DIR (system `hf` if present, else venv)
+pull: $(if $(SYS_HF),,venv) ## download BOTH models' GGUFs (+ opt-in MODEL_FILES / FULL_MODEL_FILES) into MODEL_DIR (system `hf` if present, else venv)
+	@# One download per MODELS row; $(foreach) expands each row's repo/file at make time.
+	@$(foreach m,$(MODELS),echo ">> [$m] $(MODEL_REPO_$m)  $(MODEL_FILE_$m)" && \
+	    $(HF_BIN) download $(MODEL_REPO_$m) --include "$(MODEL_FILE_$m)" --local-dir $(MODEL_DIR) || exit 1;)
 	@for f in $(MODEL_FILES); do \
-	    echo ">> $(MODEL_REPO)  $$f"; \
+	    echo ">> [$(MODEL) extra] $(MODEL_REPO)  $$f"; \
 	    $(HF_BIN) download $(MODEL_REPO) --include "$$f" --local-dir $(MODEL_DIR) || exit 1; \
 	done
 	@if [ -n "$(strip $(FULL_MODEL_FILES))" ]; then \
@@ -141,10 +178,10 @@ pull: $(if $(SYS_HF),,venv) ## download MODEL_FILES (+ opt-in FULL_MODEL_FILES) 
 	        $(HF_BIN) download $(FULL_MODEL_REPO) --include "$$f" --local-dir $(MODEL_DIR) || exit 1; \
 	    done; \
 	fi
-	@echo "models in $(MODEL_DIR): $(MODEL_FILES) $(FULL_MODEL_FILES)"
+	@echo "models in $(MODEL_DIR): $(MODEL_FILE_glimmer) $(MODEL_FILE_gemma) $(MODEL_FILES) $(FULL_MODEL_FILES)"
 
 .PHONY: check-repo
-check-repo: $(if $(SYS_HF),,venv) ## list MODEL_REPO's GGUF files on Hugging Face (discovery for MODEL_FILES; no download)
+check-repo: $(if $(SYS_HF),,venv) ## list the selected MODEL's repo GGUF files on Hugging Face (make check-repo MODEL=gemma; no download)
 	@$(PYBIN) -c "from huggingface_hub import HfApi; \
 	    info = HfApi().model_info('$(MODEL_REPO)'); \
 	    ggufs = sorted(s.rfilename for s in info.siblings if s.rfilename.endswith('.gguf')); \
@@ -152,24 +189,26 @@ check-repo: $(if $(SYS_HF),,venv) ## list MODEL_REPO's GGUF files on Hugging Fac
 	    [print('  ', f) for f in ggufs]"
 
 .PHONY: serve
-serve: ## [MAC] run llama-server on loopback with an OpenAI-compatible /v1 endpoint
+serve: ## [MAC] run llama-server for MODEL=glimmer (8080, default) or MODEL=gemma (8081) on loopback, OpenAI /v1
 	$(SERVER_BIN) -m $(MODEL_DIR)/$(MODEL_FILE) --alias $(MODEL_ALIAS) --host $(HOST) --port $(PORT) \
 		-ngl $(NGL) -c $(CTX) --parallel $(NP)
 
 .PHONY: serve-mlx
-serve-mlx: ## [MAC] run the MLX backend instead of llama.cpp (Apple-Silicon-only)
+serve-mlx: ## [MAC] run the MLX backend instead of llama.cpp (Apple-Silicon-only; Glimmer only)
 	@# mlx-lm installs/runs only on Apple Silicon; kept in its own venv so it can't
-	@# interfere with the huggingface_hub venv above.
+	@# interfere with the huggingface_hub venv above.  Glimmer-only: no MLX repo was
+	@# selected for Gemma 4 (a separate decision); refuse rather than serve the wrong model.
+	@test "$(MODEL)" = glimmer || { echo "serve-mlx supports MODEL=glimmer only"; exit 1; }
 	@test -d .venv-mlx || $(PY) -m venv .venv-mlx
 	.venv-mlx/bin/pip install --upgrade pip mlx-lm
 	.venv-mlx/bin/mlx_lm.server --model $(MLX_REPO) --host $(HOST) --port $(PORT)
 
 .PHONY: probe
-probe: ## curl the running server (list models) to confirm it answers
+probe: ## curl the selected MODEL's server (list models) to confirm it answers -- make probe MODEL=gemma
 	curl -sS http://$(HOST):$(PORT)/v1/models
 
 .PHONY: smoke
-smoke: ## one chat-completion round-trip — confirms the model actually GENERATES, not just lists
+smoke: ## one chat-completion round-trip against the selected MODEL -- confirms it actually GENERATES, not just lists
 	curl -sS http://$(HOST):$(PORT)/v1/chat/completions \
 		-H 'Content-Type: application/json' \
 		-d '{"messages":[{"role":"user","content":"Reply with exactly the word: OK"}],"max_tokens":16,"temperature":0}'
