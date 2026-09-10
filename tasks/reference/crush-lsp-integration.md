@@ -5,8 +5,8 @@
 (`github.com/charmbracelet/x/powernap v0.1.6`, `pkg/config/lsps.json`, 500+ entries), 2026-09-10.
 Explains the "no LSP client handles file" message the maintainer keeps seeing, and what
 "compatible" means for a server we install. **Implemented 2026-09-10** (§4 has the measured
-capability table, § RHEL 9 the venv variant); the work record is
-`tasks/install-language-servers-for-crush.md` (archived once the image rebuild is confirmed).
+capability table, § RHEL 9 the venv variant); the work record is `tasks/archive/2026/09/10/install-language-servers-for-crush.md`; the real-image and
+RHEL 9 verification is `tasks/verify-language-servers-on-rhel9.md`.
 
 ## 1. What Crush does with an LSP client
 
@@ -63,7 +63,7 @@ only a dnf mirror, so an npm/gem/opam/pip server would silently vanish there. Th
 declares each one with `lsp add` (bypassing all four gates in §2); a toolchain Fedora packages no
 server for gets **no** server, and that is documented rather than faked. Measured with one
 `initialize` handshake per binary in a throwaway `fedora:44`
-(`tasks/adhoc/install-language-servers-for-crush/check_fedora_servers.sh` + `lsp_handshake.py`):
+(`tasks/adhoc/verify-language-servers-on-rhel9/check_fedora_servers.sh` + `lsp_handshake.py`):
 
 | Language | dnf package → binary (Fedora 44 version) | crushrc line | definition | references | rename | documentSymbol | callHierarchy | diagnostics |
 |---|---|---|---|---|---|---|---|---|
@@ -131,7 +131,7 @@ ENV PATH=/venv/bin:$PATH
   downloaded by `make -C client vendor` into `client/vendor/wheels/` (gitignored, rides in the airgap
   tarball) and mounted read-only at `/vendor/wheels` by `make image CRUSH_VENDORED=1` when the dir
   exists. Fedora's `ty` stays unpinned dnf; pinning applies only where there is no mirror to defer to.
-- **Proof** (`tasks/adhoc/install-language-servers-for-crush/check_rhel9_ty.sh`): a throwaway
+- **Proof** (`tasks/adhoc/verify-language-servers-on-rhel9/check_rhel9_ty.sh`): a throwaway
   `quay.io/centos/centos:stream9` + `python3.11` image; the wheel `pip download`ed online; then, under
   `podman run --network=none`, the venv + `--no-index` install succeeded (`ty 0.0.80`, Python
   3.11.13) and `ty server` answered `initialize` with the full capability row above. That offline run

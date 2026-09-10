@@ -154,7 +154,7 @@ guidance is in `FORKING.md`.
 - `tasks/reference/crush-lsp-integration.md` — what Crush asks a language server for, the four
   start gates (user-configured / skip list / filetype+root marker / on PATH), where "no LSP client
   handles file" comes from, and the registry rows for every toolchain the image ships. Work:
-  `tasks/install-language-servers-for-crush.md`.
+  Implemented 2026-09-10 (work record `tasks/archive/2026/09/10/install-language-servers-for-crush.md`); the image + RHEL 9 check is `tasks/verify-language-servers-on-rhel9.md`.
 - `tasks/reference/new-hardware-bringup.md` — the first hour on a new box: what `make probe` and
   `make smoke` each prove, then quant → `NGL` → `CTX` → `NP`, the three server-log lines that
   decide it, and what to record. Work: `tasks/new-hardware-bringup-runbook.md`.

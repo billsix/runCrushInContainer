@@ -1,17 +1,17 @@
 # Install the language servers Crush's LSP tools need — Python first, then every toolchain the image ships
 
-**Status:** **Parts 1–3 implemented and staged 2026-09-10; pending the maintainer's image rebuild**
-(`make -C client image` — 22 GB, does not fit the sandbox's 16 GB nested store) and the in-container
-check that `crush_logs` shows the six servers starting. Everything provable off that rebuild was
-proven in throwaway containers (work record below). Archive once the rebuilt image checks out.
-Research 2026-09-10 (William Emerison Six <billsix@gmail.com> asked, after Crush repeatedly answered
-"no LSP client handles file" for a Python class on the **airgapped** box — a non-fatal complaint: it
-still rewrote the code). Decisions: dnf-only; Python = dnf `ty` (the pip pin reversed); RHEL 9 =
-python3.11 `/venv` + vendored `ty` wheel as a commented-out Dockerfile block.
+**Status:** **done 2026-09-10, archived.** Parts 1–3 implemented; committed by the maintainer. The
+two checks that need real machines — the rebuilt 22 GB Fedora image, and the RHEL 9 airgap box —
+are `tasks/verify-language-servers-on-rhel9.md`, which also owns the proof harnesses (moved to `tasks/adhoc/verify-language-servers-on-rhel9/`). Durable knowledge lives
+in `tasks/reference/crush-lsp-integration.md` (§4 measured table, § RHEL 9); this file is the work
+record. Research 2026-09-10 (William Emerison Six <billsix@gmail.com> asked, after Crush repeatedly
+answered "no LSP client handles file" for a Python class on the airgapped box — non-fatal). Decisions:
+dnf-only; Python = dnf `ty` (the pip pin reversed); RHEL 9 = python3.11 `/venv` + vendored `ty` wheel
+as a commented-out Dockerfile block.
 
 | Part | What | Status |
 |---|---|---|
-| 1 | Fedora: `nodejs-bash-language-server` + `glsl-analyzer` in `01-install-base.sh`; six `lsp add` lines in crushrc; throwaway-`fedora:44` handshake check; image rebuild | done except the image rebuild (maintainer) |
+| 1 | Fedora: `nodejs-bash-language-server` + `glsl-analyzer` in `01-install-base.sh`; six `lsp add` lines in crushrc; throwaway-`fedora:44` handshake check; image rebuild | done; image rebuild → `tasks/verify-language-servers-on-rhel9.md` |
 | 2 | RHEL 9: `python3.11` venv + vendored `ty` wheel, proven offline in a throwaway `centos:stream9`; commented-out Dockerfile block; wheel in `make vendor` | **done** |
 | 3 | Docs: `CLAUDE.md`, `architecture.md`, `crush-capabilities.md`, reference-doc table + RHEL 9 section, README RHEL 9 note | **done** |
 **Priority:** 3
@@ -188,7 +188,7 @@ Fedora and RHEL 9 columns), and a README "RHEL 9" one-liner pointing at the Dock
   `nodejs-bash-language-server` (before `npm`), alphabetical, no other change — it stays a verbatim
   copy of runClaudeInContainer's list *plus two* (the sibling repo does not get them: Crush is the only
   consumer). `client/entrypoint/crushrc`: one comment block stating the rule and six `lsp add` lines.
-  Proof harness `tasks/adhoc/install-language-servers-for-crush/check_fedora_servers.sh` (+
+  Proof harness `tasks/adhoc/verify-language-servers-on-rhel9/check_fedora_servers.sh` (+
   `lsp_handshake.py`, a stdlib-only `initialize` client) in a throwaway `fedora:44`: all six installed
   (`ty` 0.0.74, `gopls` 0.18.1, `clangd` 22.1.8, `rust-analyzer` 1.98.0, `bash-language-server` 5.6.0,
   `glsl_analyzer` 1.7.1 — the GLSL binary has an **underscore**, which the crushrc line uses) and all

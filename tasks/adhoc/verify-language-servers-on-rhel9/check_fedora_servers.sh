@@ -6,7 +6,7 @@
 # LSP `initialize` handshake against each (lsp_handshake.py) to record its capability set.
 # No repo files are touched; the point is a cheap check before the 22 GB image rebuild.
 #
-# Run from anywhere: `tasks/adhoc/install-language-servers-for-crush/check_fedora_servers.sh`.
+# Run from anywhere: `tasks/adhoc/verify-language-servers-on-rhel9/check_fedora_servers.sh`.
 # Needs podman (nested is fine; PODMAN_RUN_FLAGS is honoured like the project Makefiles).
 set -uo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

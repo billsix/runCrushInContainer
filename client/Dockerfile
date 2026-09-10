@@ -39,7 +39,7 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
 # install is OFFLINE. Proven 2026-09-10 in a throwaway quay.io/centos/centos:stream9 with
 # `--network=none`: python3.11 (AppStream; BaseOS 3.9 is too old for ty) + the ty 0.0.80 wheel
 # answered `initialize` with the same capability set as Fedora's dnf ty
-# (tasks/adhoc/install-language-servers-for-crush/check_rhel9_ty.sh). The crushrc line
+# (tasks/adhoc/verify-language-servers-on-rhel9/check_rhel9_ty.sh). The crushrc line
 # (`lsp add python --command ty --args server …`) is unchanged; PATH makes /venv/bin/ty resolve.
 # To use on RHEL 9: swap FROM to a RHEL 9 base, replace the Fedora package lists (01-install-base.sh
 # does NOT apply as-is — rust-analyzer and clangd exist on RHEL 9, gopls is EPEL's
