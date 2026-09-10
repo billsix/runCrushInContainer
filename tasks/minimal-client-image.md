@@ -1,12 +1,16 @@
-# Minimal client image via FULL_TOOLCHAIN flag (full by default, lean for in-sandbox verification)
+# Minimal client image via FULL_TOOLCHAIN flag — and make it THE image for nested-podman use of this project
 
-**Status:** IMPLEMENTED (2026-08-29) — `FULL_TOOLCHAIN` flag added, minimal image built and
-verified in-sandbox (nested podman, from the vendored tree): 1.65 GB, Crush runs
-(`v0.89.0+dirty`), rg/strace/tcpdump/git/go present, the full toolchain confirmed absent
-(clang/nodejs/emacs/cmake/python3 all missing; `gcc` present only as a `golang` dependency). Real
-machine: a plain `make image` (defaults) still builds the full image unchanged — not re-verified
-here, but the change is purely an added always-run layer + a gated existing layer.
-**Priority:** 4
+**Status:** phase 1 **IMPLEMENTED (2026-08-29)** — `FULL_TOOLCHAIN` flag added, minimal image built and
+verified in-sandbox (nested podman, from the vendored tree): 1.65 GB, Crush runs (`v0.89.0+dirty`),
+rg/strace/tcpdump/git/go present, the full toolchain confirmed absent (clang/nodejs/emacs/cmake/python3
+all missing; `gcc` present only as a `golang` dependency). Real machine: a plain `make image`
+(defaults) still builds the full image unchanged — not re-verified here, but the change is purely an
+added always-run layer + a gated existing layer.
+**Phase 2 — approved 2026-09-10, no open questions, next up (William Emerison Six
+<billsix@gmail.com>): the minimal image becomes the DEFAULT whenever this project is built/run nested
+inside a runClaudeInContainer / runCrushInContainer sandbox, with NO language servers in it, and
+`CLAUDE.md` says so.** Scope below.
+**Priority:** 2
 **Difficulty:** 3
 **Created:** 2026-08-29 (William Emerison Six <billsix@gmail.com>)
 
@@ -62,7 +66,58 @@ produces a lean image with everything needed to: build Crush at any `PATCH_OUT_<
 strace/tcpdump egress checks. CLAUDE.md gains a standing note that in-sandbox verification builds
 use `FULL_TOOLCHAIN=0`.
 
-## Plan
+## Phase 2 (2026-09-10) — the minimal image is the nested-podman default for this project
+
+**Ask (maintainer, 2026-09-10):** "the minimal image … is what I want the nested podman container to
+use for this project, and it'll probably need to be mentioned in the CLAUDE.md." Today the minimal
+image is opt-in (`make image FULL_TOOLCHAIN=0`) and only an agent note in `CLAUDE.md` says to use it
+in-sandbox; the ask is to make that the default behaviour, not a remembered flag.
+
+**Proposed mechanism — the `PODMAN_RUN_FLAGS` idiom, applied to the toolchain flag.** A
+`NESTED_PODMAN=1` sandbox already exports `NESTED_PODMAN=1` into the session (runClaudeInContainer
+`tasks/reference/nested-podman-design.md`, "The PODMAN_RUN_FLAGS convention"), so `client/Makefile` can
+default the flag from that signal:
+
+```make
+# Full toolchain on a real host; the 1.65 GB minimal image when this project is built NESTED inside a
+# sandbox (which exports NESTED_PODMAN=1) — the 22 GB full image does not fit the nested store.
+FULL_TOOLCHAIN ?= $(if $(filter 1,$(NESTED_PODMAN)),0,1)
+```
+
+Byte-identical on the maintainer's host (env var absent → `1`); `make image` inside a sandbox builds
+minimal with no flag to remember; `make image FULL_TOOLCHAIN=1` still forces full anywhere. Same shape
+as `PODMAN_RUN_FLAGS`, so a reader who knows one knows the other. Dockerfile `ARG FULL_TOOLCHAIN=0`
+unchanged.
+
+**Consequence (open question 1, resolved: no servers):** the minimal image skips `01-install-base.sh`, so it has
+**none of the six language servers** the crushrc now declares (`tasks/reference/crush-lsp-integration.md`
+§4) — Crush in the nested container would answer "no LSP client handles file" for everything, the
+very complaint the LSP work fixed. Declared-but-absent servers fail to start harmlessly, so nothing
+breaks; the question is whether the minimal image should carry the servers for the toolchains it
+*does* ship. It ships `golang` → `gopls` (24 MB) is the obvious one. `ty` (26 MB, Rust binary, no
+python needed to *run* the server, though Crush would be editing Python the image can't run) and
+`clang-tools-extra` (62 MB + llvm-libs 140 MB) are the judgement calls; `rust-analyzer`, the bash
+server (drags the nodejs24 runtime, ~60 MB) and `glsl-analyzer` follow their toolchains, which the
+minimal image doesn't have.
+
+Steps:
+
+- [ ] `client/Makefile`: the auto-default above (replace `FULL_TOOLCHAIN ?= 1`), comment updated;
+      `image` target's `##` line says "minimal when nested".
+- [x] Open question 1 decided: **no language servers in the minimal image** (2026-09-10) — nothing
+      to add to `00-install-minimal.sh`; the CLAUDE.md rule notes the expected LSP message.
+- [ ] In-sandbox proof: plain `make image CRUSH_VENDORED=1` under `NESTED_PODMAN=1` builds the
+      minimal image with no flag; `make -n image` on a host-shaped environment (`NESTED_PODMAN=`
+      unset) shows `--build-arg FULL_TOOLCHAIN=1`.
+- [ ] `CLAUDE.md`: the "Conventions for changing this repo" list gains the rule ("nested = minimal
+      image, automatically; the full image is the host's"), and the agent note under "What's in use"
+      becomes a statement of the default rather than a flag to remember. `architecture.md` client
+      section + `nested-podman-design.md`'s PODMAN_RUN_FLAGS section (runClaudeInContainer) get one
+      line each; README's "Client" section a one-liner if it documents `make image` flags at all.
+- [ ] Real-machine (maintainer): a plain `make image` on the host still builds the full image — the
+      phase-1 box below, still open, is the same check.
+
+## Plan (phase 1, 2026-08-29)
 
 - [x] Write `client/entrypoint/00-install-minimal.sh` — dnf guard + the minimal set
       (ca-certificates, git, git-lfs, golang, gnupg2, less, ripgrep, strace, tcpdump, which).
@@ -95,4 +150,9 @@ use `FULL_TOOLCHAIN=0`.
 
 ## Open questions
 
-None — the three design questions were answered 2026-08-29 (see Context).
+Phase 1's three design questions were answered 2026-08-29 (see Context). Phase 2 has one:
+
+1. ~~**Should the minimal image carry any language servers?**~~ **RESOLVED 2026-09-10: none**
+   (maintainer: "minimal should not have language servers"). The crushrc's six `lsp add` lines stay;
+   in the minimal image they fail to start harmlessly, and `CLAUDE.md` says so in one clause so the
+   "no LSP client handles file" message in a nested container is expected, not a bug.
