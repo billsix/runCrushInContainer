@@ -21,14 +21,18 @@ CONTAINER_NAME = crushcontainer
 # Latest stable Crush release (decision 2026-08-18). Override: make image CRUSH_TAG=vX.Y.Z
 CRUSH_TAG ?= v0.89.0
 
-# Full ~430-package dev toolchain vs a minimal image. Default 1 = the batteries-included image
-# (Dockerfile ARG defaults to 0, so a bare `podman build` is lean — the usual convention).
-# `make image FULL_TOOLCHAIN=0` builds a ~2 GB minimal image (golang/git/ripgrep + strace/tcpdump)
-# that still builds Crush at any flag combination, runs it against the model, vendors, and hosts a
-# runtime egress check — and fits the dev sandbox's nested-podman store for in-sandbox verification.
-# Same CONTAINER_NAME for both (a minimal HOST build replaces the full image until the next full
-# rebuild — accepted). See tasks/minimal-client-image.md.
-FULL_TOOLCHAIN ?= 1
+# Full ~430-package dev toolchain vs a minimal image. On a real host the default is 1 = the
+# batteries-included ~22 GB image (Dockerfile ARG defaults to 0, so a bare `podman build` is lean —
+# the usual convention). NESTED, the default flips to 0 automatically (2026-09-10): a
+# runClaudeInContainer/runCrushInContainer sandbox exports NESTED_PODMAN=1, and the 22 GB image does
+# not fit its RAM-backed store, so an in-sandbox `make image` builds the ~1.65 GB minimal image
+# (golang/git/ripgrep + strace/tcpdump; NO language servers, by decision) with no flag to remember —
+# the same auto-default idiom as PODMAN_RUN_FLAGS below. It still builds Crush at any flag
+# combination, runs it against the model, vendors, and hosts a runtime egress check. Override either
+# way: `make image FULL_TOOLCHAIN=1` nested (only with a store that can take 22 GB), or
+# `FULL_TOOLCHAIN=0` on the host. Same CONTAINER_NAME for both (a minimal HOST build replaces the
+# full image until the next full rebuild — accepted). See tasks/minimal-client-image.md.
+FULL_TOOLCHAIN ?= $(if $(filter 1,$(NESTED_PODMAN)),0,1)
 
 # The ONE language-server pin: `ty` as a wheel, for the RHEL 9 airgap variant only. Fedora gets `ty`
 # from dnf (01-install-base.sh, unpinned like every other tool); RHEL 9 packages no Python LSP at all,
@@ -208,7 +212,7 @@ endif
 all: image ## Build the image
 
 .PHONY: image
-image: ## build the client image: full toolchain + Crush built from source (pinned CRUSH_TAG). FULL_TOOLCHAIN=0 builds a minimal image; CRUSH_VENDORED=1 builds offline from ./vendor; PATCH_OUT_<X>=0/1 flips any egress patch (see the flag block above)
+image: ## build the client image: full toolchain + Crush built from source (pinned CRUSH_TAG). Nested in a sandbox (NESTED_PODMAN=1) it defaults to the minimal image; FULL_TOOLCHAIN=0/1 overrides; CRUSH_VENDORED=1 builds offline from ./vendor; PATCH_OUT_<X>=0/1 flips any egress patch (see the flag block above)
 	$(CONTAINER_CMD) build -t $(CONTAINER_NAME) \
 		--build-arg CRUSH_TAG=$(CRUSH_TAG) \
 		--build-arg CRUSH_AT_IMPORT=$(CRUSH_AT_IMPORT) \

@@ -86,6 +86,12 @@ SSH tunnel:
   container paths — is mapped in `tasks/reference/container-file-layout.md`** (printable via
   `make -C client manifest`; also baked at `~/.config/crush/reference/container-file-layout.md`
   so the agent can read it in-container). Consult it before citing a container path.
+- **Two sizes, chosen by where it is built (2026-09-10):** `FULL_TOOLCHAIN ?= $(if $(filter
+  1,$(NESTED_PODMAN)),0,1)` in `client/Makefile` — a host `make image` is the full ~22 GB image; the
+  same command inside a sandbox (which exports `NESTED_PODMAN=1`) is the ~1.65 GB minimal image
+  (`00-install-minimal.sh` only: golang/git/ripgrep + strace/tcpdump, **no language servers** by
+  decision, so the crushrc's `lsp add` lines fail to start there). The `PODMAN_RUN_FLAGS` idiom
+  applied to a build flag; `FULL_TOOLCHAIN=0|1` overrides. Record: `tasks/minimal-client-image.md`.
 - Full runClaudeInContainer toolchain (`entrypoint/01-install-base.sh`, verbatim copy) +
   **Crush built from source at image-build time**, pinned `CRUSH_TAG` (default **`v0.89.0`**,
   the latest stable at bring-up; `github.com/charmbracelet/crush`). The build is
@@ -259,9 +265,11 @@ vendoring only guarantees the sources are present and offline-buildable. `server
 - Order: server up → tunnel up → *then* `crush`. The models are pinned in crushrc, so Crush starts
   either way; a provider whose server is down just fails when you pick it.
 
-## Nested-build gotcha (if you build the client image nested)
+## Nested-build gotcha (if you force the FULL client image nested)
 
-The client image is **~22.3 GB**. Building it in a RAM-backed nested podman store fails at the
+Since 2026-09-10 a nested `make image` builds the minimal image by default (above), so this only
+applies to `make image FULL_TOOLCHAIN=1` inside a sandbox. The full client image is **~22.3 GB**.
+Building it in a RAM-backed nested podman store fails at the
 *layer commit* (not install) with `no space left on device` — commit peak (base+diff+temp)
 exceeds the final size. A 32 GB store overflowed; `mount -o remount,size=50g
 /var/lib/containers` (or a bigger `NESTED_PODMAN_TMPFS_SIZE`) fixed it. On a real disk-backed

@@ -57,6 +57,13 @@ Three environments are in play; label instructions so it's unambiguous:
   (`muse-glimmer`, `gemma-4`), server `MODEL_PORT_<m>` ↔ the crushrc `--base-url` ports (+ the
   tunnel lines in `README.md` and `client/entrypoint/shell.sh`), and server `CTX` ↔ the crushrc's
   `--context-window`.
+- **Nested = the minimal image, automatically (2026-09-10).** `client/Makefile` defaults
+  `FULL_TOOLCHAIN` from the `NESTED_PODMAN` signal every sandbox exports
+  (`$(if $(filter 1,$(NESTED_PODMAN)),0,1)`, the `PODMAN_RUN_FLAGS` idiom): an in-sandbox
+  `make image` builds the ~1.65 GB minimal image, a host `make image` the full ~22 GB one, no flag
+  either way. The minimal image has **no language servers** (maintainer's decision) — the crushrc's
+  `lsp add` lines fail to start there and Crush says "no LSP client handles file"; that is expected
+  nested, not a bug. `FULL_TOOLCHAIN=1` forces full nested only with a store that can take 22 GB.
 - **The server binds loopback only.** Never bind llama-server to `0.0.0.0` / the LAN; the
   only ingress is the SSH tunnel. Keep it that way.
 - **The client image reuses runClaudeInContainer's full toolchain** (`01-install-base.sh`,
@@ -195,13 +202,12 @@ lowest priority-number, then lowest difficulty-number):
 - `decide-egress-verification.md` (P6/D3, proposed) — decide whether the audit needs an enforced
   runtime egress check (strace/tcpdump or firewall permitting only the local model endpoint), or
   whether the source-level audit suffices; real-machine if built.
-- `minimal-client-image.md` (P4/D3, **implemented 2026-08-29**) — `FULL_TOOLCHAIN` flag splits the
-  image build (Makefile `?=1` = the maintainer's full ~22 GB image; `FULL_TOOLCHAIN=0` = the
-  verified 1.65 GB minimal image: golang/git/ripgrep + strace/tcpdump). **Agent note: for in-sandbox
-  image-level verification build `make image FULL_TOOLCHAIN=0`** (add `CRUSH_VENDORED=1` to skip the
-  network) — the full image exceeds the nested-podman store. Always-run `00-install-minimal.sh` +
-  gated `01-install-base.sh`; same tag for both. Remaining: real-machine confirm a default
-  `make image` still builds full (unchanged).
+- `minimal-client-image.md` (P2/D3, phase 1 **implemented 2026-08-29**, phase 2 **2026-09-10**) —
+  `FULL_TOOLCHAIN` splits the image build: the full ~22 GB image on a host, the 1.65 GB minimal image
+  (golang/git/ripgrep + strace/tcpdump, no language servers) **automatically when nested** (see
+  "Conventions" above). Always-run `00-install-minimal.sh` + gated `01-install-base.sh`; same tag
+  for both. Remaining: real-machine confirm a default host `make image` still builds full
+  (unchanged).
 - `standardize-project-container-template.md` (P5/D5, proposed) — adopt the cross-project
   container-template standard (the `shell`/`shell-exec` pair + `SHELL_RUN_FLAGS`, mount conventions)
   in this repo's docs + `client/`; sibling task in runClaudeInContainer.

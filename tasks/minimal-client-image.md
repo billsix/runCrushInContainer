@@ -6,10 +6,12 @@ rg/strace/tcpdump/git/go present, the full toolchain confirmed absent (clang/nod
 all missing; `gcc` present only as a `golang` dependency). Real machine: a plain `make image`
 (defaults) still builds the full image unchanged — not re-verified here, but the change is purely an
 added always-run layer + a gated existing layer.
-**Phase 2 — approved 2026-09-10, no open questions, next up (William Emerison Six
-<billsix@gmail.com>): the minimal image becomes the DEFAULT whenever this project is built/run nested
-inside a runClaudeInContainer / runCrushInContainer sandbox, with NO language servers in it, and
-`CLAUDE.md` says so.** Scope below.
+**Phase 2 — IMPLEMENTED 2026-09-10** (William Emerison Six <billsix@gmail.com>: "make it the default for
+when it's being built in a nested container … the makefile can enforce it, correct? as long as the
+NESTED_PODMAN flag is set, which we have it do anyways!"): `FULL_TOOLCHAIN ?= $(if $(filter
+1,$(NESTED_PODMAN)),0,1)` in `client/Makefile`; no language servers in the minimal image; `CLAUDE.md`
+rule + `architecture.md` + runClaudeInContainer's `nested-podman-design.md` updated. Proof below.
+Remaining: the host-side box (a plain `make image` on the maintainer's host still builds full).
 **Priority:** 2
 **Difficulty:** 3
 **Created:** 2026-08-29 (William Emerison Six <billsix@gmail.com>)
@@ -102,18 +104,21 @@ minimal image doesn't have.
 
 Steps:
 
-- [ ] `client/Makefile`: the auto-default above (replace `FULL_TOOLCHAIN ?= 1`), comment updated;
-      `image` target's `##` line says "minimal when nested".
+- [x] `client/Makefile`: the auto-default (replaced `FULL_TOOLCHAIN ?= 1`), comment rewritten;
+      `image` target's `##` line says "nested … defaults to the minimal image" (2026-09-10).
 - [x] Open question 1 decided: **no language servers in the minimal image** (2026-09-10) — nothing
       to add to `00-install-minimal.sh`; the CLAUDE.md rule notes the expected LSP message.
-- [ ] In-sandbox proof: plain `make image CRUSH_VENDORED=1` under `NESTED_PODMAN=1` builds the
-      minimal image with no flag; `make -n image` on a host-shaped environment (`NESTED_PODMAN=`
-      unset) shows `--build-arg FULL_TOOLCHAIN=1`.
-- [ ] `CLAUDE.md`: the "Conventions for changing this repo" list gains the rule ("nested = minimal
-      image, automatically; the full image is the host's"), and the agent note under "What's in use"
-      becomes a statement of the default rather than a flag to remember. `architecture.md` client
-      section + `nested-podman-design.md`'s PODMAN_RUN_FLAGS section (runClaudeInContainer) get one
-      line each; README's "Client" section a one-liner if it documents `make image` flags at all.
+- [x] `make -n image` three ways (2026-09-10): `NESTED_PODMAN=1` → `--build-arg FULL_TOOLCHAIN=0`;
+      `env -u NESTED_PODMAN` (host-shaped) → `FULL_TOOLCHAIN=1`; nested + `FULL_TOOLCHAIN=1` on the
+      command line → `1` (override wins).
+- [ ] In-sandbox proof: a flagless `make image` in the `NESTED_PODMAN=1` session builds the minimal
+      image (online build; no vendored tree was present) — result recorded below when it finishes.
+- [x] `CLAUDE.md`: new "Nested = the minimal image, automatically" convention (incl. the expected
+      no-LSP message nested), and the "What's in use" entry restated as the default; `architecture.md`
+      client section bullet + the "Nested-build gotcha" retitled to the forced-full case;
+      runClaudeInContainer `nested-podman-design.md` PODMAN_RUN_FLAGS section: the idiom applied to a
+      build variant (staged there, not committed — no authorization for that repo). README: unchanged
+      — it documents the host `make image`, whose behaviour did not change.
 - [ ] Real-machine (maintainer): a plain `make image` on the host still builds the full image — the
       phase-1 box below, still open, is the same check.
 
