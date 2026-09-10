@@ -70,7 +70,7 @@ Three environments are in play; label instructions so it's unambiguous:
   sorted, maximal — don't prune) and bakes: **Crush built from source** (patched with the
   `@`-import diff when `CRUSH_AT_IMPORT=1`), the **`crushrc`** (pinned models + catalog suppression
   + six explicit `lsp add` lines), and **dotfiles** (`entrypoint/dotfiles/.extrabashrc`). It **omits** the auth/config-layering
-  machinery for now (see below). The Makefile also conditionally mounts host `~/.tmux.conf` /
+  machinery for now (see below). The Makefile also conditionally mounts host `~/.tmux.conf` / `~/.vimrc` /
   `~/.gitconfig` / `~/.gnupg`.
 - **Language servers: dnf only, declared explicitly (2026-09-10).** Crush's `lsp_*` tools need a
   server on `PATH`; the crushrc `lsp add`s one per toolchain Fedora packages (python `ty`, go, c,

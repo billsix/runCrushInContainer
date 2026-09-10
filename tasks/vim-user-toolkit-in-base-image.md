@@ -1,8 +1,14 @@
 # Give vim users a complete setup in the client image (vim is already there)
 
-**Status:** proposed — needs go-ahead; small. Created 2026-09-10 at the maintainer's request
-(William Emerison Six <billsix@gmail.com>: "add vim, and whatever normally vim users want
-installed, to the base install script").
+**Status:** **implemented and staged 2026-09-10; pending the maintainer's host `make image`** (the full
+image does not fit the sandbox's nested store, and the nested default builds the *minimal* image, which
+skips `01-install-base.sh` — vim is a full-image feature) — then archive. Mirrors runClaudeInContainer's
+unit of the same slug exactly (same six rpms, byte-identical `.vimrc` apart from its header, same
+`VIMRC_MOUNT` idiom). Proven in a throwaway `fedora:44` with this repo's `.vimrc`: `$EDITOR` is
+`/usr/bin/vim`, and `:Git` / `:NERDTreeToggle` / `:Commentary` / `:ALEInfo` / `:GitGutterToggle` all
+exist with the vimrc in effect. Created 2026-09-10 at the maintainer's request (William Emerison Six
+<billsix@gmail.com>: "add vim, and whatever normally vim users want installed, to the base install
+script").
 **Priority:** 6
 **Difficulty:** 2
 
@@ -44,16 +50,37 @@ else, and `make image` builds.
    `~/.tmux.conf` / `~/.gitconfig` (skipped if absent).
 5. `universal-ctags` is what Fedora's `ctags` package provides — confirm, no change expected.
 
+## Work record (2026-09-10)
+
+- `client/entrypoint/01-install-base.sh`: `vim-ale`, `vim-commentary`, `vim-default-editor`,
+  `vim-fugitive`, `vim-gitgutter`, `vim-nerdtree` (the six Fedora 44 packages; `vim-airline` and
+  `vim-surround` are not packaged — rpm-only, so dropped). ~3 MB. The script is runClaudeInContainer's
+  list + this repo's two language-server rpms + these six.
+- `client/entrypoint/dotfiles/.vimrc`: runClaudeInContainer's file with this repo's paths in the header;
+  baked by the existing `COPY entrypoint/dotfiles/ /root/`.
+- `client/Makefile`: `VIMRC_MOUNT` (conditional, the tmux idiom) in `SHELL_RUN_FLAGS`; `make -n shell`
+  emits no mount line when the host has no `~/.vimrc`.
+- Docs: `CLAUDE.md` + `README.md` + `architecture.md` mount lists; `container-file-layout.md` **and its
+  baked twin** got the two new rows (the baked `.vimrc`; the run-time mount). **Pre-existing drift
+  found, not touched:** the twin and the `tasks/reference/` copy already differed — the 2026-09-03
+  "stack does not persist" change updated only the baked twin's mounts table, and the reference copy
+  still listed a `~/.config/crush/stack.md` mount. **Synced 2026-09-10** (maintainer: make them identical with the newest, by git date — the baked twin, `e13195f`): the reference copy is now a byte copy of the twin.
+- Proof: throwaway `fedora:44`, nested — same harness as runClaudeInContainer's unit
+  (`bash -lc 'echo $EDITOR'` → `/usr/bin/vim`; `vim -N -u /root/.vimrc -es` → all five plugin commands
+  exist, `shiftwidth=4`, space leader).
+
 ## Verification / done-state
 
-`make -C client image` builds; in the container `vim --version` shows `+clipboard` (if chosen),
-`:scriptnames` lists the baked `.vimrc`, `git commit` opens vim, and the plugins load
-(`:AirlineToggle`, `:Git`). `FULL_TOOLCHAIN=0` still has `vim-enhanced` and the `.vimrc` but no
-plugins. Image-size delta recorded here.
+- [ ] **[HOST]** `make -C client image` builds; in `make -C client shell`: `git commit` opens vim,
+      `:scriptnames` lists the baked `.vimrc` (or the mounted host one), `:Git` / `:NERDTreeToggle` work.
+      Image-size delta (expected ~3 MB) recorded here.
+- [x] Throwaway proof (2026-09-10, above).
+- Note: the **minimal image** (`FULL_TOOLCHAIN=0`, the nested default) has no vim at all —
+  `00-install-minimal.sh` ships `less` and no editor — so none of this applies there; by design
+      (maintainer, 2026-09-10: "minimal doesn't need vim").
 
 ## Open questions
 
-1. **Which plugins?** Recommend the git + statusline + comment/surround set above via rpms only.
-2. **Clipboard support** — `vim-X11` pulls X libraries into a headless image. Recommend skip;
-   note `"+y` is unavailable.
-3. **Mount host `~/.vimrc`?** Recommend yes, conditional, matching the tmux/gitconfig idiom.
+Resolved 2026-09-10 with runClaudeInContainer's twin (the maintainer: "do it for runCrushInContainer"):
+rpm-only plugin set (the six Fedora ships), host `~/.vimrc` mounted conditionally, neovim left
+unconfigured.

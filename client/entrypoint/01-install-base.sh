@@ -435,7 +435,13 @@ dnf install -y \
     unzip \
     uv \
     valgrind \
+    vim-ale \
+    vim-commentary \
+    vim-default-editor \
     vim-enhanced \
+    vim-fugitive \
+    vim-gitgutter \
+    vim-nerdtree \
     vulkan-tools \
     wabt \
     wayland-devel \

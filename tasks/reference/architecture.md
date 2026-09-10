@@ -150,7 +150,7 @@ SSH tunnel:
   (run the client on the host for a clean level). Full detail: `tasks/reference/nested-podman-design.md`.
 - **Dotfiles + host config (2026-08-20):** the Dockerfile bakes `client/entrypoint/dotfiles/.extrabashrc`
   (prompt, `ls` alias, `GPG_TTY`) via `COPY … /root/` + a `~/.bashrc` source line, and the Makefile
-  conditionally mounts host `~/.tmux.conf` / `~/.gitconfig` / `~/.gnupg` (runClaudeInContainer's
+  conditionally mounts host `~/.tmux.conf` / `~/.gitconfig` / `~/.gnupg` / `~/.vimrc` (runClaudeInContainer's
   `readlink -f` + existence-test idiom, `:Z`). See
   `tasks/archive/2026/08/20/dotfiles-and-host-config-mounts.md`.
 - **`@`-import patch (2026-08-20):** the client builds a locally-patched Crush that recursively splices

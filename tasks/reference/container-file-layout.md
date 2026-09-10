@@ -49,6 +49,7 @@ the session log alongside it).
 | `entrypoint/03-build-crush.sh` | `/usr/local/bin/03-build-crush.sh` | no |
 | — (built by `03-build-crush.sh`) | `/usr/local/bin/crush` (via `GOBIN`) | no |
 | `entrypoint/dotfiles/.extrabashrc` | `/root/.extrabashrc` | no |
+| `entrypoint/dotfiles/.vimrc` | `/root/.vimrc` | yes — by the host's `~/.vimrc` when it exists (2026-09-10) |
 | `entrypoint/dotfiles/.config/containers/storage.conf` | `/root/.config/containers/storage.conf` | no (nested-podman fuse-overlayfs) |
 | `entrypoint/dotfiles/.config/crush/CLAUDE.md` | `/root/.config/crush/CLAUDE.md` | no (always-loaded conventions) |
 | `entrypoint/dotfiles/.config/crush/commands/` (7 files) | `/root/.config/crush/commands/` | no (slash commands) |
@@ -72,9 +73,14 @@ GOBIN=/usr/local/bin GOFLAGS=-trimpath`.
 | `~/.tmux.conf` | `/root/.tmux.conf` | only if it exists on the host |
 | `~/.gnupg` | `/root/.gnupg` | only if it exists on the host |
 | `~/.gitconfig` | `/root/.gitconfig` | only if it exists on the host |
+| `~/.vimrc` | `/root/.vimrc` | only if it exists on the host — shadows the baked `entrypoint/dotfiles/.vimrc` (2026-09-10) |
 | `~/.ai-coding-conventions.personal.md` | `/root/.config/crush/ai-coding-conventions.personal.md` | always (`touch`ed blank if absent) — **overrides the baked blank**; note the dotted host name → un-dotted container name |
-| `~/.config/crush/stack.md` | `/root/.config/crush/stack.md` | always (`mkdir`+`touch`) — the diversion stack survives `--rm` |
 | `EXTRA_MOUNTS` | user-chosen | user-supplied; no doc covers these paths |
+
+> The **diversion stack** (`~/.config/crush/stack.md`) is **not** a host mount and is **not** baked (as of
+> 2026-09-03) — it is in-session only: created on the ephemeral `--rm` overlay inside the container and discarded
+> at exit. Its still-open items are folded into the task/reference docs by the session-end sweep. See the
+> conventions `CLAUDE.md` ("The diversion stack" / "Ending a session").
 
 Non-mount run flags that also shape the environment: `--network=host`
 (`NET_FLAGS`), `--security-opt label=disable` (`SELINUX_OPT`),

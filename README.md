@@ -248,7 +248,7 @@ The first cut was just "get it running"; the client has since grown a few things
 - **Only the two local models are offered** — the baked `crushrc` pins Muse Glimmer (`8080`) and
   Gemma 4 (`8081`) explicitly and sets `option default-providers false` to suppress Crush's built-in
   provider catalog.
-- **Host config mounts** — `~/.tmux.conf` / `~/.gitconfig` / `~/.gnupg` are mounted in when present,
+- **Host config mounts** — `~/.tmux.conf` / `~/.gitconfig` / `~/.gnupg` / `~/.vimrc` are mounted in when present,
   plus a baked `.extrabashrc` (prompt, aliases).
 
 The runClaudeInContainer working-method machinery is now **ported** — the cross-project conventions

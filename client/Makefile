@@ -167,6 +167,12 @@ GNUPG_FILE := $(HOME)/.gnupg
 GNUPG_REAL_PATH := $(shell readlink -f $(GNUPG_FILE))
 GNUPG_MOUNT := $(shell if [ -d $(GNUPG_REAL_PATH) ]; then echo "-v $(GNUPG_REAL_PATH):/root/.gnupg:Z" ; fi)
 
+# Host ~/.vimrc shadows the baked entrypoint/dotfiles/.vimrc when present (2026-09-10); conditional
+# like tmux/gitconfig — a vim user without a dotfile gets the baked defaults, nothing breaks.
+VIMRC_FILE := $(HOME)/.vimrc
+VIMRC_REAL_PATH := $(shell readlink -f $(VIMRC_FILE))
+VIMRC_MOUNT := $(shell if [ -f $(VIMRC_REAL_PATH) ]; then echo "-v $(VIMRC_REAL_PATH):/root/.vimrc:Z" ; fi)
+
 # Personal-overlay mount (UNCONDITIONAL): the baked conventions CLAUDE.md `@`-imports
 # ai-coding-conventions.personal.md, so that path must always resolve. `touch` the host file at
 # parse time (created blank if absent) and mount it over the baked blank default, so a maintainer's
@@ -257,6 +263,7 @@ SHELL_RUN_FLAGS = \
 		$(TMUX_MOUNT) \
 		$(GNUPG_MOUNT) \
 		$(GITCONFIG_MOUNT) \
+		$(VIMRC_MOUNT) \
 		$(PERSONAL_MOUNT) \
 		$(NESTED_PODMAN_FLAGS) \
 		$(EXTRA_MOUNTS)
