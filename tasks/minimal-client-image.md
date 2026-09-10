@@ -111,8 +111,15 @@ Steps:
 - [x] `make -n image` three ways (2026-09-10): `NESTED_PODMAN=1` → `--build-arg FULL_TOOLCHAIN=0`;
       `env -u NESTED_PODMAN` (host-shaped) → `FULL_TOOLCHAIN=1`; nested + `FULL_TOOLCHAIN=1` on the
       command line → `1` (override wins).
-- [ ] In-sandbox proof: a flagless `make image` in the `NESTED_PODMAN=1` session builds the minimal
-      image (online build; no vendored tree was present) — result recorded below when it finishes.
+- [x] In-sandbox proof (2026-09-10): a flagless `make image` in the `NESTED_PODMAN=1` session built
+      `localhost/crushcontainer` with `--build-arg FULL_TOOLCHAIN=0` (exit 0, ~10 min, online — no
+      vendored tree was present). Crush runs (`v0.89.0+dirty`); rg/strace/tcpdump/git/go present;
+      sentinels clang/nodejs/emacs/cmake/python3 absent — and `ty`/`gopls` absent, as decided.
+      **Size 3.16 GB vs phase 1's 1.65 GB**: the online path leaves the Go module cache
+      (`/root/go/pkg/mod`, filled by `go mod vendor` in `03-build-crush.sh`) in the layer; the
+      vendored (`CRUSH_VENDORED=1`) build downloads nothing and stays lean. Not fixed here — an
+      observation for whoever cares about the online image's size (a `go clean -modcache` at the
+      end of the build script would do it).
 - [x] `CLAUDE.md`: new "Nested = the minimal image, automatically" convention (incl. the expected
       no-LSP message nested), and the "What's in use" entry restated as the default; `architecture.md`
       client section bullet + the "Nested-build gotcha" retitled to the forced-full case;
