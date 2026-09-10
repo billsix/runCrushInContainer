@@ -57,8 +57,12 @@ make deps      # check the prerequisites above (Xcode CLT + cmake) are installed
 make llama     # clone + build llama.cpp for Metal, pinned to a known-good tag
 make pull      # download the Q4_K_M GGUF from Hugging Face into ./models
 make serve     # start llama-server on 127.0.0.1:8080 (OpenAI-compatible /v1)
-make probe     # (in another terminal) confirm the server answers before wiring the client
+make probe     # (in another terminal) does it ANSWER? -- lists the model alias + live context size
+make smoke     # (in another terminal) does it GENERATE? -- one chat round-trip that must reply "OK"
 ```
+> **New machine (airgap box, bigger or smaller Mac)?** Run `probe`, then `smoke`, then size the
+> knobs in this order — quant → `NGL` → `CTX` → `NP` — following
+> `tasks/reference/new-hardware-bringup.md`; it names the three server-log lines that decide it.
 
 `make serve-mlx` runs the MLX backend instead (often faster on Apple Silicon). Model, quant,
 port, and context size are Makefile variables — override per run, e.g.
@@ -106,6 +110,17 @@ the background after authentication):
 ssh -fN -L 8080:127.0.0.1:8080 you@mac-studio.local   # returns immediately; runs in background
 pkill -f 'ssh -fN -L 8080'                             # ...tear it down later with this
 ```
+
+**Two models, one tunnel.** Once Gemma 4 is served alongside Glimmer
+(`tasks/add-gemma-4-alongside-glimmer.md`: Glimmer on `8080`, Gemma on `8081` — fixed), forward
+both ports in the same command; `-L` repeats:
+```sh
+ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac-studio.local
+ssh -fN -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac-studio.local   # background variant
+```
+Then `curl -s http://127.0.0.1:8081/v1/models` verifies the second one exactly as below; the
+client's crushrc reaches each provider on its own port, and Crush's models dialog (`ctrl+l`)
+picks between them.
 
 **Verify the tunnel** from a *second* terminal on the Linux host — a JSON model listing means
 you're wired end-to-end:

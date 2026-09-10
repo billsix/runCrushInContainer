@@ -134,6 +134,17 @@ guidance is in `FORKING.md`.
   autoload, no native `@`-import, custom commands, hooks, provider/model selection + the
   `disable_default_providers` catalog switch, context-window/compaction). Read before touching
   Crush config or the port.
+- `tasks/reference/gemma-4-alongside-glimmer.md` — Google's open-weights models against the
+  OSI-licence bar: Gemma 1–3 are custom-licensed, **Gemma 4 is Apache-2.0** with official Q4_0 QAT
+  GGUFs; the family table, llama.cpp support status, and the two-models/two-fixed-ports design.
+  Work: `tasks/add-gemma-4-alongside-glimmer.md`.
+- `tasks/reference/crush-lsp-integration.md` — what Crush asks a language server for, the four
+  start gates (user-configured / skip list / filetype+root marker / on PATH), where "no LSP client
+  handles file" comes from, and the registry rows for every toolchain the image ships. Work:
+  `tasks/install-language-servers-for-crush.md`.
+- `tasks/reference/new-hardware-bringup.md` — the first hour on a new box: what `make probe` and
+  `make smoke` each prove, then quant → `NGL` → `CTX` → `NP`, the three server-log lines that
+  decide it, and what to record. Work: `tasks/new-hardware-bringup-runbook.md`.
 - `tasks/reference/crush-prompt-history.md` — how Crush's prompt history works at `v0.89.0` (what the
   history list holds, the Up/Down state machine, ordering, where it is persisted — `.crush/crush.db`
   in the launch directory, so `/work` — and what `ctrl+r` search needed), plus §7: exactly what our
