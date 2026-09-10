@@ -30,7 +30,7 @@
 # Glimmer support) and, for Gemma 4, anything after PR #28335 (2026-09-04, Gemma 4 vision
 # handling; the Gemma 4 conversion fix #26882 is 2026-08-12).  Bumped b10353 -> b10883
 # (2026-09-09, newest at the time) on 2026-09-10 for Gemma 4 -- the maintainer's decision
-# (tasks/add-gemma-4-alongside-glimmer.md).  "Known-good" means it built and `make smoke`d
+# (tasks/reference/gemma-4-alongside-glimmer.md §6).  "Known-good" means it built and `make smoke`d
 # on the Mac for BOTH models; until that run, roll back per-invocation with
 # `make llama LLAMACPP_TAG=b10353` if Glimmer misbehaves.  Confirm the concrete tag against
 # the llama.cpp releases page before trusting it -- this value drifts.

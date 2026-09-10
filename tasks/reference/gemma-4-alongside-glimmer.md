@@ -4,8 +4,8 @@
 **OSI-approved-license** bar, what it would take to serve one next to Glimmer, and the trade-offs.
 Researched 2026-09-10 against Google's own terms page and the Hugging Face API; sizes, filenames
 and llama.cpp support **drift** — re-verify at implementation time (`CLAUDE.md`: "Verify
-model/tool identifiers before hardcoding them"). The work itself is
-`tasks/add-gemma-4-alongside-glimmer.md`. Sibling of
+model/tool identifiers before hardcoding them"). The implementation landed 2026-09-10 (§6; work
+record `tasks/archive/2026/09/10/add-gemma-4-alongside-glimmer.md`); the Mac verification is `tasks/verify-gemma-4-on-the-mac.md`. Sibling of
 `glimmer-models-and-airgap-quant-selection.md`, which this doc does not repeat.
 
 ## TL;DR
@@ -106,6 +106,40 @@ Things the maintainer should know before saying go:
   `llamacpp` providers; nothing in `dependency-network-audit.md` changes.
 - **Gemma 3 must not sneak in**: any `gemma-3-*` repo fails the licence bar. The `check-repo`
   step and the HF `license:` tag are the guard.
+
+## 6. As implemented (2026-09-10) — how the two-model server actually works
+
+Everything in §4 was built as designed; the details a maintainer needs when touching it:
+
+- **The table is four variables per row** in `server/Makefile` — `MODEL_REPO_<m>`, `MODEL_FILE_<m>`,
+  `MODEL_ALIAS_<m>`, `MODEL_PORT_<m>` for `MODELS := glimmer gemma` — and `MODEL ?= glimmer` copies
+  the chosen row into the *old* names (`MODEL_REPO`, `MODEL_FILE`, `MODEL_ALIAS`, `PORT`), so every
+  recipe and doc reference kept its spelling. Adding a third model is four lines plus a `MODELS`
+  entry, a crushrc provider/model pair, and a tunnel `-L`. An unknown `MODEL=` is a `$(error …)`.
+- **`PORT` is `override`-assigned** from the row: `make serve PORT=9999` still serves on 8080. That
+  is the "non-configurable" in the ask made mechanical — the crushrc `--base-url`s, the README/`shell.sh`
+  tunnel line and the Makefile row are the three places a port lives, and they must move together.
+- **`pull`/`vendor` walk both rows with a make-time `$(foreach)`** (a shell-side `eval` of
+  `MODEL_REPO_$m` was tried first and dropped — make can expand the row, the shell can't). For a
+  one-row pull, override the list: `make pull MODELS=gemma MODEL=gemma` (how the 14.4 GB Gemma file
+  was fetched in the Linux sandbox without also pulling Glimmer).
+- **`MODEL_FILES` changed meaning**: it was *the* download set (with `MODEL_FILE` = its first entry);
+  it is now an **empty-by-default extra set** from the *selected* row's repo, on top of the two
+  defaults. `vendor.sh FULL=1` still presets `*.gguf` and yields the same Glimmer quant ladder as
+  before, plus the Gemma default; `make pull MODEL=gemma MODEL_FILES="*mmproj*"` adds the vision
+  projector. `FULL_MODEL_*` stays Glimmer-only. `make serve MODEL_FILE=<other quant>` still works —
+  a command-line assignment beats `:=`.
+- **`serve-mlx` refuses `MODEL=gemma`** (one-line message, exit 1): no MLX repo was chosen for
+  Gemma 4, and serving Glimmer's MLX build on Gemma's port would be the worst kind of wrong.
+- **`LLAMACPP_TAG` went `b10353` → `b10883`** (2026-09-09 release) in the same commit as the rows —
+  the maintainer chose "newest after the 2026-09-04 vision fix (#28335)". Until the Mac `smoke`s both
+  models at that tag it is a *candidate*; `make llama LLAMACPP_TAG=b10353` is the one-flag rollback.
+- **Client**: `provider add gemma-4` on `127.0.0.1:8081` + `model add gemma-4/gemma-4
+  --context-window 65536`; Glimmer stays `large`/`small`; `shell.sh` prints the two-`-L` tunnel and
+  no longer says "auto-discovers" (models have been pinned since 2026-08-20).
+- **Verified off the Mac**: `make check-repo MODEL=gemma` lists exactly `gemma-4-26B-it-mmproj.gguf`
+  and `gemma-4-26B_q4_0-it.gguf`; the real `pull` target fetched the latter (14,439,363,584 bytes).
+  **Not yet verified**: anything needing Metal — see `tasks/verify-gemma-4-on-the-mac.md`.
 
 ## Sources
 

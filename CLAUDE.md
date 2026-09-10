@@ -143,7 +143,7 @@ guidance is in `FORKING.md`.
 - `tasks/reference/gemma-4-alongside-glimmer.md` — Google's open-weights models against the
   OSI-licence bar: Gemma 1–3 are custom-licensed, **Gemma 4 is Apache-2.0** with official Q4_0 QAT
   GGUFs; the family table, llama.cpp support status, and the two-models/two-fixed-ports design.
-  Work: `tasks/add-gemma-4-alongside-glimmer.md`.
+  Implemented 2026-09-10 (§6 there); the Mac verification is `tasks/verify-gemma-4-on-the-mac.md`.
 - `tasks/reference/crush-lsp-integration.md` — what Crush asks a language server for, the four
   start gates (user-configured / skip list / filetype+root marker / on PATH), where "no LSP client
   handles file" comes from, and the registry rows for every toolchain the image ships. Work:

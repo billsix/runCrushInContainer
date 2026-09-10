@@ -16,8 +16,8 @@ that wires it into the README is `tasks/new-hardware-bringup-runbook.md`. Comman
 
 Run them in this order, every time, on every new box: `probe` first (cheap, catches wrong
 port/alias/tunnel), then `smoke` (catches a model that lists but cannot run — an over-committed KV
-cache fails *here*, not at `probe`). Both take `MODEL=` once
-`tasks/add-gemma-4-alongside-glimmer.md` lands.
+cache fails *here*, not at `probe`). Both take `MODEL=glimmer|gemma` (default `glimmer`; the
+port follows the model — 8080 / 8081).
 
 ## 1. The bring-up sequence
 

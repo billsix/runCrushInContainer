@@ -26,7 +26,7 @@ SSH tunnel:
   (PR #26882, 2026-08-12) and the vision handling (PR #28335, 2026-09-04). Decision: pin the newest
   *known-good* tag ≥ those, chosen when building on the Mac (a tag isn't "known-good" until it
   builds+serves there). **Bumped `b10353` → `b10883`** (2026-09-09 release) on 2026-09-10 for Gemma 4
-  (maintainer's decision, `tasks/add-gemma-4-alongside-glimmer.md`); its first Mac build+`smoke`
+  (maintainer's decision, `tasks/reference/gemma-4-alongside-glimmer.md` §6); its first Mac build+`smoke`
   for both models is the pending verification. Build is `cmake -DGGML_METAL=ON` — Metal.
 - **Two models, one `MODEL=` switch, fixed ports (2026-09-10).** The Makefile carries a two-row
   table (`MODELS := glimmer gemma`; per row `MODEL_REPO_<m>`, `MODEL_FILE_<m>`, `MODEL_ALIAS_<m>`,
@@ -263,7 +263,8 @@ Not formally exercised: a full multi-step *tool-using* Crush edit driving the ag
 spot-check when convenient. **Pending on the Mac (2026-09-10):** the Gemma 4 row — `make llama` at
 the bumped `b10883`, then `make serve MODEL=gemma` + `make smoke MODEL=gemma` (and a Glimmer
 re-`smoke` at the new tag); off the Mac, `make -n` for every target/MODEL, `make check-repo
-MODEL=gemma`, and the Gemma 4 `pull` were exercised (`tasks/add-gemma-4-alongside-glimmer.md`).
+MODEL=gemma`, and the Gemma 4 `pull` were exercised (work record `tasks/archive/2026/09/10/add-gemma-4-alongside-glimmer.md`; the Mac run is
+`tasks/verify-gemma-4-on-the-mac.md`).
 
 ## Conventions machinery — ported (2026-08-21)
 
