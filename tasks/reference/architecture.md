@@ -1,7 +1,7 @@
 # runCrushInContainer — architecture & operations
 
 **Reference document** — how the two halves fit together, the pins, and the gotchas learned
-during bring-up. Not a task; update in place. Last updated 2026-08-29.
+during bring-up. Not a task; update in place. Last updated 2026-09-10.
 
 ## What this is
 
@@ -113,9 +113,13 @@ SSH tunnel:
   none. Capability table + the RHEL 9 venv variant: `crush-lsp-integration.md` §4 and § RHEL 9.
 - **Crush config is `crushrc`, NOT `crush.json`** (`client/entrypoint/crushrc`; global path
   `~/.config/crush/crushrc`). `crush.json` is deprecated. The baked config declares exactly two
-  **`llamacpp`**-type providers — `muse-glimmer` on `8080` and `gemma-4` on `8081` (2026-09-10),
-  Glimmer preselected in both `large`/`small` slots, Gemma 4 reachable through the models dialog
-  (`ctrl+l`). **`base_url` is the bare root** (`http://127.0.0.1:8080`, no `/v1`) —
+  **`llamacpp`**-type providers — `muse-glimmer` on `8080` and `gemma-4` on `8081` (2026-09-10).
+  At load the crushrc **probes both ports with `curl` and preselects the model that answers** in the
+  `large`/`small` slots — Gemma only when 8081 answers and 8080 does not; Glimmer otherwise
+  (both/neither/no curl) — because Crush never probes a pinned provider itself and shows no picker
+  with two providers configured (decided 2026-09-10; mechanism and precedence in
+  `crush-capabilities.md` § "Provider & model selection"). The other model is one `ctrl+l` away.
+  **`base_url` is the bare root** (`http://127.0.0.1:8080`, no `/v1`) —
   Crush appends `/v1/models` itself (`internal/discover/llamacpp.go`). A trailing `/v1` would
   double-path.
 - **Provider config: `disable_default_providers` + explicit pinned model (2026-08-20).** The crushrc
@@ -184,9 +188,10 @@ SSH tunnel:
     ungated path, `crush update-providers`, is removed by `PATCH_OUT_UPDATE_PROVIDERS_CMD ?= 1`) and
     `hyper.charm.land` (guarded out by `PATCH_OUT_HYPER ?= 1`).
 - **The egress patch/flag system (2026-08-29):** the dependency network audit
-  (`tasks/reference/dependency-network-audit.md`, decisions D1–D12) produced **thirteen build-time
-  patches** in `client/patches/`, each behind its own defaulted flag (`PATCH_OUT_<X>`, plus the
-  `CRUSH_AT_IMPORT` feature flag). Defaults encode the audit's disposition: phone-home
+  (`tasks/reference/dependency-network-audit.md`, decisions D1–D12) produced twelve `PATCH_OUT_<X>`
+  patches; with the two feature patches (`CRUSH_AT_IMPORT`, and `CRUSH_SHELL_HISTORY` added
+  2026-09-09) `client/patches/` holds **fourteen build-time patches**, each behind its own defaulted
+  flag. Defaults encode the audit's disposition: phone-home
   (telemetry, update check), the ungated catwalk command, and the out-of-design cloud providers
   (Google/Vertex, Bedrock/AWS, Azure, OpenRouter, Vercel, Hyper, Copilot) are **patched out by
   default**; the web tools and sourcegraph are **kept by default**. `entrypoint/03-build-crush.sh`

@@ -43,6 +43,7 @@ PATCHES="$REPO_ROOT/client/patches"
 # Canonical application order — keep identical to entrypoint/03-build-crush.sh.
 ALL=(
 	crush-at-import.patch
+	crush-shell-history.patch
 	crush-no-update-check.patch
 	no-telemetry.patch
 	no-update-providers-cmd.patch
@@ -57,9 +58,10 @@ ALL=(
 	no-copilot.patch
 )
 
-# The audit-default set (flags at their defaults: at-import ON via Makefile,
-# web-tools + sourcegraph kept, everything else patched out).
-DEFAULT="crush-at-import.patch crush-no-update-check.patch no-telemetry.patch no-update-providers-cmd.patch no-google-provider.patch no-bedrock-aws.patch no-azure.patch no-openrouter.patch no-vercel.patch no-hyper.patch no-copilot.patch"
+# The audit-default set (flags at their defaults: the two feature patches — at-import and
+# shell-history — ON via Makefile, web-tools + sourcegraph kept, everything else patched out).
+# crush-shell-history.patch was added 2026-09-09 and missed here until 2026-09-10.
+DEFAULT="crush-at-import.patch crush-shell-history.patch crush-no-update-check.patch no-telemetry.patch no-update-providers-cmd.patch no-google-provider.patch no-bedrock-aws.patch no-azure.patch no-openrouter.patch no-vercel.patch no-hyper.patch no-copilot.patch"
 
 # Combinations that also get compiled.
 BUILD_COMBOS=(

@@ -11,8 +11,10 @@
 #    make shell                    run Crush in an ephemeral container (mounts CWD)
 #    make shell PROJECT=/path/app  mount a specific project at /work instead of CWD
 #
-#  Deferred on purpose (see ../tasks/): the task/stack/personal-config machinery and
-#  any auth plumbing — the endpoint is a local, keyless llama-server behind SSH.
+#  The conventions machinery (baked CLAUDE.md + reference docs, slash commands, personal
+#  overlay mount, in-session diversion stack) is ported and baked — see ../CLAUDE.md "What's
+#  in use". No auth plumbing, on purpose: the endpoint is a local, keyless llama-server
+#  behind SSH.
 # ============================================================================
 
 CONTAINER_CMD ?= $(shell command -v podman >/dev/null 2>&1 && echo podman || echo docker)

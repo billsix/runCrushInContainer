@@ -11,7 +11,7 @@ that wires it into the README is `tasks/new-hardware-bringup-runbook.md`. Comman
 
 | Target | What it does | What a pass proves | What it cannot tell you |
 |---|---|---|---|
-| `make probe` `[ANY]` | `curl http://127.0.0.1:$PORT/v1/models` | the server process is up, the port is right, the model **alias** the client expects is what it reports (`muse-glimmer`), and the live `meta.n_ctx` | that it can generate at all |
+| `make probe` `[ANY]` | `curl http://127.0.0.1:$PORT/v1/models` | the server process is up, the port is right, the model **alias** the client expects is what it reports (`muse-glimmer` on 8080, `gemma-4` on 8081), and the live `meta.n_ctx` | that it can generate at all |
 | `make smoke` `[ANY]` | one `/v1/chat/completions` asking for the word `OK`, `max_tokens 16` | the model loaded fully and **generates** — weights, KV cache and the Metal/CUDA path all work | speed, or that a real context fits |
 
 Run them in this order, every time, on every new box: `probe` first (cheap, catches wrong

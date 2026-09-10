@@ -49,7 +49,7 @@ Resolved in the sibling task, apply in both:
 in `client/Makefile`'s `SHELL_RUN_FLAGS`) — so a `shell.sh` edit is live without a 22 GB rebuild; the
 Dockerfile `COPY … /shell.sh` stays as the baked fallback. Bill's reasoning: this is the tool you
 actively develop, so live launcher edits matter here (unlike a dead project). The `CLAUDE.md`
-framing/shell-exec notes are also updated. No further items open for this repo.
+framing/shell-exec notes are also updated. The decisions are settled; the three Plan boxes above are still unchecked because this repo has not yet written the conformance checklist into its own docs (noted 2026-09-10).
 
 ## Cross-links
 

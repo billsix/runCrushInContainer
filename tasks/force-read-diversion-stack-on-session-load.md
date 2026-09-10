@@ -31,6 +31,11 @@ mechanism is chosen.**
   `--rm`. The conventions body (the diversion-trail section) is ported and **references** that
   path. **What's missing is only the force-READ** — the file is present but not loaded into
   context automatically, so the agent must *remember* to open it (the exact reliance that fails).
+  > **Premise outdated (2026-09-10):** since 2026-09-03 the stack is in-session only — NOT mounted,
+  > NOT `touch`ed (`client/Makefile` "Diversion stack" comment;
+  > `tasks/archive/2026/09/03/stack-in-session-only-harvest-at-sweep.md`). Plan step 2 ("confirm the
+  > Makefile still seeds/mounts") no longer applies; a force-read would need a baked starter file
+  > (or a `global-context-path` to a file that exists) instead. Re-scope before any go-ahead.
 - **Crush's force-read mechanisms (two, both available):**
   1. **Native `global-context-path`** (crushrc) — `client/entrypoint/crushrc:22` already sets
      `option global-context-path /root/.config/crush/CLAUDE.md`; a file registered this way is

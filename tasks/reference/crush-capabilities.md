@@ -40,7 +40,7 @@ v0.89.0-specific (several absent features are on Crush's in-repo `docs/*/FUTURE.
    **Update (2026-08-27, revised 2026-08-29):** a second local patch,
    `client/patches/crush-no-update-check.patch`, removes the unconditional startup update check
    (`go app.checkForUpdates(ctx)`, `internal/app/app.go` → GET
-   `api.github.com/.../releases/latest`). As of 2026-08-29 it is one of **thirteen** build-time
+   `api.github.com/.../releases/latest`). As of 2026-09-09 it is one of **fourteen** build-time
    patches, each behind its own defaulted flag (`PATCH_OUT_UPDATE_CHECK ?= 1` for this one) — see
    the egress patch/flag system in `architecture.md` and the decisions in
    `dependency-network-audit.md`. Every build clones (or copies the vendored tree) + builds from
@@ -153,10 +153,34 @@ set (`provider.go:175,186` short-circuit to custom-only). Two behaviors that sur
 **To offer only local models** (crushrc): `option default-providers false` (inverted → sets
 `disable_default_providers`, `options.go:191`) **plus** an explicit `model add <provider>/<id>` per
 provider so each survives without discovery. runCrushInContainer's baked `crushrc` does exactly this
-for its two providers (`muse-glimmer` on 8080, `gemma-4` on 8081, Glimmer preselected; the models
-dialog `ctrl+l` switches) — verified
-`crush models` drops from **1532 → 1**. Full history + before/after:
-`tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md`.
+for its two providers (`muse-glimmer` on 8080, `gemma-4` on 8081; the models dialog `ctrl+l` — also
+`ctrl+m`, `keys.go:89` — switches) — verified `crush models` drops from **1532 → 1**. Full history +
+before/after: `tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md`.
+
+### Which model is active at startup, and what a `ctrl+l` switch does (verified v0.89.0, 2026-09-10)
+
+Four facts a two-pinned-provider setup runs into (all read from the vendored tag):
+
+- **No startup probe, no startup picker.** A pinned model is never health-checked; the onboarding
+  picker appears only when `IsConfigured()` is false, i.e. **zero** enabled providers
+  (`config.go:720`, `ui.go:491`). With two providers configured Crush silently starts on whatever
+  `models.large` resolves to, and a wrong choice surfaces only as `connection refused` on the first
+  message. That is why the baked crushrc probes `127.0.0.1:8080`/`8081` itself at load
+  (`curl -sf -m 2 …/v1/models`) and picks the one that answers — legal because the crushrc runs
+  through the same shell interpreter as the bash tool (`internal/shellconfig/load.go`: `$(cmd)` and
+  external commands work, 30 s `loadTimeout`).
+- **Mid-session switching is supported.** `ctrl+l` → `handleSelectModel` (`ui.go:2241`) refuses only
+  while the agent is busy ("Agent is busy, please wait…"); otherwise it persists the choice and
+  refreshes the agents in place — no restart.
+- **A `ctrl+l` choice outranks the crushrc's `model large`.** The switch is written with
+  `UpdatePreferredModel(ScopeGlobal, …)` to `~/.local/share/crush/crush.json` (`store.go:94,518`),
+  and `lookupConfigs` (`load.go:917-947`) merges files in the order system → `~/.config/crush/crush.json`
+  → `crushrc` → **that data-dir JSON** → project configs, later winning. In the client that data
+  path is on the ephemeral `--rm` overlay, so a manual switch sticks for the life of one container
+  and the crushrc probe decides again at the next `make shell`.
+- **Everything else stays off.** `option default-providers false` still suppresses the catalog, and
+  the `PATCH_OUT_<X>` patches remove or guard Google/Vertex, Bedrock, Azure, OpenRouter, Vercel,
+  Hyper and Copilot at build time, so the dialog lists exactly the two loopback providers.
 
 ## What Crush does NOT have (so the port must drop or rework these)
 

@@ -22,7 +22,8 @@
 # maybe rows are the work-list for the phase-2 deep audit; the table itself becomes
 # the basis of the reference doc's triage section. Read-only: mutates nothing.
 #
-# Run from the repo root:  python3 tasks/adhoc/audit-dependency-network-egress/triage_modules.py
+# Run from the repo root:  python3 tools/triage_dependency_egress.py
+# (promoted from tasks/adhoc/audit-dependency-network-egress/triage_modules.py at archive time)
 #
 # The classification is deliberately coarse and errs toward flagging: importing
 # net/http may mean an HTTP *client* (egress-relevant) or just status-code constants

@@ -51,7 +51,8 @@ exist as for Glimmer; the same provenance rule applies (straight requants only).
 
 ## 3. llama.cpp support
 
-Gemma 4 landed in llama.cpp before the project's pinned `LLAMACPP_TAG` (b10353, 2026-08-10) — but
+*(Written before the decision; the bump to `b10883` recommended here was made 2026-09-10 — see §6.)*
+Gemma 4 landed in llama.cpp before the project's then-pinned `LLAMACPP_TAG` (b10353, 2026-08-10) — but
 the conversion fix `#26882` merged 2026-08-12 and the **vision fix `#28335` merged 2026-09-04**.
 Text-only serving at the current pin is plausible but **unverified**; bumping to a post-2026-09-04
 tag is the safe choice, and `server/Makefile` already says to pin "the newest known-good release",

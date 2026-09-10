@@ -5,8 +5,8 @@
 # Declares exactly two providers -- the local models served by llama.cpp on the Mac, reached
 # through the host's SSH tunnel: Muse Glimmer on port 8080 and Gemma 4 on port 8081. Both models
 # are pinned EXPLICITLY (not auto-discovered) and the built-in provider catalog is suppressed --
-# see the provider/model blocks below. Glimmer is preselected; switch with Crush's model dialog
-# (ctrl+l) like any other provider.
+# see the provider/model blocks below. At load this file probes both ports and preselects the one
+# that answers (Glimmer when both/neither do); switch any time with Crush's model dialog (ctrl+l).
 #
 # Reachability: the client runs with `podman run --network=host`, so 127.0.0.1:8080/8081 inside
 # the container are the host's forwarded ports. On the host, keep the tunnel open (both ports):
@@ -68,10 +68,31 @@ provider add gemma-4 \
 
 model add gemma-4/gemma-4 --name "Gemma 4 26B-A4B" --context-window 65536
 
-# Preselect Glimmer for both slots so Crush uses it immediately — no model picker at startup.
-# Gemma 4 is one ctrl+l away (the models dialog lists both providers).
-model large muse-glimmer/muse-glimmer
-model small muse-glimmer/muse-glimmer
+# --- Preselect whichever model is actually being served (decided 2026-09-10) ---
+# Crush never probes an explicitly-pinned provider at startup and shows no picker when more than
+# one is configured (onboarding runs only with ZERO enabled providers — internal/ui/model/ui.go
+# `IsConfigured`), so a wrong preselect only surfaces as a connection error on the first message.
+# Since a 36 GB Mac serves ONE model at a time, ask both ports which one is up: this file is a real
+# shell script (internal/shellconfig/load.go — same interpreter as the bash tool, $(cmd) and
+# external commands work, bounded by a 30 s load timeout), and a refused loopback connect returns
+# instantly. Rule: only Gemma answering → Gemma; both, neither, or no curl → Glimmer (the default).
+# NOTE: a ctrl+l choice is written to ~/.local/share/crush/crush.json (UpdatePreferredModel,
+# ScopeGlobal), which is merged AFTER this file and wins — but that path is on the ephemeral --rm
+# overlay, so the probe decides again at every `make shell`. See
+# tasks/reference/crush-capabilities.md § "Provider & model selection".
+glimmer_up=0
+gemma_up=0
+if command -v curl >/dev/null 2>&1; then
+  curl -sf -m 2 -o /dev/null http://127.0.0.1:8080/v1/models && glimmer_up=1
+  curl -sf -m 2 -o /dev/null http://127.0.0.1:8081/v1/models && gemma_up=1
+fi
+if [ "$gemma_up" = 1 ] && [ "$glimmer_up" = 0 ]; then
+  model large gemma-4/gemma-4
+  model small gemma-4/gemma-4
+else
+  model large muse-glimmer/muse-glimmer
+  model small muse-glimmer/muse-glimmer
+fi
 
 # --- Language servers: declared explicitly, dnf-installed, one per toolchain Fedora packages ---
 # Crush bundles no servers; without these lines it auto-starts registry-known servers only when
@@ -84,14 +105,25 @@ model small muse-glimmer/muse-glimmer
 # Lisp) deliberately have no line. Capability sets per server and the RHEL 9 variant (a /venv `ty`
 # — same line, different install): tasks/reference/crush-lsp-integration.md.
 # `ruff` is in the image for format.sh only — diagnostics-only and on Crush's skip list, no LSP role.
-lsp add python --command ty --args server --filetypes py --root-markers pyproject.toml setup.py .git
-lsp add go --command gopls --filetypes go --root-markers go.mod go.work .git
-lsp add c --command clangd --filetypes c cpp h hpp --root-markers compile_commands.json CMakeLists.txt Makefile .git
-lsp add rust --command rust-analyzer --filetypes rs --root-markers Cargo.toml .git
-lsp add sh --command bash-language-server --args start --filetypes sh bash --root-markers .git
+# SYNTAX GOTCHA (bit us 2026-09-10, startup died with "lsp add: unknown flag setup.py"): the usage
+# text says `[--filetypes TYPE ...]`, but every `lsp add` flag takes exactly ONE value per occurrence
+# (internal/shellconfig/flags.go parseFlagValue: flagString → i+2); `opAppend` means REPEAT the flag
+# to add a value — `--filetypes go --filetypes mod`, as Crush's own load_test.go does. A second bare
+# word is parsed as a flag name and aborts config loading, so Crush never starts.
+lsp add python --command ty --args server --filetypes py \
+    --root-markers pyproject.toml --root-markers setup.py --root-markers .git
+lsp add go --command gopls --filetypes go \
+    --root-markers go.mod --root-markers go.work --root-markers .git
+lsp add c --command clangd --filetypes c --filetypes cpp --filetypes h --filetypes hpp \
+    --root-markers compile_commands.json --root-markers CMakeLists.txt --root-markers Makefile --root-markers .git
+lsp add rust --command rust-analyzer --filetypes rs \
+    --root-markers Cargo.toml --root-markers .git
+lsp add sh --command bash-language-server --args start --filetypes sh --filetypes bash \
+    --root-markers .git
 # glsl_analyzer (underscore — the Fedora package is glsl-analyzer) offers definition + diagnostics
 # only; enough for mvp's shader trees, and free.
-lsp add glsl --command glsl_analyzer --filetypes glsl vert frag comp --root-markers .git
+lsp add glsl --command glsl_analyzer --filetypes glsl --filetypes vert --filetypes frag --filetypes comp \
+    --root-markers .git
 
 # --- Permissions: auto-allow file read/write, ask for everything else ---
 # The client is a throwaway container and the constant prompts for FILE ACCESS (read/write) are the

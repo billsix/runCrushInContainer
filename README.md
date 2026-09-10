@@ -8,8 +8,9 @@ job has two halves: it **runs the agent** in a throwaway container pointed at wh
 you're working on, and it **delivers to the agent the conventions** that teach it how your projects
 are structured and built (the ported working-method machinery — see "What's in use").
 
-It's **fork-friendly** — the model, quant, serving port, and agent are Makefile variables you can
-swap — so it's a starting point for *your own assistant-runner*. That is **not** the same as a
+It's **fork-friendly** — the models, quants, and agent version are Makefile variables you can swap
+(the two serving ports are deliberately fixed) — so it's a starting point for *your own
+assistant-runner*. That is **not** the same as a
 template for the codebases you build with it: those follow the container-per-project conventions the
 agent is taught, which live in your personal overlay (`ai-coding-conventions.personal.md`), not here.
 
@@ -164,8 +165,9 @@ instead of dropping you into an interactive shell — for ad-hoc/CI use.
 `--network=host` makes the container share the host's network, so Crush talking to
 `127.0.0.1:8080` / `:8081` hits the SSH-forwarded ports and, through them, the Mac. The baked
 `crushrc` preconfigures exactly two local providers, **pins Muse Glimmer (`8080`) and Gemma 4
-(`8081`) explicitly, preselects Glimmer, and suppresses Crush's built-in model catalog** so only
-those two are offered; switch with the models dialog (`ctrl+l`).
+(`8081`) explicitly and suppresses Crush's built-in model catalog** so only those two are offered.
+At startup it probes both ports and **preselects whichever model is being served** (Glimmer when
+both or neither answer); switch any time with the models dialog (`ctrl+l`).
 
 ## Airgapped rebuild — vendoring the sources
 
@@ -253,8 +255,9 @@ The first cut was just "get it running"; the client has since grown a few things
 
 The runClaudeInContainer working-method machinery is now **ported** — the cross-project conventions
 (a lean, always-loaded `CLAUDE.md`), the task-doc and reference-doc systems, the diversion stack
-(host-mounted so it survives `--rm`), the personal-overlay layering, the 7 slash commands, and
-nested-podman support (`make shell NESTED_PODMAN=1`). See `tasks/port-runclaude-conventions-systems.md`.
+(in-session only; the session-end sweep preserves what's still in flight), the personal-overlay
+layering, the 8 slash commands, and nested-podman support (`make shell NESTED_PODMAN=1`). See
+`tasks/port-runclaude-conventions-systems.md`.
 
 **Customize it for yourself — the personal overlay (`ai-coding-conventions.personal.md`).** The baked, always-loaded
 `CLAUDE.md` (at `~/.config/crush/CLAUDE.md`) `@`-imports **`~/.config/crush/ai-coding-conventions.personal.md`**,
@@ -268,7 +271,7 @@ So you customize the setup without editing anything tracked: just fill in that h
 ## Forking
 
 runCrushInContainer is a fork-friendly **assistant-runner** — point it at a different model, quant,
-serving port, or agent by editing the Makefile variables, and layer in your own personal conventions
+or agent version by editing the Makefile variables, and layer in your own personal conventions
 (the ones the agent then follows). (It's a template for *this tool*, not for the projects you develop
 with it.) See **`FORKING.md`** for
 exactly what to change (and what's portable vs personal).

@@ -10,7 +10,10 @@ then. Nothing in the repo has been changed by this task except this doc.
 **Priority:** 4
 **Difficulty:** 2
 **Started:** 2026-08-22
-**Blocked by:** `tasks/verify-vendored-airgap-rebuild.md` (offline rebuild must be verified working first).
+**Blocked on:** `tasks/verify-vendored-airgap-rebuild.md` being archived (the offline rebuild verified
+working on the real airgap box), and the airgap box's Go being ≥ 1.26.6 (v0.90.0's `go.mod` floor).
+**Recheck:** `ls tasks/verify-vendored-airgap-rebuild.md` — absent (archived) = half cleared; on the
+airgap box `go version` ≥ 1.26.6 = the other half. Both = unblocked; re-rate Priority and start the plan.
 
 ## Goal
 

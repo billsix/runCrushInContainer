@@ -72,6 +72,19 @@ Three environments are in play; label instructions so it's unambiguous:
   + six explicit `lsp add` lines), and **dotfiles** (`entrypoint/dotfiles/.extrabashrc`). It **omits** the auth/config-layering
   machinery for now (see below). The Makefile also conditionally mounts host `~/.tmux.conf` / `~/.vimrc` /
   `~/.gitconfig` / `~/.gnupg`.
+- **The crushrc is executed Bash, and its `lsp add` flags take ONE value each (2026-09-10).** A
+  broken crushrc means Crush refuses to start (`Failed to load config … unknown flag …`), so treat
+  edits to `client/entrypoint/crushrc` as code: `--filetypes a --filetypes b`, never
+  `--filetypes a b` (the usage text's `...` means repeat the flag). Cheap gate before a `make image`:
+  build the vendored tree (`cd client/vendor/crush && GOPROXY=off go build -mod=vendor -o /tmp/crush .`)
+  and run `crush models` with the edited file at `$HOME/.config/crush/crushrc` — a parse error shows
+  there. Origin: `tasks/crushrc-startup-failure-and-model-preselect.md`.
+- **Model preselection is probe-based (2026-09-10).** Crush never health-checks a pinned provider and
+  shows no picker with two configured, so the crushrc `curl`s `127.0.0.1:8080`/`8081` at load and
+  preselects the model that answers (Gemma only when 8081 alone answers; Glimmer otherwise). A
+  `ctrl+l` switch outranks it for the life of that container (written to the ephemeral
+  `~/.local/share/crush/crush.json`). Mechanism: `tasks/reference/crush-capabilities.md` § "Which
+  model is active at startup". `curl` is in the minimal image for this (`00-install-minimal.sh`).
 - **Language servers: dnf only, declared explicitly (2026-09-10).** Crush's `lsp_*` tools need a
   server on `PATH`; the crushrc `lsp add`s one per toolchain Fedora packages (python `ty`, go, c,
   rust, sh, glsl — all dnf, `01-install-base.sh`), so auto-detection's four gates never decide.
@@ -98,7 +111,8 @@ The full working-method machinery is now **ported and in use** (Phases 0–4, 20
 - **cross-project conventions** — a lean, always-loaded `CLAUDE.md` baked at `~/.config/crush/CLAUDE.md`
   and registered as a `global-context-path` in `crushrc` (the reference docs + personal overlay pulled
   in via the `@`-import patch);
-- **diversion stack** — host-mounted at `~/.config/crush/stack.md` (survives `--rm`);
+- **diversion stack** — in-session only at `~/.config/crush/stack.md` (on the `--rm` overlay; the
+  session-end sweep folds still-open items into the task docs — decided 2026-09-03);
 - **personal-overlay layering** — the everyday per-user customization path: the baked always-loaded
   `CLAUDE.md` (`~/.config/crush/CLAUDE.md`) `@`-imports `~/.config/crush/ai-coding-conventions.personal.md`
   (blank tracked default), over which `make shell` mounts the host's `~/.ai-coding-conventions.personal.md`
@@ -106,7 +120,8 @@ The full working-method machinery is now **ported and in use** (Phases 0–4, 20
   project→URL mapping / mount layout / instructions** without editing anything tracked; the agent loads
   it every session and the tracked conventions stay maintainer-agnostic. Example to copy:
   `client/entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md`; see `FORKING.md`;
-- **7 slash commands** (`/new-task`, `/stack-*`, … — in Crush's `/` dialog under the **User** tab);
+- **8 slash commands** (`/new-task`, `/new-reference`, `/new-reference-set`, `/archive-task`,
+  `/stack-*` — in Crush's `/` dialog under the **User** tab);
 - **nested-podman** (`make shell NESTED_PODMAN=1`; inner runs: `--network=host` needed at this depth, and the cgroups flag auto-applies via the PODMAN_RUN_FLAGS convention — see `tasks/reference/nested-podman-design.md`);
 - **`make shell-exec`** (`client/Makefile`) — the batch twin of `make shell`: `make shell-exec
   SCRIPT=<path under the mounted PROJECT at /work> | CMD='...'` runs a script/command in the same
@@ -191,47 +206,50 @@ is copied from `tasks/reference/` must keep both copies in sync).
 
 ## In-flight tasks
 
-Scan `tasks/` (top-level) at session start for the current list; as of 2026-08-29 (easy wins first —
+Scan `tasks/` (top-level) at session start for the current list; as of 2026-09-10 (easy wins first —
 lowest priority-number, then lowest difficulty-number):
 
-- `disable-crush-telemetry.md` (P6/D2, **blocked**) — telemetry + GitHub update-check disabled
-  (2026-08-27; superseded into the flag-guarded patch model 2026-08-29). The rebuild half of its
-  gate cleared 2026-08-29 (real-machine default-flag image built, Crush connected); **blocked on**
-  the remaining runtime egress watch (no traffic to `data.charm.land`/`api.github.com`) —
-  overlaps `decide-egress-verification.md`; `/recheck-blocked` tests it. Last gate before archive.
-- `decide-egress-verification.md` (P6/D3, proposed) — decide whether the audit needs an enforced
-  runtime egress check (strace/tcpdump or firewall permitting only the local model endpoint), or
-  whether the source-level audit suffices; real-machine if built.
-- `tasks/archive/2026/09/10/minimal-client-image.md` (**done 2026-09-10**) — `FULL_TOOLCHAIN` splits the image
-  build: the full ~22 GB image on a host, the 1.65 GB minimal image (golang/git/ripgrep + strace/tcpdump,
-  no language servers) **automatically when nested** (see "Conventions" above). Always-run
-  `00-install-minimal.sh` + gated `01-install-base.sh`; same tag for both; host full build confirmed.
-- `standardize-project-container-template.md` (P5/D5, proposed) — adopt the cross-project
-  container-template standard (the `shell`/`shell-exec` pair + `SHELL_RUN_FLAGS`, mount conventions)
-  in this repo's docs + `client/`; sibling task in runClaudeInContainer.
-- `verify-vendored-airgap-rebuild.md` (P3/D3) — real-machine check that the vendored offline rebuild
-  actually works with no network (client image + Mac server). **Gates the Crush bump.**
+- `crushrc-startup-failure-and-model-preselect.md` (P2/D2, **implemented, awaiting the host rebuild**)
+  — the 2026-09-10 crushrc shipped `lsp add … --root-markers a b c`, which Crush parses as an
+  unknown flag and refuses to start; fixed (one value per flag occurrence) and, per the maintainer,
+  the crushrc now probes 8080/8081 at load and preselects the served model. Proven in-sandbox against
+  the vendored build; done-state = `make -C client image` on the host, `crush` starts, `ctrl+l` shows
+  two models.
 - `verify-auto-allow-file-tools.md` (P3/D2) — real-machine check that file tools don't prompt and
   everything else still does (needs a client-image rebuild).
-- `bump-crush-to-v0.90.0.md` (P4/D2) — investigated (patch ports clean); **blocked on
-  `verify-vendored-airgap-rebuild.md`** and on the airgapped Go being ≥1.26.6 for v0.90.0.
+- `verify-vendored-airgap-rebuild.md` (P3/D3) — real-machine check that the vendored offline rebuild
+  actually works with no network (client image + Mac server). **Gates the Crush bump.**
+- `port-lean-image-nested-convention.md` (P4/D1, proposed) — add the lean-image-when-nested paragraph
+  to the baked conventions file once the runClaudeInContainer wording lands.
+- `bump-crush-to-v0.90.0.md` (P4/D2, **blocked**) — investigated (patch ports clean); blocked on
+  `verify-vendored-airgap-rebuild.md` and on the airgapped Go being ≥1.26.6 for v0.90.0.
 - `context-advisor-script.md` (P4/D2) — host-run server/context advisor script (drafted, **on hold**).
+- `force-read-diversion-stack-on-session-load.md` (P4/D2, proposed, do-not-implement) — its premise
+  (a host-mounted stack) is outdated since 2026-09-03; needs re-scoping before any go-ahead.
+- `verify-vendor-pulls-all-quants.md` (P4/D3) — **deferred** (needs the target airgap hardware/quant);
+  model-universe research done in `tasks/reference/glimmer-models-and-airgap-quant-selection.md`.
 - `offline-nested-podman-base-images.md` (P4/D5) — seed base images so *nested* project builds work
   offline (proposed).
 - `port-runclaude-conventions-systems.md` (P4/D5) — Phases 0–4 implemented; **testing phase deferred**.
+- `new-hardware-bringup-runbook.md` (P5/D2, in progress) — runbook written and linked; walk it on a
+  second box.
+- `port-blocked-task-convention.md` (P5/D3) — port the blocked-task convention + `/recheck-blocked`
+  from runClaudeInContainer (three tasks here already use the `Blocked on:`/`Recheck:` shape).
+- `standardize-project-container-template.md` (P5/D5, proposed) — adopt the cross-project
+  container-template standard (the `shell`/`shell-exec` pair + `SHELL_RUN_FLAGS`, mount conventions)
+  in this repo's docs + `client/`; sibling task in runClaudeInContainer.
+- `decide-egress-verification.md` (P6/D3, proposed) — decide whether the audit needs an enforced
+  runtime egress check (strace/tcpdump or firewall permitting only the local model endpoint), or
+  whether the source-level audit suffices; real-machine if built.
 - `crush-at-import-parity.md` (P6/D4) — bring the `@`-import patch to full Claude parity (follow-up).
-- `verify-vendor-pulls-all-quants.md` (P4/D3) — **deferred** (needs the target airgap hardware/quant);
-  model-universe research done in `tasks/reference/glimmer-models-and-airgap-quant-selection.md`.
-- `verify-gemma-4-on-the-mac.md` (P3/D2, **blocked**, human-gated) — `make llama` at `b10883`,
-  Gemma `probe`/`smoke` on 8081, Glimmer re-`smoke`, two models in the rebuilt client's `ctrl+l`.
-- `verify-language-servers-on-rhel9.md` (P3/D3, **blocked**, human-gated) — the rebuilt full image
-  (built 2026-09-10; the six-binary check + a `.py` symbol query remain) and the RHEL 9 airgap box
-  (vendored `ty` wheel → uncommented Dockerfile block → offline build → `lsp_*` works).
-- `port-lean-image-nested-convention.md` (P4/D1, proposed) — copy the lean-image-when-nested point 3
-  into the ported conventions file once runClaudeInContainer's umbrella lands its text.
-- `new-hardware-bringup-runbook.md` (P5/D2, in progress) — runbook written + README wired; open on a
-  walk on a real second box.
-- `port-blocked-task-convention.md` (P5/D3) — port the blocked-task convention from runClaudeInContainer.
+
+**Blocked (human-gated; `/recheck-blocked` tests them):** `verify-gemma-4-on-the-mac.md` (P3/D2 —
+`make llama` at `b10883`, Gemma `probe`/`smoke` on 8081, Glimmer re-`smoke`, two models in the rebuilt
+client's `ctrl+l`); `verify-language-servers-on-rhel9.md` (P3/D3 — the rebuilt full image, built
+2026-09-10: the six-binary check + a `.py` symbol query remain; then the RHEL 9 airgap box: vendored `ty`
+wheel → uncommented Dockerfile block → offline build → `lsp_*` works); `disable-crush-telemetry.md`
+(P6/D2 — the runtime egress watch: no traffic to `data.charm.land`/`api.github.com`; overlaps
+`decide-egress-verification.md`; last gate before archive).
 
 Completed & archived (see `tasks/archive/2026/08/`): the bring-up, provider-catalog suppression (+ its
 airgapped verification), dotfiles/host-config mounts, context-window sizing, the `@`-import patch,

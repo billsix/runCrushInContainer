@@ -82,6 +82,8 @@ commercial use/modification/redistribution. The Apache requirement is easily met
 
 ## 6. Implication for this repo's vendor path (why the current "pull all" is wrong for airgap)
 
+> **Partly overtaken (2026-09-10):** `MODEL_FILES` is now an *extra* download set on top of the two per-model defaults, and `FULL_MODEL_*` is Glimmer-only (`gemma-4-alongside-glimmer.md` §6). The critique below of `FULL=1` (safetensors without `config.json`/tokenizer; no `QUANT=` selector) still stands.
+
 `vendor.sh`'s `FULL=1` presets `MODEL_FILES=*.gguf` (all Meta quants = just 2) **plus
 `FULL_MODEL_FILES=*.safetensors` from the base repo (~60 GB)**. For a high-cost airgap transfer, pulling
 the 60 GB base is precisely the wrong default. The airgap-optimal shape is **"select one quant," not

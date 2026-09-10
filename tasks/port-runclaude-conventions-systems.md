@@ -75,7 +75,7 @@ Makefile (Phase 4): `image-export`/`image-import` targets + `client/crushcontain
 `make format` + `client/entrypoint/format.sh` (shfmt, accumulate-status). P4.1 mounts were already
 done; **P4.4 (nested-podman) — initially skipped, then implemented 2026-08-21** (the skip was wrong:
 the client is a full dev sandbox and projects build/run nested) — see
-`tasks/add-nested-podman-to-client.md`.
+`tasks/archive/2026/08/22/add-nested-podman-to-client.md`.
 
 ## Goal
 
@@ -128,7 +128,7 @@ history / the session that created it); each line says what it is and the concre
 
 ### Phase 0 — Delivery mechanism (unblocks everything) — Difficulty 3
 
-- [x] **P0.1 Bake the conventions file.** Create `client/entrypoint/CLAUDE.md`, COPY it into the
+- [x] **P0.1 Bake the conventions file.** Create `client/entrypoint/dotfiles/.config/crush/CLAUDE.md` (path as shipped; the plan first said `client/entrypoint/CLAUDE.md`), COPY it into the
       image at `/root/.config/crush/CLAUDE.md`, and register it with `option global-context-path
       /root/.config/crush/CLAUDE.md` in `crushrc` (required — the global auto-defaults are only
       `CRUSH.md`/`AGENTS.md`, so a `CLAUDE.md` there is not picked up without the line). This
@@ -142,7 +142,7 @@ history / the session that created it); each line says what it is and the concre
 ### Phase 1 — The conventions content + reference docs (highest value, generic) — Difficulty 4
 
 - [x] **P1.1 Port the conventions body (F18).** Adapt runClaudeInContainer's shared
-      `.claude/CLAUDE.md` into `client/entrypoint/CLAUDE.md` (baked to
+      `.claude/CLAUDE.md` into `client/entrypoint/dotfiles/.config/crush/CLAUDE.md` (baked to
       `~/.config/crush/CLAUDE.md`). The *content* is agent-agnostic engineering/writing
       discipline and ports as-is; edit only the Claude-Code-specific delivery notes (the
       "Auto-imported references" section, `@`-import mentions, `~/.claude` paths, `/audit-repo`
@@ -158,7 +158,7 @@ history / the session that created it); each line says what it is and the concre
       (Crush's config model is already in `crush-capabilities.md` + `architecture.md`). Left unchecked
       as a deliberate skip, not a TODO.
 - [x] **P1.4 Personal-overlay split (F9/F10).** Ship a **blank**
-      `client/entrypoint/ai-coding-conventions.personal.md` baked into the image, register it as a
+      `client/entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.md` baked into the image, register it as a
       global-context-path, and mount the host's `~/.ai-coding-conventions.personal.md` over it in
       the client `Makefile` (auto-`touch` if absent — the mount is unconditional so the context
       path always resolves). Add a `.personal.example.md` template + note it in a fork guide.
@@ -184,7 +184,7 @@ need their directories + the wording to point at Crush paths. The repo already h
 
 ### Phase 3 — Slash commands (needs the Crush command rewrite) — Difficulty 4
 
-Port the 7 commands (F12–F18) from `.claude/commands/*.md` to Crush's command dir
+Port the 7 commands (F12–F18; an 8th, `/new-reference-set`, was added 2026-09-06) from `.claude/commands/*.md` to Crush's command dir
 (`~/.config/crush/commands/`, baked into the image at `/root/.config/crush/commands/`). Per
 `crush-capabilities.md` finding 3, each port =:
 
@@ -216,7 +216,7 @@ Mostly already present in `client/` (bring-up) or directly reusable from runClau
       multi-step-failure-propagation shape.
 - [x] **P4.4 nested-podman flags (F24) — DONE 2026-08-21** (the initial "skip" was wrong; the client
       is a full dev sandbox and projects build/run nested). `make shell NESTED_PODMAN=1` now works;
-      full implementation + rationale: `tasks/add-nested-podman-to-client.md`.
+      full implementation + rationale: `tasks/archive/2026/08/22/add-nested-podman-to-client.md`.
 
 ### Phase T — Testing (run at the end, on the real setup)
 
@@ -231,7 +231,7 @@ commands, the updated crushrc), and **`[MAC] make serve`** at `CTX=65536`.
 - [ ] **No context overflow:** the above should NOT error with "exceeds context size". If it does, the
       conventions grew — trim, or raise `CTX`.
 - [ ] **Slash commands appear:** in the TUI (`crush`, not `crush run`), type `/` — **the dialog opens on
-      the "System" tab; press `Tab` to reach the "User" tab** where our 7 custom commands live
+      the "System" tab; press `Tab` to reach the "User" tab** where our 8 custom commands live
       (`new-task`, … `stack-drop`), prefixed `user:`. **GOTCHA:** the User tab only shows once the
       commands are baked — rebuild (`make image`) first, or you'll see only System commands. (Verified in
       source: `internal/ui/dialog/commands.go:34-36` System/User/MCP tabs; `:263` hides the tab selector

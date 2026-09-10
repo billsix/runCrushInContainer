@@ -15,8 +15,9 @@ Where an entry below describes patch *mechanics*, the implemented shape is autho
 policy, and decision history live there). Regenerate the phase-1 table with
 `python3 tools/triage_dependency_egress.py` from the repo root.
 
-**FOUNDATIONAL:** this deployment's only intended traffic is Crush → the **local model at
-`127.0.0.1:8080`** (llama.cpp behind an SSH tunnel, `--network=host`). Loopback/local-model traffic
+**FOUNDATIONAL:** this deployment's only intended traffic is Crush → the **local models at
+`127.0.0.1:8080` / `:8081`** (llama.cpp behind an SSH tunnel, `--network=host`; two loopback
+providers since 2026-09-10). Loopback/local-model traffic
 is the essential core — never a finding, never patched. Everything below concerns **external**
 egress only.
 
@@ -482,6 +483,7 @@ One row per decision flag — implemented and wired (2026-08-29) through
 | `PATCH_OUT_HYPER` | `1` (out) | `no-hyper.patch` | hyper.charm.land provider, OAuth, and x-crush-id header gone |
 | `PATCH_OUT_COPILOT` | `1` (out) | `no-copilot.patch` | GitHub Copilot device-flow OAuth + provider case gone |
 | `CRUSH_AT_IMPORT` | `1` (applied) | `crush-at-import.patch` | (existing feature patch, unchanged semantics) |
+| `CRUSH_SHELL_HISTORY` | `1` (applied) | `crush-shell-history.patch` | (feature patch, 2026-09-09; no network surface — `crush-prompt-history.md` §7) |
 
 Patches sharing files must remain **independently applicable AND reversible in any flag
 combination** — proven by `tools/sweep_egress_patch_combos.sh`
@@ -495,7 +497,7 @@ with `git apply --unidiff-zero`, in the canonical order listed in `03-build-crus
 
 At the audited tag, with the recommended defaults applied and the standing config
 (`option default-providers false`, `CRUSH_DISABLE_METRICS=1`, `DO_NOT_TRACK=1`, providers pointed
-at `127.0.0.1:8080`):
+at `127.0.0.1:8080` and `:8081`):
 
 - **Unsolicited egress: zero.** The only unsolicited path in the entire 213-module tree —
   PostHog → `data.charm.land/batch/` — is triple-killed (env, config, D4 patch); the update check

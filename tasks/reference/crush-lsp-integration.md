@@ -67,12 +67,22 @@ server for gets **no** server, and that is documented rather than faked. Measure
 
 | Language | dnf package → binary (Fedora 44 version) | crushrc line | definition | references | rename | documentSymbol | callHierarchy | diagnostics |
 |---|---|---|---|---|---|---|---|---|
-| Python | `ty` → `ty` (0.0.74) | `lsp add python --command ty --args server --filetypes py --root-markers pyproject.toml setup.py .git` | yes | yes | yes | yes | yes | pull + push |
-| Go | `gopls` → `gopls` (0.18.1) | `lsp add go --command gopls --filetypes go --root-markers go.mod go.work .git` | yes | yes | yes | yes | yes | push |
-| C/C++ | `clang-tools-extra` → `clangd` (22.1.8) | `lsp add c --command clangd --filetypes c cpp h hpp --root-markers compile_commands.json CMakeLists.txt Makefile .git` | yes | yes | yes | yes | yes | push |
-| Rust | `rust-analyzer` → `rust-analyzer` (1.98.0) | `lsp add rust --command rust-analyzer --filetypes rs --root-markers Cargo.toml .git` | yes | yes | yes | yes | yes | pull + push |
-| Bash | `nodejs-bash-language-server` → `bash-language-server` (5.6.0) | `lsp add sh --command bash-language-server --args start --filetypes sh bash --root-markers .git` | yes | yes | yes | yes | **no** | push |
-| GLSL | `glsl-analyzer` → `glsl_analyzer` (1.7.1; note the underscore) | `lsp add glsl --command glsl_analyzer --filetypes glsl vert frag comp --root-markers .git` | yes | **no** | **no** | **no** | **no** | push |
+| Python | `ty` → `ty` (0.0.74) | `lsp add python --command ty --args server --filetypes py --root-markers pyproject.toml --root-markers setup.py --root-markers .git` | yes | yes | yes | yes | yes | pull + push |
+| Go | `gopls` → `gopls` (0.18.1) | `lsp add go --command gopls --filetypes go --root-markers go.mod --root-markers go.work --root-markers .git` | yes | yes | yes | yes | yes | push |
+| C/C++ | `clang-tools-extra` → `clangd` (22.1.8) | `lsp add c --command clangd --filetypes c --filetypes cpp --filetypes h --filetypes hpp --root-markers compile_commands.json --root-markers CMakeLists.txt --root-markers Makefile --root-markers .git` | yes | yes | yes | yes | yes | push |
+| Rust | `rust-analyzer` → `rust-analyzer` (1.98.0) | `lsp add rust --command rust-analyzer --filetypes rs --root-markers Cargo.toml --root-markers .git` | yes | yes | yes | yes | yes | pull + push |
+| Bash | `nodejs-bash-language-server` → `bash-language-server` (5.6.0) | `lsp add sh --command bash-language-server --args start --filetypes sh --filetypes bash --root-markers .git` | yes | yes | yes | yes | **no** | push |
+| GLSL | `glsl-analyzer` → `glsl_analyzer` (1.7.1; note the underscore) | `lsp add glsl --command glsl_analyzer --filetypes glsl --filetypes vert --filetypes frag --filetypes comp --root-markers .git` | yes | **no** | **no** | **no** | **no** | push |
+
+**Flag syntax — one value per flag occurrence (learned the hard way, 2026-09-10).** The usage text's
+`[--filetypes TYPE ...]` reads as "space-separated list", but `internal/shellconfig/flags.go`
+`parseFlagValue` consumes exactly one token per `flagString` flag (`return v, i + 2`); `opAppend`
+means *repeat the flag* to append (`--filetypes go --filetypes mod`, as `load_test.go` does). A second
+bare token is looked up as a flag name and the whole config load aborts — Crush then refuses to
+start with `lsp add: unknown flag setup.py`. The first version of these six lines shipped that way
+(commit `77e78e8`) because the servers were proven in throwaway containers but the crushrc itself
+was never loaded through Crush; work record `tasks/archive/2026/09/10/crushrc-startup-failure-and-model-preselect.md`
+(if archived) or `tasks/crushrc-startup-failure-and-model-preselect.md`.
 
 "push" = `textDocumentSync` advertised, so `publishDiagnostics` flows; "pull" = the newer
 `diagnosticProvider` too. GLSL is definition-and-diagnostics only — kept because it is free and
@@ -169,6 +179,9 @@ lsp add <name> --command CMD [--args ARG ...] [--env KEY VALUE ...] [--filetypes
 lsp remove <name>
 option auto-lsp false        # only explicitly added servers, if wanted
 ```
+
+> The `...` above means **repeat the flag**, not a space-separated list: `--filetypes go --filetypes mod`.
+> `--filetypes go mod` is a parse error that stops Crush from starting (see §4's syntax note).
 
 ## Sources
 
