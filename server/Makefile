@@ -141,6 +141,15 @@ llama: ## [MAC] clone + build llama.cpp for Metal, pinned to LLAMACPP_TAG
 	@# source for an offline rebuild. Reused if $(LLAMACPP_DIR) already exists — so on the airgap
 	@# box a pre-vendored checkout is built in place with no network.
 	@test -d $(LLAMACPP_DIR) || git clone --branch $(LLAMACPP_TAG) $(LLAMACPP_REPO) $(LLAMACPP_DIR)
+	@# An existing checkout is moved to LLAMACPP_TAG (2026-09-10: a tag bump used to be silently
+	@# ignored — the target only cloned when the dir was missing). Try the local checkout first
+	@# (works offline when the vendored full-history clone already has the tag); only if the tag is
+	@# unknown locally, fetch it — that path needs the network and is the online box's job.
+	@git -C $(LLAMACPP_DIR) checkout -q $(LLAMACPP_TAG) 2>/dev/null || \
+	    { git -C $(LLAMACPP_DIR) fetch -q --tags origin && git -C $(LLAMACPP_DIR) checkout -q $(LLAMACPP_TAG); }
+	@echo "llama.cpp at $$(git -C $(LLAMACPP_DIR) describe --tags --always)"
+	@# A stale build/CMakeCache.txt from an earlier configure can fail the configure step (seen
+	@# 2026-09-10 on the Mac: cpp-httplib "OpenSSL::SSL target not found"); `rm -rf` the build dir.
 	cmake -S $(LLAMACPP_DIR) -B $(LLAMACPP_DIR)/build -DGGML_METAL=ON -DCMAKE_BUILD_TYPE=Release
 	cmake --build $(LLAMACPP_DIR)/build -j
 	@echo "built $(SERVER_BIN)"

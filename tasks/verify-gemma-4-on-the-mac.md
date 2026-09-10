@@ -33,9 +33,14 @@ two models in `ctrl+l` and routes a Gemma chat to 8081. Then record the numbers 
 
 ## Steps
 
-1. `[MAC]` `cd server && make llama` — first build at `b10883`. **If it fails to build**, that is the
-   tag, not Gemma: `make llama LLAMACPP_TAG=b10353` restores the last known-good and this task's
-   finding becomes "pick a tag between" (record it here).
+1. `[MAC]` `cd server && rm -rf llama.cpp/build && make llama` — first build at `b10883`. The
+   `rm -rf` is once: the first attempt (2026-09-10) died in CMake's configure with
+   `Target "cpp-httplib" links to: OpenSSL::SSL but the target was not found`, and clearing the stale
+   `build/CMakeCache.txt` was the whole fix. `make llama` now also moves an existing checkout to
+   `LLAMACPP_TAG` and prints `llama.cpp at <tag>` — before 2026-09-10 it reused whatever tag was
+   checked out, so an earlier "b10883" attempt on a pre-existing clone was b10353's tree; confirm the
+   printed tag. **If it fails to build**, that is the tag, not Gemma: `make llama LLAMACPP_TAG=b10353`
+   restores the last known-good and this task's finding becomes "pick a tag between" (record it here).
 2. `[MAC]` `make pull` (fetches both GGUFs; Glimmer is already there, Gemma is ~14.4 GB).
 3. `[MAC]` `make serve MODEL=gemma`; second terminal: `make probe MODEL=gemma` (expect
    `"id":"gemma-4"` and the live `n_ctx`), then `make smoke MODEL=gemma` (expect `OK`). **Watch the

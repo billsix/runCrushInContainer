@@ -27,7 +27,11 @@ SSH tunnel:
   *known-good* tag ≥ those, chosen when building on the Mac (a tag isn't "known-good" until it
   builds+serves there). **Bumped `b10353` → `b10883`** (2026-09-09 release) on 2026-09-10 for Gemma 4
   (maintainer's decision, `tasks/reference/gemma-4-alongside-glimmer.md` §6); its first Mac build+`smoke`
-  for both models is the pending verification. Build is `cmake -DGGML_METAL=ON` — Metal.
+  for both models is the pending verification. Build is `cmake -DGGML_METAL=ON` — Metal. `make llama`
+  moves an existing checkout to `LLAMACPP_TAG` (local checkout, else fetch+checkout; prints the tag)
+  — before 2026-09-10 a tag bump was silently ignored by a pre-existing clone. A stale
+  `build/CMakeCache.txt` can fail the configure step (a cpp-httplib `OpenSSL::SSL` error on the Mac,
+  2026-09-10); `rm -rf server/llama.cpp/build` is the fix.
 - **Two models, one `MODEL=` switch, fixed ports (2026-09-10).** The Makefile carries a two-row
   table (`MODELS := glimmer gemma`; per row `MODEL_REPO_<m>`, `MODEL_FILE_<m>`, `MODEL_ALIAS_<m>`,
   `MODEL_PORT_<m>`). `MODEL=glimmer` (default) or `MODEL=gemma` selects the row for
