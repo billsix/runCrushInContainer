@@ -1,7 +1,9 @@
 # Add Google Gemma 4 (Apache-2.0) alongside Muse Glimmer — one server, two models, two fixed ports
 
-**Status:** approved 2026-09-10 — **Gemma 4 26B-A4B** chosen by the maintainer (question 1 resolved);
-the llama.cpp tag bump (question 2) is still to confirm at implementation. Not started. Created 2026-09-10 from
+**Status:** approved 2026-09-10, no open questions — **Gemma 4 26B-A4B**, and **bump `LLAMACPP_TAG`**
+to the newest release after 2026-09-04 (both the maintainer's decisions). Not started. Order of work:
+this task first among the 2026-09-10 batch — everything but `make serve`/`make smoke` can be done
+off the Mac; those two are the maintainer's final step. Created 2026-09-10 from
 the maintainer's request (William Emerison Six <billsix@gmail.com>).
 **Priority:** 4
 **Difficulty:** 4
@@ -109,5 +111,9 @@ comment and the tunnel line (§4).
 ## Open questions
 
 1. ~~**Which Gemma 4?**~~ **RESOLVED 2026-09-10: 26B-A4B** (William Emerison Six <billsix@gmail.com>: "recommended").
-2. **Which `LLAMACPP_TAG`?** Recommended: the newest release after 2026-09-04, verified by
-   `make smoke MODEL=gemma`. Alternative: keep b10353 and accept text-only Gemma as unverified.
+2. ~~**Which `LLAMACPP_TAG`?**~~ **RESOLVED 2026-09-10: the newest release after 2026-09-04**
+   (maintainer: "I go with your recommendation"), picked from the llama.cpp releases page at
+   implementation and verified by `make smoke MODEL=gemma` on the Mac. The bump lands in the same
+   commit as the Gemma rows, so if Glimmer misbehaves at the new tag, `make serve MODEL=glimmer
+   && make smoke` is the first check and `LLAMACPP_TAG=b10353` on the command line is the
+   one-flag rollback.
