@@ -89,4 +89,4 @@ conventions reflect the auto-inheritance; no Makefile change.**
 
 ## Sibling
 
-runClaudeInContainer carries the twin task, `tasks/nested-podman-signal-inherited-doc-cleanup.md`.
+runClaudeInContainer carries the twin task, `tasks/archive/2026/09/11/nested-podman-signal-inherited-doc-cleanup.md`.
