@@ -61,7 +61,9 @@ Three environments are in play; label instructions so it's unambiguous:
   `FULL_TOOLCHAIN` from the `NESTED_PODMAN` signal every sandbox exports
   (`$(if $(filter 1,$(NESTED_PODMAN)),0,1)`, the `PODMAN_RUN_FLAGS` idiom): an in-sandbox
   `make image` builds the ~1.65 GB minimal image, a host `make image` the full ~22 GB one, no flag
-  either way. The minimal image has **no language servers** (maintainer's decision) — the crushrc's
+  either way — the signal is inherited from the launch via `?=`, and is deliberately **not** baked
+  into the image (`ENV NESTED_PODMAN=1`), which would falsely advertise nested capability on a plain
+  non-nested launch. The minimal image has **no language servers** (maintainer's decision) — the crushrc's
   `lsp add` lines fail to start there and Crush says "no LSP client handles file"; that is expected
   nested, not a bug. `FULL_TOOLCHAIN=1` forces full nested only with a store that can take 22 GB.
 - **The server binds loopback only.** Never bind llama-server to `0.0.0.0` / the LAN; the

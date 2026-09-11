@@ -93,4 +93,12 @@ test -e /dev/fuse && podman info >/dev/null 2>&1 && echo "nested OK" || echo "ne
 - `$NESTED_PODMAN` == `1` but `/dev/fuse` absent / `podman info` fails ⇒ the **host** (or outer
   sandbox) lacks nested support, not the client config.
 
+Because the signal is an env var and every Makefile reads it with `?=`, it propagates to every nested
+`make` the agent runs (a project's `make image`/`make test`, this client's own `make image`) with
+**nothing typed on the command line** — the agent never passes `NESTED_PODMAN=1` downstream; the flag
+lives only on the outermost host launch. It is deliberately **not** baked into the image via
+`ENV NESTED_PODMAN=1` (which the runtime `-e NESTED_PODMAN=$(NESTED_PODMAN)` would override anyway), and
+must stay coupled to the actual capability flags: a plain non-nested launch would otherwise falsely
+advertise nested support while `/dev/fuse`/caps/tmpfs are absent.
+
 The full rationale/declined-alternatives live in runClaudeInContainer's copy of this doc.

@@ -295,7 +295,7 @@ fail-fast, losing the report-everything property).
 
 When working on a container-per-project repo, you can build/run its containers **inside** this client.
 **Assume nesting is available and just run the nested command** (with the flags below) — don't
-pre-check every time; the run itself is the test. **Only if a nested run errors** do you diagnose:
+pre-check every time; the run itself is the test. The `NESTED_PODMAN=1` set at that launch is exported into the session and inherited by every nested `make` via its `NESTED_PODMAN ?= 0` (make's `?=` respects an env value), so run **plain** `make image` / `make shell` for a nested project — **never pass `NESTED_PODMAN=1` on a downstream command**; that flag belongs only on the outermost host launch, which is the user's to run. **Only if a nested run errors** do you diagnose:
 nesting needs **`make shell NESTED_PODMAN=1`** at launch, detectable inside the container by the
 **`$NESTED_PODMAN` env var** (`1` = on; `0`/unset = not — NOT a make variable, which is host-side and
 invisible here) and confirmable with `test -e /dev/fuse && podman info`. If `$NESTED_PODMAN` isn't
