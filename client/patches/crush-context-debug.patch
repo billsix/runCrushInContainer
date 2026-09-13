@@ -1,0 +1,68 @@
+From: William Emerison Six <billsix@gmail.com>
+Subject: [PATCH] prompt: log per-source context/system-prompt token breakdown (CTXDBG)
+
+Optional DEBUG instrumentation (build-gated behind CRUSH_CONTEXT_DEBUG=1 in
+03-build-crush.sh; kept in patches/ but not applied in shipped images). Logs, at
+Info level to the crush log, the byte + approx-token size of every context file
+spliced into the system prompt (project + global scope, fully @-expanded), the
+skills XML, the git status, and the total assembled system prompt. Lets the
+~48K-token first-turn context on a large repo be attributed source-by-source.
+
+Uses only already-imported packages (log/slog, internal/skills for
+ApproxTokenCount) and touches only promptData and Build, which the @-import
+patch does not, so it applies cleanly with or without CRUSH_AT_IMPORT.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+---
+diff --git a/internal/agent/prompt/prompt.go b/internal/agent/prompt/prompt.go
+index 4917b25..cb821d9 100644
+--- a/internal/agent/prompt/prompt.go
++++ b/internal/agent/prompt/prompt.go
+@@ -93,6 +93,12 @@ func (p *Prompt) Build(ctx context.Context, provider, model string, store *confi
+ 		return "", fmt.Errorf("executing template: %w", err)
+ 	}
+ 
++	// CTXDBG (crush-context-debug.patch): the fully-assembled system prompt (base
++	// template + all spliced context files + skills XML + git status). Compare this
++	// against the provider-reported input/prompt tokens shown in the UI: the gap is
++	// the tool schemas + conversation messages, which this number does NOT include.
++	slog.Info("CTXDBG system-prompt-total", "prompt", p.name, "bytes", sb.Len(), "approx_tokens", skills.ApproxTokenCount(sb.String()))
++
+ 	return sb.String(), nil
+ }
+ 
+@@ -229,6 +235,34 @@ func (p *Prompt) promptData(ctx context.Context, provider, model string, store *
+ 	for _, files := range globalContextFiles {
+ 		data.GlobalContextFiles = append(data.GlobalContextFiles, files...)
+ 	}
++
++	// CTXDBG (crush-context-debug.patch): per-source breakdown of everything that
++	// gets spliced into the system prompt, so the first-turn context on a large repo
++	// can be attributed source-by-source. Content is already fully expanded here (the
++	// @-import patch runs inside processFile), so a big `@`-imported file shows up as
++	// its importer's size. Emitted at Info level to the crush log
++	// (<data-dir>/logs/crush.log, i.e. .crush/logs/crush.log). Build-gated behind
++	// CRUSH_CONTEXT_DEBUG=1 in 03-build-crush.sh; the patch is kept but NOT applied in
++	// shipped images. See tasks/investigate-context-bloat-geometricalgebra.md and
++	// tasks/reference/crush-context-assembly.md.
++	ctxTok := 0
++	for _, cf := range data.ContextFiles {
++		n := skills.ApproxTokenCount(cf.Content)
++		ctxTok += n
++		slog.Info("CTXDBG context-file", "scope", "project", "path", cf.Path, "bytes", len(cf.Content), "approx_tokens", n)
++	}
++	globalTok := 0
++	for _, cf := range data.GlobalContextFiles {
++		n := skills.ApproxTokenCount(cf.Content)
++		globalTok += n
++		slog.Info("CTXDBG context-file", "scope", "global", "path", cf.Path, "bytes", len(cf.Content), "approx_tokens", n)
++	}
++	slog.Info("CTXDBG skills-xml", "bytes", len(data.AvailSkillXML), "approx_tokens", skills.ApproxTokenCount(data.AvailSkillXML))
++	slog.Info("CTXDBG git-status", "bytes", len(data.GitStatus), "approx_tokens", skills.ApproxTokenCount(data.GitStatus))
++	slog.Info("CTXDBG context-files-total",
++		"project_files", len(data.ContextFiles), "project_tokens", ctxTok,
++		"global_files", len(data.GlobalContextFiles), "global_tokens", globalTok)
++
+ 	return data, nil
+ }
+ 

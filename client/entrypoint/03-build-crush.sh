@@ -64,6 +64,15 @@
 #                                 correctness fixes; set CRUSH_LSP_ASYNC=0 to build without them.
 #                                 Re-verify both on every CRUSH_TAG bump. See
 #                                 tasks/lsp-python-server-not-registering.md.
+#   CRUSH_CONTEXT_DEBUG          0/1, default 0 — DEBUG-only instrumentation patch (a FEATURE
+#                                 flag, not a bugfix): logs a per-source token/byte breakdown of
+#                                 the assembled system prompt (each context file @-expanded, the
+#                                 skills XML, git status, and the total) at Info level to
+#                                 <data-dir>/logs/crush.log. Turn ON to attribute first-turn
+#                                 context bloat on a large repo, then read the CTXDBG lines from
+#                                 the log. Keep the patch in patches/ but leave this OFF in
+#                                 shipped images. See tasks/investigate-context-bloat-geometricalgebra.md
+#                                 and tasks/reference/crush-context-assembly.md.
 #   PATCH_OUT_UPDATE_CHECK        0/1, default 1 — no startup api.github.com release check
 #   PATCH_OUT_TELEMETRY           0/1, default 1 — PostHog/data.charm.land unreachable at
 #                                 build level (on top of the env/config opt-outs)
@@ -95,6 +104,7 @@ PATCHES_DIR="${PATCHES_DIR:-/patches}"
 CRUSH_AT_IMPORT="${CRUSH_AT_IMPORT:-0}"
 CRUSH_SHELL_HISTORY="${CRUSH_SHELL_HISTORY:-0}"
 CRUSH_LSP_ASYNC="${CRUSH_LSP_ASYNC:-1}"   # mandatory bugfix, default ON (see the env note above)
+CRUSH_CONTEXT_DEBUG="${CRUSH_CONTEXT_DEBUG:-0}"   # DEBUG-only context breakdown logging, default OFF
 PATCH_OUT_UPDATE_CHECK="${PATCH_OUT_UPDATE_CHECK:-1}"
 PATCH_OUT_TELEMETRY="${PATCH_OUT_TELEMETRY:-1}"
 PATCH_OUT_UPDATE_PROVIDERS_CMD="${PATCH_OUT_UPDATE_PROVIDERS_CMD:-1}"
@@ -131,6 +141,7 @@ apply_patch "$CRUSH_AT_IMPORT"                "crush-at-import.patch"
 apply_patch "$CRUSH_SHELL_HISTORY"            "crush-shell-history.patch"
 apply_patch "$CRUSH_LSP_ASYNC"               "crush-lsp-async.patch"
 apply_patch "$CRUSH_LSP_ASYNC"               "crush-lsp-router-notif.patch"
+apply_patch "$CRUSH_CONTEXT_DEBUG"           "crush-context-debug.patch"
 apply_patch "$PATCH_OUT_UPDATE_CHECK"         "crush-no-update-check.patch"
 apply_patch "$PATCH_OUT_TELEMETRY"            "no-telemetry.patch"
 apply_patch "$PATCH_OUT_UPDATE_PROVIDERS_CMD" "no-update-providers-cmd.patch"

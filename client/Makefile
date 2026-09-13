@@ -52,6 +52,15 @@ CRUSH_AT_IMPORT ?= 1
 # Re-verify the patch on every CRUSH_TAG bump (see the task docs).
 CRUSH_SHELL_HISTORY ?= 1
 
+# DEBUG-only diagnostic patch (client/patches/crush-context-debug.patch): logs a per-source
+# token/byte breakdown of the assembled system prompt (each context file @-expanded, skills
+# XML, git status, total) to <data-dir>/logs/crush.log. Default OFF — turn ON to diagnose
+# first-turn context bloat: `make image CRUSH_CONTEXT_DEBUG=1`, run, then read the CTXDBG lines
+# from the mounted project's .crush/logs/crush.log. Keep the patch; leave this 0 in shipped
+# images. See ../tasks/investigate-context-bloat-geometricalgebra.md and
+# ../tasks/reference/crush-context-assembly.md.
+CRUSH_CONTEXT_DEBUG ?= 0
+
 # ---- Egress patch flags: one per decision, defaults encode the audit's disposition ----
 # From the dependency network audit (../tasks/reference/dependency-network-audit.md, D1-D12).
 # Each PATCH_OUT_<X> guards one patch in client/patches/, applied at BUILD time by
@@ -218,6 +227,7 @@ image: ## build the client image: full toolchain + Crush built from source (pinn
 		--build-arg CRUSH_TAG=$(CRUSH_TAG) \
 		--build-arg CRUSH_AT_IMPORT=$(CRUSH_AT_IMPORT) \
 		--build-arg CRUSH_SHELL_HISTORY=$(CRUSH_SHELL_HISTORY) \
+		--build-arg CRUSH_CONTEXT_DEBUG=$(CRUSH_CONTEXT_DEBUG) \
 		--build-arg VENDOR_TOOLS=$(VENDOR_TOOLS) \
 		$(PATCH_FLAGS) \
 		$(CRUSH_VENDOR_FLAGS) .

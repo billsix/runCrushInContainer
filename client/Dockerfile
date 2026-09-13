@@ -88,6 +88,10 @@ RUN if [ -e /usr/share/containers/mounts.conf ]; then : > /usr/share/containers/
 ARG CRUSH_TAG=v0.89.0
 ARG CRUSH_AT_IMPORT=0
 ARG CRUSH_SHELL_HISTORY=0
+# DEBUG-only: 1 applies crush-context-debug.patch (per-source system-prompt token
+# breakdown logged to <data-dir>/logs/crush.log). Default 0; keep it 0 in shipped
+# images. See tasks/investigate-context-bloat-geometricalgebra.md.
+ARG CRUSH_CONTEXT_DEBUG=0
 ARG CRUSH_VENDORED=0
 ARG PATCH_OUT_UPDATE_CHECK=1
 ARG PATCH_OUT_TELEMETRY=1
@@ -118,6 +122,7 @@ COPY entrypoint/03-build-crush.sh /usr/local/bin/
 # every flag is passed to the script explicitly.
 RUN CRUSH_TAG="$CRUSH_TAG" CRUSH_VENDORED="$CRUSH_VENDORED" CRUSH_AT_IMPORT="$CRUSH_AT_IMPORT" \
     CRUSH_SHELL_HISTORY="$CRUSH_SHELL_HISTORY" \
+    CRUSH_CONTEXT_DEBUG="$CRUSH_CONTEXT_DEBUG" \
     PATCH_OUT_UPDATE_CHECK="$PATCH_OUT_UPDATE_CHECK" \
     PATCH_OUT_TELEMETRY="$PATCH_OUT_TELEMETRY" \
     PATCH_OUT_UPDATE_PROVIDERS_CMD="$PATCH_OUT_UPDATE_PROVIDERS_CMD" \
