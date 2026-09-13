@@ -42,7 +42,7 @@ the session log alongside it).
 | Repo source (under `client/`) | Container path | Shadowed at run time? |
 | --- | --- | --- |
 | `entrypoint/00-install-minimal.sh` | `/usr/local/bin/00-install-minimal.sh` | no (always run at build) |
-| `entrypoint/01-install-base.sh` | `/usr/local/bin/01-install-base.sh` | no (run iff `FULL_TOOLCHAIN=1`) |
+| `entrypoint/01-install-base.sh` | `/usr/local/bin/01-install-base.sh` | no (always run at build) |
 | `entrypoint/02-install-vendor-tools.sh` | `/usr/local/bin/02-install-vendor-tools.sh` | no (run iff `VENDOR_TOOLS=1`) |
 | `patches/` | `/patches/` | no |
 | `entrypoint/vendor/` | `/usr/local/bin/vendor/` (`chmod +x`) | no |

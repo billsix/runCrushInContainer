@@ -14,14 +14,19 @@ conventions (`tasks/port-runclaude-conventions-systems.md`); its § "Running pro
 container" must carry the same **point 3 — the lean-image default** that the runClaudeInContainer
 umbrella adds to the original: every optional-feature build flag defaults lean when `NESTED_PODMAN=1`
 (`FLAG ?= $(if $(filter 1,$(NESTED_PODMAN)),0,1)`), gates and product build deps never trimmed,
-`FLAG=1` overrides, new projects start that way. Done = the paragraph is in the ported file, word-for-word
-with the original (the port is near-verbatim by decision), and `make image` bakes it.
+`FLAG=1` overrides, new projects start that way — **for downstream container-per-project repos ONLY,
+never the two sandboxes themselves** (the sandboxes are host-built and merely launched nested;
+decoupled 2026-09-12, see `tasks/reference/nested-podman-vs-image-content.md` and runClaudeInContainer
+`tasks/scope-lean-image-to-downstream-not-sandboxes.md`). Done = the paragraph (carrying that scope
+boundary) is in the ported file, and `make image` bakes it.
 
 ## Context — read first
 
 - runClaudeInContainer `tasks/reference/minimal-nested-images.md` §2 — the standard and the draft text.
-- This repo's `client/Makefile` `FULL_TOOLCHAIN` line — the reference implementation the convention
-  generalizes; `tasks/archive/2026/09/10/minimal-client-image.md` for its decisions.
+- This repo's `client/Makefile` **no longer has a `FULL_TOOLCHAIN` flag** (removed 2026-09-12 — the
+  client is always the full toolchain; see `tasks/reference/nested-podman-vs-image-content.md`). It is
+  therefore NOT an example of the convention; the convention applies to *downstream* projects only.
+  History of the (now-removed) flag: `tasks/archive/2026/09/10/minimal-client-image.md`.
 - `tasks/reference/architecture.md` › "Conventions machinery — ported": the ported file is trimmed to a
   lean core for the 64k window — add the paragraph, not the reference doc.
 

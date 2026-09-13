@@ -1,0 +1,11 @@
+--- a/vendor/github.com/charmbracelet/x/powernap/pkg/transport/connection.go
++++ b/vendor/github.com/charmbracelet/x/powernap/pkg/transport/connection.go
+@@ -50,7 +50,7 @@
+ 	conn := jsonrpc2.NewConn(
+ 		ctx,
+ 		jsonrpc2.NewBufferedStream(stream, jsonrpc2.VSCodeObjectCodec{}),
+-		jsonrpc2.HandlerWithError(c.handleRequest),
++		jsonrpc2.AsyncHandler(jsonrpc2.HandlerWithError(c.handleRequest)),
+ 		jsonrpc2.SetLogger(stdLogger),
+ 	)
+ 

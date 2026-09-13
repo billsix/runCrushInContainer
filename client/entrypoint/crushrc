@@ -110,7 +110,11 @@ fi
 # (internal/shellconfig/flags.go parseFlagValue: flagString → i+2); `opAppend` means REPEAT the flag
 # to add a value — `--filetypes go --filetypes mod`, as Crush's own load_test.go does. A second bare
 # word is parsed as a flag name and aborts config loading, so Crush never starts.
-lsp add python --command ty --args server --filetypes py \
+# Named `ty` (not `python`): Crush's resolveServerName maps an unknown user name to the first
+# bundled server whose command matches, and a server named `python` misresolves to the registry's
+# `tvm_ffi_navigator` (command `python`); `ty` resolves cleanly. --filetypes py still binds it to
+# Python files. (See tasks/lsp-python-server-not-registering.md.)
+lsp add ty --command ty --args server --filetypes py \
     --root-markers pyproject.toml --root-markers setup.py --root-markers .git
 lsp add go --command gopls --filetypes go \
     --root-markers go.mod --root-markers go.work --root-markers .git

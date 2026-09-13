@@ -47,6 +47,23 @@
 #                                 the prompt just sent, history spans sessions, same-second
 #                                 entries keep their order, and ctrl+r reverse-searches
 #                                 (see tasks/reference/crush-prompt-history.md)
+#   CRUSH_LSP_ASYNC              0/1, DEFAULT 1 (mandatory BUGFIXES, not optional features) — applies
+#                                 two powernap LSP correctness patches:
+#                                   (1) crush-lsp-router-notif.patch — THE fix. powernap's Router
+#                                       treated any request whose id is the zero value (numeric id 0)
+#                                       as a notification, so ty's workspace/configuration (sent with
+#                                       id 0) was never routed to its handler and got a null reply,
+#                                       which ty rejects ("invalid type: null, expected a sequence") —
+#                                       ty then never gets its config and gates documentSymbol, so
+#                                       lsp_symbols times out at Crush's hardcoded 5s. Fixed by routing
+#                                       on req.Notif (the jsonrpc2 field) instead of id==zero.
+#                                   (2) crush-lsp-async.patch — defensive: wraps the handler in
+#                                       jsonrpc2.AsyncHandler so a server that gates on a server->client
+#                                       callback can't deadlock powernap's single reader goroutine.
+#                                 Defaulted ON here (not plumbed via the Makefile) because they're
+#                                 correctness fixes; set CRUSH_LSP_ASYNC=0 to build without them.
+#                                 Re-verify both on every CRUSH_TAG bump. See
+#                                 tasks/lsp-python-server-not-registering.md.
 #   PATCH_OUT_UPDATE_CHECK        0/1, default 1 — no startup api.github.com release check
 #   PATCH_OUT_TELEMETRY           0/1, default 1 — PostHog/data.charm.land unreachable at
 #                                 build level (on top of the env/config opt-outs)
@@ -77,6 +94,7 @@ PATCHES_DIR="${PATCHES_DIR:-/patches}"
 
 CRUSH_AT_IMPORT="${CRUSH_AT_IMPORT:-0}"
 CRUSH_SHELL_HISTORY="${CRUSH_SHELL_HISTORY:-0}"
+CRUSH_LSP_ASYNC="${CRUSH_LSP_ASYNC:-1}"   # mandatory bugfix, default ON (see the env note above)
 PATCH_OUT_UPDATE_CHECK="${PATCH_OUT_UPDATE_CHECK:-1}"
 PATCH_OUT_TELEMETRY="${PATCH_OUT_TELEMETRY:-1}"
 PATCH_OUT_UPDATE_PROVIDERS_CMD="${PATCH_OUT_UPDATE_PROVIDERS_CMD:-1}"
@@ -111,6 +129,8 @@ apply_patch() {
 }
 apply_patch "$CRUSH_AT_IMPORT"                "crush-at-import.patch"
 apply_patch "$CRUSH_SHELL_HISTORY"            "crush-shell-history.patch"
+apply_patch "$CRUSH_LSP_ASYNC"               "crush-lsp-async.patch"
+apply_patch "$CRUSH_LSP_ASYNC"               "crush-lsp-router-notif.patch"
 apply_patch "$PATCH_OUT_UPDATE_CHECK"         "crush-no-update-check.patch"
 apply_patch "$PATCH_OUT_TELEMETRY"            "no-telemetry.patch"
 apply_patch "$PATCH_OUT_UPDATE_PROVIDERS_CMD" "no-update-providers-cmd.patch"
@@ -123,6 +143,28 @@ apply_patch "$PATCH_OUT_OPENROUTER"           "no-openrouter.patch"
 apply_patch "$PATCH_OUT_VERCEL"               "no-vercel.patch"
 apply_patch "$PATCH_OUT_HYPER"                "no-hyper.patch"
 apply_patch "$PATCH_OUT_COPILOT"              "no-copilot.patch"
+
+# --- self-verify the async LSP bugfix actually landed --------------------------
+# A cached/mis-applied patch would silently reintroduce the powernap deadlock (ty's
+# documentSymbol times out). This assertion runs inside the (uncached-when-patches-change)
+# build layer, so a SUCCESSFUL build proves the wrap is in the tree; it also prints a
+# grep-able marker for the build log. See tasks/lsp-python-server-not-registering.md.
+_CONN=/tmp/crush/vendor/github.com/charmbracelet/x/powernap/pkg/transport/connection.go
+_ROUTER=/tmp/crush/vendor/github.com/charmbracelet/x/powernap/pkg/transport/router.go
+if [ "$CRUSH_LSP_ASYNC" = "1" ]; then
+    if grep -q "AsyncHandler(jsonrpc2.HandlerWithError" "$_CONN"; then
+        echo "CRUSH_LSP_ASYNC_VERIFY: PRESENT — AsyncHandler wrap is in the build tree"
+    else
+        echo "CRUSH_LSP_ASYNC_VERIFY: MISSING — crush-lsp-async.patch did not apply"; exit 1
+    fi
+    # The router notification-routing fix is THE fix for ty timing out (id-0 request misrouted
+    # as a notification -> null workspace/configuration -> gated documentSymbol).
+    if grep -q "if req.Notif {" "$_ROUTER"; then
+        echo "CRUSH_LSP_ROUTER_VERIFY: PRESENT — req.Notif routing fix is in the build tree"
+    else
+        echo "CRUSH_LSP_ROUTER_VERIFY: MISSING — crush-lsp-router-notif.patch did not apply"; exit 1
+    fi
+fi
 
 # --- build offline from vendor/ (both modes; the online mode already fetched) -----
 ( cd /tmp/crush && GOPROXY=off go build -mod=vendor -ldflags "$LDFLAGS" \

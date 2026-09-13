@@ -56,7 +56,38 @@ the first whose `HandlesFile(path)` is true — the file is under the client's c
 returns exactly `no LSP client handles file: <path>` (`lsp_symbols.go:35`,
 `lsp_replace_symbol.go:80`). It is not an error from a server; it means **no server was started**.
 
+## 3a. `context deadline exceeded` — powernap Router mis-routes id-0 requests (2026-09-13)
+
+A *different* failure from §3: the server started and Crush contacted it, but `lsp_symbols` returns
+`context deadline exceeded`. Root cause is a **powernap Router bug**, confirmed from the runtime log
+(`option debug-lsp true` shows ty's stderr: `Failed to deserialize client response
+(method=workspace/configuration): invalid type: null, expected a sequence`). `ty` advertises that it
+needs `workspace/configuration` and **gates `documentSymbol` on a valid reply**; it sends that request
+with **id 0**. Powernap's `pkg/transport/router.go` `Route` decides "notification" via
+`req.ID == (jsonrpc2.ID{})` — but the zero-value ID *is* numeric id 0, so the id-0 request is
+misclassified as a notification, Crush's registered `HandleWorkspaceConfiguration` is never called, and
+a `null` result is returned. ty rejects `null` ("expected a sequence"), never configures, and the
+`documentSymbol` request dies at Crush's hardcoded 5 s (`internal/lsp/client.go:725`). No crushrc knob
+helps (`--timeout` is only the 30 s init, `manager.go:233`). The reproducer
+`tasks/adhoc/lsp-python-server-not-registering/ty_lsp_probe.py` shows ty is fast when the reply is sent
+with the correct id, and hangs when it isn't.
+
+**Fix (shipped 2026-09-13):** `client/patches/crush-lsp-router-notif.patch` routes on `req.Notif` (the
+jsonrpc2 field, set only for real notifications) instead of `req.ID == zero`. A second, *defensive*
+patch `crush-lsp-async.patch` wraps the handler in `jsonrpc2.AsyncHandler` (prevents a latent
+single-reader-goroutine deadlock; not the cause here). Both are applied by `03-build-crush.sh` under
+`CRUSH_LSP_ASYNC` (default on) with a build-time self-check that fails if either doesn't land. Also:
+`resolveServerName` (`manager.go:322`) misfiles a user server named `python` under the registry's
+`tvm_ffi_navigator` (command `python`), so the crushrc declares the Python server as **`ty`**, not
+`python`. Full record: `tasks/lsp-python-server-not-registering.md`. Both powernap bugs are worth
+reporting upstream to charmbracelet.
+
 ## 4. What the image ships — six dnf servers, declared explicitly (measured 2026-09-10)
+
+> **Always present (2026-09-12):** the client image is always the full toolchain (the former
+> `FULL_TOOLCHAIN`/minimal-when-nested split was removed — see
+> `tasks/reference/nested-podman-vs-image-content.md`), so these six servers ship in every build.
+> There is no longer a nested/minimal image in which they are absent.
 
 **The rule (maintainer, 2026-09-10): language servers come from dnf only** — the airgap rebuild has
 only a dnf mirror, so an npm/gem/opam/pip server would silently vanish there. The baked crushrc
@@ -67,7 +98,7 @@ server for gets **no** server, and that is documented rather than faked. Measure
 
 | Language | dnf package → binary (Fedora 44 version) | crushrc line | definition | references | rename | documentSymbol | callHierarchy | diagnostics |
 |---|---|---|---|---|---|---|---|---|
-| Python | `ty` → `ty` (0.0.74) | `lsp add python --command ty --args server --filetypes py --root-markers pyproject.toml --root-markers setup.py --root-markers .git` | yes | yes | yes | yes | yes | pull + push |
+| Python | `ty` → `ty` (0.0.74) | `lsp add ty --command ty --args server --filetypes py --root-markers pyproject.toml --root-markers setup.py --root-markers .git` (named `ty`, not `python` — see §3a) | yes | yes | yes | yes | yes | pull + push |
 | Go | `gopls` → `gopls` (0.18.1) | `lsp add go --command gopls --filetypes go --root-markers go.mod --root-markers go.work --root-markers .git` | yes | yes | yes | yes | yes | push |
 | C/C++ | `clang-tools-extra` → `clangd` (22.1.8) | `lsp add c --command clangd --filetypes c --filetypes cpp --filetypes h --filetypes hpp --root-markers compile_commands.json --root-markers CMakeLists.txt --root-markers Makefile --root-markers .git` | yes | yes | yes | yes | yes | push |
 | Rust | `rust-analyzer` → `rust-analyzer` (1.98.0) | `lsp add rust --command rust-analyzer --filetypes rs --root-markers Cargo.toml --root-markers .git` | yes | yes | yes | yes | yes | pull + push |
@@ -163,7 +194,7 @@ ENV PATH=/venv/bin:$PATH
    one-off failure look permanent.
 
 The deterministic fix does not depend on which: **declare the servers explicitly in the baked
-crushrc** (`lsp add python --command ty --args server --filetypes py`), which bypasses the skip list,
+crushrc** (`lsp add ty --command ty --args server --filetypes py`), which bypasses the skip list,
 the root-marker check and the PATH rescan latency (gate 1). (The first draft also said "pin the
 server versions in the image"; the dnf-only rule reversed that — Fedora's `ty` is whatever dnf
 ships, and only the RHEL 9 wheel is pinned.) The diagnosis was never run: the failing project is on

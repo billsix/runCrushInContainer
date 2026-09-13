@@ -57,15 +57,15 @@ Three environments are in play; label instructions so it's unambiguous:
   (`muse-glimmer`, `gemma-4`), server `MODEL_PORT_<m>` ↔ the crushrc `--base-url` ports (+ the
   tunnel lines in `README.md` and `client/entrypoint/shell.sh`), and server `CTX` ↔ the crushrc's
   `--context-window`.
-- **Nested = the minimal image, automatically (2026-09-10).** `client/Makefile` defaults
-  `FULL_TOOLCHAIN` from the `NESTED_PODMAN` signal every sandbox exports
-  (`$(if $(filter 1,$(NESTED_PODMAN)),0,1)`, the `PODMAN_RUN_FLAGS` idiom): an in-sandbox
-  `make image` builds the ~1.65 GB minimal image, a host `make image` the full ~22 GB one, no flag
-  either way — the signal is inherited from the launch via `?=`, and is deliberately **not** baked
-  into the image (`ENV NESTED_PODMAN=1`), which would falsely advertise nested capability on a plain
-  non-nested launch. The minimal image has **no language servers** (maintainer's decision) — the crushrc's
-  `lsp add` lines fail to start there and Crush says "no LSP client handles file"; that is expected
-  nested, not a bug. `FULL_TOOLCHAIN=1` forces full nested only with a store that can take 22 GB.
+- **The client is always the full toolchain; `NESTED_PODMAN` is run-time only (2026-09-12).**
+  `make image` (on the host) builds the full ~430-package image with all the language servers the
+  crushrc declares — there is no `FULL_TOOLCHAIN` flag any more. `NESTED_PODMAN` is purely a
+  run-time launch capability (the podman-run flags that let Crush build/run *other* projects'
+  containers nested), fully decoupled from image content. It is deliberately **not** baked into the
+  image (`ENV NESTED_PODMAN=1`), which would falsely advertise nested capability on a plain
+  non-nested launch. (Formerly `FULL_TOOLCHAIN` auto-defaulted to a minimal, language-server-less
+  image when nested — that silently broke LSP on `make shell NESTED_PODMAN=1`, so it was removed;
+  rationale and history: `tasks/reference/nested-podman-vs-image-content.md`.)
 - **The server binds loopback only.** Never bind llama-server to `0.0.0.0` / the LAN; the
   only ingress is the SSH tunnel. Keep it that way.
 - **The client image reuses runClaudeInContainer's full toolchain** (`01-install-base.sh`,
@@ -86,7 +86,7 @@ Three environments are in play; label instructions so it's unambiguous:
   preselects the model that answers (Gemma only when 8081 alone answers; Glimmer otherwise). A
   `ctrl+l` switch outranks it for the life of that container (written to the ephemeral
   `~/.local/share/crush/crush.json`). Mechanism: `tasks/reference/crush-capabilities.md` § "Which
-  model is active at startup". `curl` is in the minimal image for this (`00-install-minimal.sh`).
+  model is active at startup". `curl` is in the base package set for this (`00-install-minimal.sh`).
 - **Language servers: dnf only, declared explicitly (2026-09-10).** Crush's `lsp_*` tools need a
   server on `PATH`; the crushrc `lsp add`s one per toolchain Fedora packages (python `ty`, go, c,
   rust, sh, glsl — all dnf, `01-install-base.sh`), so auto-detection's four gates never decide.
@@ -276,6 +276,7 @@ layout — see the archived task's `crush.log`; 2026/08/30). **2026/09/10** (`ta
 **Gemma 4 alongside Glimmer** (the `MODEL=` model table, fixed ports 8080/8081, `LLAMACPP_TAG` →
 `b10883`, second crushrc provider), **language servers for Crush** (six dnf servers declared
 explicitly; the RHEL 9 `/venv` + `ty`-wheel block, proven offline in a throwaway Stream 9), the
-**minimal client image as the nested default** (`FULL_TOOLCHAIN` auto-defaults from `NESTED_PODMAN`),
-the `make llama` tag-checkout fix, and the **vim user toolkit** (six Fedora vim plugin rpms, a baked
-`.vimrc`, a conditional host `~/.vimrc` mount; the minimal image deliberately has no editor).
+**minimal client image as the nested default** (`FULL_TOOLCHAIN` auto-defaulted from `NESTED_PODMAN`;
+**reverted 2026-09-12** — the client is always the full toolchain now, `NESTED_PODMAN` run-time only:
+`tasks/reference/nested-podman-vs-image-content.md`), the `make llama` tag-checkout fix, and the
+**vim user toolkit** (six Fedora vim plugin rpms, a baked `.vimrc`, a conditional host `~/.vimrc` mount).

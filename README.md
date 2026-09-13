@@ -158,6 +158,10 @@ make shell-exec CMD='some command'         # ^ or an inline command
 make manifest  # print the container file layout (baked vs mounted paths; no build)
 ```
 
+> `make shell` and `make shell-exec` do **not** auto-build — run `make image` first; they run the
+> last-built image (and error cleanly if none exists). `make image` always builds the full toolchain;
+> `NESTED_PODMAN=1` is a run-time flag on `make shell` (podman-in-podman), never a build/image option.
+
 `make shell-exec` is the batch twin of `make shell`: same container and mounts, but it runs a
 script (`SCRIPT=`, relative to the mounted PROJECT at `/work`) or an inline `CMD=` and exits,
 instead of dropping you into an interactive shell — for ad-hoc/CI use.

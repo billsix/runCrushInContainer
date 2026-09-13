@@ -4,9 +4,11 @@
 (`tasks/reference/dependency-network-audit.md` — findings, D1–D12, flag index), so the decision has
 its numbers. Deferred originally by the maintainer (William Emerison Six <billsix@gmail.com>,
 2026-08-29: "no verification needed for now … a follow up task, to decide if we even need to").
-Note: the minimal image (`tasks/archive/2026/09/10/minimal-client-image.md`, done) bakes strace+tcpdump into a sandbox-buildable
-minimal image — exactly the environment a runtime egress check would run in; if a check is wanted,
-consider sequencing after that task.
+Note: the client is now always the full toolchain (strace+tcpdump present), but the sandbox-buildable
+*minimal* image that once made an in-sandbox runtime egress check practical was **removed 2026-09-12**
+(`tasks/reference/nested-podman-vs-image-content.md`) — the full image is ~22 GB and won't build in the
+nested RAM store. So if an in-sandbox egress check is wanted, its environment needs rethinking (a
+purpose-built lean egress image, or run the watch on the host).
 **Priority:** 6
 **Difficulty:** 3
 **Started:** 2026-08-29

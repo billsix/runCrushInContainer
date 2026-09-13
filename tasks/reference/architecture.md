@@ -86,12 +86,14 @@ SSH tunnel:
   container paths — is mapped in `tasks/reference/container-file-layout.md`** (printable via
   `make -C client manifest`; also baked at `~/.config/crush/reference/container-file-layout.md`
   so the agent can read it in-container). Consult it before citing a container path.
-- **Two sizes, chosen by where it is built (2026-09-10):** `FULL_TOOLCHAIN ?= $(if $(filter
-  1,$(NESTED_PODMAN)),0,1)` in `client/Makefile` — a host `make image` is the full ~22 GB image; the
-  same command inside a sandbox (which exports `NESTED_PODMAN=1`) is the ~1.65 GB minimal image
-  (`00-install-minimal.sh` only: golang/git/ripgrep + strace/tcpdump, **no language servers** by
-  decision, so the crushrc's `lsp add` lines fail to start there). The `PODMAN_RUN_FLAGS` idiom
-  applied to a build flag; `FULL_TOOLCHAIN=0|1` overrides. Record: `tasks/archive/2026/09/10/minimal-client-image.md`.
+- **One image, always the full toolchain (2026-09-12):** `make image` (on the host) builds the full
+  ~430-package image with all the language servers the crushrc declares. There is no `FULL_TOOLCHAIN`
+  flag — image content is fixed, and `NESTED_PODMAN` is purely run-time launch capability, decoupled
+  from the build. The full image is large (~22 GB), so build it on the host, not nested. (Until
+  2026-09-12 `FULL_TOOLCHAIN` auto-defaulted to a ~1.65 GB minimal, language-server-less image when
+  nested — that silently broke LSP on `make shell NESTED_PODMAN=1`, so it was removed; rationale and
+  history: `tasks/reference/nested-podman-vs-image-content.md`, superseding
+  `tasks/archive/2026/09/10/minimal-client-image.md`.)
 - Full runClaudeInContainer toolchain (`entrypoint/01-install-base.sh`, verbatim copy) +
   **Crush built from source at image-build time**, pinned `CRUSH_TAG` (default **`v0.89.0`**,
   the latest stable at bring-up; `github.com/charmbracelet/crush`). The build is
@@ -102,8 +104,7 @@ SSH tunnel:
   with plugins as Fedora rpms — fugitive, commentary, nerdtree, ale, gitgutter (`vim-airline`/`-surround`
   are not packaged; rpm-only by decision) — driven by the baked `entrypoint/dotfiles/.vimrc`, shadowed by
   the host's `~/.vimrc` when `make shell` finds one (`VIMRC_MOUNT`). No clipboard build (`"+y` is
-  unavailable). Neovim present, unconfigured. Full-image only: the minimal image ships no editor
-  (maintainer: "minimal doesn't need vim"). Record: `tasks/archive/2026/09/10/vim-user-toolkit-in-base-image.md`.
+  unavailable). Neovim present, unconfigured. Record: `tasks/archive/2026/09/10/vim-user-toolkit-in-base-image.md`.
 - **Language servers (2026-09-10): dnf-installed, declared explicitly in the crushrc.** Six `lsp add`
   lines — python (`ty server`), go (`gopls`), c (`clangd`), rust (`rust-analyzer`), sh
   (`bash-language-server start`), glsl (`glsl_analyzer`) — every binary from dnf via
@@ -276,15 +277,15 @@ vendoring only guarantees the sources are present and offline-buildable. `server
 - Order: server up → tunnel up → *then* `crush`. The models are pinned in crushrc, so Crush starts
   either way; a provider whose server is down just fails when you pick it.
 
-## Nested-build gotcha (if you force the FULL client image nested)
+## Nested-build gotcha (build the client on the host, not nested)
 
-Since 2026-09-10 a nested `make image` builds the minimal image by default (above), so this only
-applies to `make image FULL_TOOLCHAIN=1` inside a sandbox. The full client image is **~22.3 GB**.
-Building it in a RAM-backed nested podman store fails at the
-*layer commit* (not install) with `no space left on device` — commit peak (base+diff+temp)
-exceeds the final size. A 32 GB store overflowed; `mount -o remount,size=50g
-/var/lib/containers` (or a bigger `NESTED_PODMAN_TMPFS_SIZE`) fixed it. On a real disk-backed
-host build there's no such ceiling. See runClaudeInContainer's
+The client image is the full toolchain (**~22.3 GB**) and is meant to be built on the host. Building
+it in a RAM-backed nested podman store fails at the *layer commit* (not install) with `no space left
+on device` — commit peak (base+diff+temp) exceeds the final size. A 32 GB store overflowed; `mount -o
+remount,size=50g /var/lib/containers` (or a bigger `NESTED_PODMAN_TMPFS_SIZE`) worked around it, but
+the intended path is a real disk-backed host build, which has no such ceiling. (There is no longer a
+minimal variant to sidestep this nested — see "One image, always the full toolchain" above and
+`tasks/reference/nested-podman-vs-image-content.md`.) See runClaudeInContainer's
 `tasks/reference/nested-podman-design.md` and its `dir-backed-nested-podman-storage.md`.
 
 ## Verification status (updated 2026-09-10)

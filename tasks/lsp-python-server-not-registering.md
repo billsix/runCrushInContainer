@@ -1,91 +1,147 @@
-# `lsp add python` (ty) not registering — Python absent from the LSP sidebar
+# Python LSP times out — powernap Router mis-routes ty's id-0 `workspace/configuration`
 
-**Status:** investigating — awaiting `crush logs` from the running container
+*(Filename slug is historical: the first symptom was "python absent from the sidebar" on the minimal
+image; that was fixed by the full-toolchain decoupling, and the real, confirmed cause is a
+powernap JSON-RPC routing bug. Slug kept to avoid breaking inbound links.)*
+
+**Status:** DONE — verified 2026-09-13 on the maintainer's host image: `lsp_symbols` on
+`src/gacalc/base.py` returns the full symbol table (106 symbols), sidebar server `ty`. Fix shipped:
+`crush-lsp-router-notif.patch` (the cause) + `crush-lsp-async.patch` (defensive) + `python`→`ty`
+rename, all verified in-build (`CRUSH_LSP_ROUTER_VERIFY`/`CRUSH_LSP_ASYNC_VERIFY: PRESENT`). Archive
+after the work commit lands. Follow-up worth doing: file both powernap bugs upstream with charmbracelet.
 **Priority:** 2
-**Difficulty:** 3
+**Difficulty:** 4
 
 ## BLUF
 
-With the Crush client rooted at `/foo/opt/geometricalgebra` (a project that HAS
-`pyproject.toml`, `setup.py`, and `.git`), the LSP sidebar registers **five** servers —
-`c, glsl, go, rust, sh` — but **not `python`**, and `lsp_symbols` on a `.py` file returns
-`no LSP client handles file: …/src/gacalc/base.py`. Crush seeds every user-configured server
-into the sidebar *before* any gate, so Python's total absence means the **`lsp add python` line
-isn't producing a config entry at all**, while the other five do — a Python-line-specific
-registration failure. **This is NOT the root-marker gate** (the working dir has the markers) and
-NOT a missing binary (that would still show Python as "unstarted"). Root cause is not yet known;
-it needs `crush logs` from the running container. **Done = `python` registers and `ty server`
-handles `.py` files.**
+`lsp_symbols` on a `.py` file fails with `context deadline exceeded`. The runtime log (with
+`option debug-lsp true`) shows ty's own stderr: `Failed to deserialize client response
+(method=workspace/configuration): invalid type: null, expected a sequence`. So **Crush replies
+`null` to ty's `workspace/configuration` request**, ty (which gates `documentSymbol` on a valid
+config reply) rejects it and never proceeds → 5 s timeout. The `null` is a **powernap Router bug**:
+`Route` classifies a request as a notification with `req.ID == (jsonrpc2.ID{})`, but a real request
+whose id is numeric **0** has a zero-value ID — and ty sends `workspace/configuration` with **id 0** —
+so the handler is skipped and a `null` result is returned. **Fix = route on `req.Notif`** (the
+jsonrpc2 field), shipped as `crush-lsp-router-notif.patch`. (The earlier AsyncHandler patch addressed
+a *different*, latent deadlock and was NOT the fix; it's kept as defensive hardening.) No crushrc
+`--timeout` helps (that only covers the 30 s init). **Done = `lsp_symbols` returns symbols for
+`base.py` in the running client.**
 
-## Context
+## Confirmed root cause (2026-09-13, from the runtime log)
 
-**Evidence (2026-09-12, from the maintainer's running client, `crush v0.89.0+dirty`):**
-- Working dir `/foo/opt/geometricalgebra` — confirmed to contain `pyproject.toml`, `setup.py`,
-  and `.git` at its top level.
-- LSPs panel: `● c unstarted / ● glsl unstarted / ● go unstarted / ● rust unstarted / ●
-  sh unstarted` — **Python is absent** (alphabetically it would sit between `go` and `rust`; the
-  panel shows `go` then `rust` with nothing between).
-- Tool result: `ERROR no LSP client handles file: /foo/opt/geometricalgebra/src/gacalc/base.py`.
-
-**Why this is a registration failure, not a gate or a binary miss (Crush v0.89.0 source, under
-`client/vendor/crush/`):**
-- `internal/lsp/manager.go` `TrackConfigured` (≈`:86-100`) seeds the sidebar with every
-  **user-configured** server (`if !s.isUserConfigured(name) { continue }`) *before* startup and
-  *before* any root-marker/PATH check. So if `python` never appears, its config entry was never
-  created — `isUserConfigured("python")` is false.
-- A **missing binary** for a user-configured server still leaves it seeded as "unstarted" (the
-  `LookPath` gate is skipped for user-configured servers), so Python's *absence* is not "ty
-  missing".
-- The **root-marker gate** is ruled out here: the working dir contains Python's markers. (That
-  gate is a separate latent bug — `tasks/lsp-add-root-markers-gate-startup.md`.)
-
-**The config path:** `crushrc` is baked verbatim — `COPY entrypoint/crushrc
-/root/.config/crush/crushrc` (`client/Dockerfile:146`). The **source** Python line
-(`client/entrypoint/crushrc:113-114`) is:
+With the AsyncHandler patch verified in the binary, the client reached "ready" but `lsp_symbols` still
+timed out. `crush logs` (debug-lsp on) showed, repeatedly, ty's stderr:
+`ERROR Failed to deserialize client response (method=workspace/configuration): invalid type: null,
+expected a sequence`. Reading powernap `pkg/transport/router.go` `Route`:
+```go
+if req.ID == (jsonrpc2.ID{}) {        // treats id==zero-value as a NOTIFICATION
+    ... return nil, nil               // handler NOT called → caller replies null
+}
+if handler, ok := r.handlers[req.Method]; ok { return handler(...) }
 ```
-lsp add python --command ty --args server --filetypes py \
-    --root-markers pyproject.toml --root-markers setup.py --root-markers .git
-```
-Structurally this is the same repeated-flag pattern as `sh` (`--command bash-language-server
---args start …`), which *does* register — so nothing obvious distinguishes it. Config parsing
-lives in `internal/shellconfig/lsp.go` + `flags.go` (`parseFlagValue`); a malformed flag
-historically produced `lsp add: unknown flag setup.py` (the pre-fix space-separated form), but
-the current line uses repeated `--root-markers`, which should be correct.
+`jsonrpc2.ID{}`'s zero value is numeric id `0`. ty sends `workspace/configuration` with **id 0**, so
+`Route` misclassifies it as a notification, never calls Crush's registered
+`HandleWorkspaceConfiguration` (which would return `[{}]`), and returns `nil` → Crush sends
+`result: null`. ty rejects it ("expected a sequence"), never gets its config, and gates
+`documentSymbol` forever. `jsonrpc2` itself detects notifications via `req.Notif`
+(`request.go:108` sets it when there's no `id`; `handler_with_error.go:22` uses it) — so the fix is to
+route on `req.Notif`, not `req.ID == zero`. My standalone probe passed because it replied using ty's
+actual id; only powernap's Router mishandles id 0.
 
-**Correction to earlier diagnosis (2026-09-12):** an earlier read claimed `grep -c 'lsp add'`
-== 9 meant a stale image. It does not — that count includes ~3 comment lines mentioning "lsp
-add"; the current source greps to 9 too (6 commands + 3 comments). The running crushrc is not
-stale on that basis.
+## Root cause — confirmed by experiment (2026-09-13)
 
-## Leading hypotheses (need the logs to decide)
+Three direct LSP handshakes to the real `ty` 0.0.74, rooted at `/foo/opt/geometricalgebra` (2534
+files), timing `documentSymbol` on `src/gacalc/base.py`. Reproduce with
+`tasks/adhoc/lsp-python-server-not-registering/ty_lsp_probe.py <root> <file>`:
 
-1. **The `lsp add python` line is rejected at config-load and skipped** while the other five
-   load — a parser edge case specific to this line (e.g. `--command ty --args server`, or the
-   `python` name). `crush logs` would show the rejection (config errors log to file, never the
-   TUI).
-2. **`ty` / `ty server` invalid** in the image (wrong subcommand, or a `ty` that isn't Astral's)
-   — though a bad binary should still show Python as "unstarted", so this is lower-likelihood
-   for the *absence*.
-3. **The running baked crushrc differs from source** (a typo or an unshipped fix) despite the
-   `COPY` — confirm by grepping the running file.
+| mode | what it does | result |
+|---|---|---|
+| minimal | empty client capabilities (bare handshake) | documentSymbol **ok 0.18 s**, 106 symbols; ty sends nothing back |
+| rich | powernap's caps (`configuration`/`workDoneProgress`/`dynamicRegistration`) + answer ty's callbacks on a background reader | documentSymbol **ok 0.18 s**; ty sends **`workspace/configuration`** |
+| noconfig | same rich init, but leave `workspace/configuration` **unanswered** | documentSymbol **STILL PENDING after 20 s** |
 
-## Recheck / diagnostics (run in the running container)
+So: `ty` is fast (minimal, and rich-when-answered), and it **gates `documentSymbol` on the
+`workspace/configuration` reply** (noconfig hangs). The background-reader in "rich" is exactly what
+`AsyncHandler` gives; it works. Crush does not have it:
 
-```
-grep -n -A1 'lsp add python' ~/.config/crush/crushrc         # does the running line match source verbatim?
-crush logs 2>&1 | grep -iE 'python|unknown flag|lsp|parse|ty ' | tail -40   # the real registration/parse error
-command -v ty && ty --version && ty server --help 2>&1 | head -3            # is `ty server` valid?
-```
-Cleared when the logs/greps identify why `lsp add python` doesn't register; then fix (likely a
-one-line crushrc change — coordinate with the sibling root-marker task if both touch the
-crushrc) and confirm Python appears in the sidebar and `lsp_symbols` works on `base.py`.
+- Powernap advertises `configuration: true` (`powernap/pkg/lsp/client.go:641-778`), so ty asks.
+- Powernap builds the connection **without `AsyncHandler`** (`powernap/pkg/transport/connection.go:50-55`),
+  so the sole `jsonrpc2` reader goroutine both dispatches ty's `workspace/configuration` request
+  (running the handler + writing the reply, `sourcegraph/jsonrpc2` `HandlerWithError`) **and** must
+  deliver the pending `documentSymbol` response — it cannot reliably do both.
+- The documentSymbol request is wrapped in a **hardcoded 5 s** deadline (`crush
+  internal/lsp/client.go:725`); when the response isn't delivered in time it returns
+  `context deadline exceeded` (surfaced by `internal/agent/tools/lsp_symbols.go:38-40`).
+- Aggravator: Crush's `workspace/configuration` handler returns a **fixed length-1 array regardless of
+  requested count** (`internal/lsp/handlers.go:14-16`) — an LSP violation.
+
+**Why no crushrc knob helps:** `--timeout N` sets only the 30 s *init* context
+(`manager.go:233`, `config.go:256`); the 5 s (and 10 s) per-request deadlines
+(`client.go:699-765`) are hardcoded.
+
+## Implemented (2026-09-13, staged — awaiting host build-verify)
+
+- **`client/patches/crush-lsp-router-notif.patch` — THE fix.** Routes on `req.Notif` instead of
+  `req.ID == (jsonrpc2.ID{})` in powernap `pkg/transport/router.go`, so ty's id-0
+  `workspace/configuration` is handled (returns `[{}]`) instead of getting `null`. Generated with
+  `diff` and verified with `git apply --check --unidiff-zero -p1` against a fresh copy → applies
+  cleanly.
+- **`client/patches/crush-lsp-async.patch` — defensive.** Wraps powernap's handler in
+  `jsonrpc2.AsyncHandler` (`connection.go:53`); prevents a latent single-reader-goroutine deadlock
+  but was NOT the cause of this timeout. Kept; also verified to apply cleanly.
+- **`client/entrypoint/03-build-crush.sh`** — applies both via `CRUSH_LSP_ASYNC` (default **1**,
+  mandatory bugfixes; set `=0` to skip). Not plumbed through the Makefile/Dockerfile on purpose, so a
+  bare build applies them too. A build-time self-check greps both patched files and **fails the build**
+  if either didn't land (`CRUSH_LSP_ROUTER_VERIFY` / `CRUSH_LSP_ASYNC_VERIFY: PRESENT`), so a
+  successful build proves both are compiled in.
+- **`client/entrypoint/crushrc`** — server renamed `python` → `ty` (dodges the `resolveServerName`
+  misfiling), `--filetypes py` unchanged.
+- **NOT shipped:** the `handlers.go` length-1 fix — `ty` requests exactly 1 config item, so Crush's
+  length-1 reply is already correct once the request is actually routed; defensive-only, left as a
+  follow-up.
+- **Cannot build-verify here:** the 22 GB client image only builds on the host. The prior build already
+  confirmed `CRUSH_LSP_ASYNC_VERIFY: PRESENT`; the next build must also show `CRUSH_LSP_ROUTER_VERIFY:
+  PRESENT`, then `lsp_symbols` should return symbols.
+
+## Fix
+
+1. **Primary (correct, server-agnostic): patch `powernap` to use `jsonrpc2.AsyncHandler`** at
+   `pkg/transport/connection.go:53` (available at the vendored `sourcegraph/jsonrpc2/async.go`). The
+   repo builds Crush from source and applies `client/patches/*.patch` in `03-build-crush.sh`, so add a
+   new patch there; powernap is vendored inside the crush build tree. Re-verify on every `CRUSH_TAG`
+   bump (like the other patches).
+2. **Secondary (defensive): fix `internal/lsp/handlers.go:14`** to return a `workspace/configuration`
+   array whose length matches the request's `items` count.
+3. **Cheap cleanup: rename the crushrc server `python` → `ty`** (`client/entrypoint/crushrc`) —
+   `resolveServerName` (`manager.go:322-332`) misfiles a server named `python` under the registry's
+   `tvm_ffi_navigator` (whose command is `python`); naming it `ty` resolves cleanly. Doesn't change the
+   spawned command, but avoids the misresolution.
+4. **Report upstream** to charmbracelet (powernap: no `AsyncHandler` + a server that gates on
+   `workspace/configuration` deadlocks; and the length-1 config reply). This is a genuine library bug.
+
+**Verification:** rebuild the client on the host (the 22 GB image can't build in the nested store),
+then in the running client `lsp_symbols` on `base.py` returns symbols; the probe's "rich" mode already
+proves the AsyncHandler behavior works.
+
+## Prior symptoms (history, superseded)
+
+- 2026-09-12, **minimal image**: sidebar showed `c/glsl/go/rust/sh` but not `python`; `lsp_symbols`
+  returned `no LSP client handles file`. Cause: the nested build installed no language servers (no
+  `ty`). Fixed by `tasks/decouple-full-toolchain-from-nested-podman.md` (client always full toolchain).
+- 2026-09-13, **init-timeout hypothesis**: once `ty` was installed, the error became `context deadline
+  exceeded`; first theory was a slow/hung `ty` init on the large tree, fixable by `--timeout`. The
+  experiments above **refuted** it — `ty` inits in 0.08 s and answers documentSymbol in <0.2 s.
 
 ## Open questions (for the maintainer)
 
-1. Paste the output of the three diagnostics above (especially `crush logs …`) so we can pinpoint
-   why `lsp add python` isn't registering while the other five servers are.
+1. Result of the host rebuild (`make -C client image` — the changed patch/script/crushrc invalidate
+   the build-layer cache; `podman builder prune -f` first if paranoid) + a live `lsp_symbols` on
+   `base.py`: does the `ty` server now return symbols (sidebar entry now named `ty`)? If yes, archive
+   this task; if it still times out, capture `crush logs` and reopen.
 
 ## Related
 
-- `tasks/lsp-add-root-markers-gate-startup.md` — the distinct latent gate bug (not this issue).
-- `tasks/reference/crush-lsp-integration.md` — how Crush consumes LSPs; §2 gate model.
+- `tasks/decouple-full-toolchain-from-nested-podman.md` — prerequisite (got `ty` installed); done.
+- `tasks/lsp-add-root-markers-gate-startup.md` — the distinct latent root-marker gate bug.
+- `tasks/reference/crush-lsp-integration.md` — how Crush consumes LSPs.
+- `tasks/adhoc/lsp-python-server-not-registering/ty_lsp_probe.py` — the reproducer for the three modes.

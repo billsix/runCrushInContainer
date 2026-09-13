@@ -1,0 +1,16 @@
+--- a/vendor/github.com/charmbracelet/x/powernap/pkg/transport/router.go
++++ b/vendor/github.com/charmbracelet/x/powernap/pkg/transport/router.go
+@@ -57,8 +57,11 @@
+ 	r.mu.RLock()
+ 	defer r.mu.RUnlock()
+ 
+-	// Check if it's a notification (no ID)
+-	if req.ID == (jsonrpc2.ID{}) {
++	// Check if it's a notification. Use req.Notif (jsonrpc2 sets it when the request has no
++	// "id"), NOT req.ID == zero: a real request whose id is numeric 0 has a zero-value ID and
++	// would be misrouted here as a notification — handler skipped, caller sent a null result.
++	// That is exactly what broke ty's workspace/configuration (id 0) -> null -> gated documentSymbol.
++	if req.Notif {
+ 		if handler, ok := r.notificationHandlers[req.Method]; ok {
+ 			handler(ctx, req.Method, *req.Params)
+ 		}

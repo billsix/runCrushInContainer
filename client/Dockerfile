@@ -7,26 +7,25 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
     echo "keepcache=True" >> /etc/dnf/dnf.conf && \
     dnf upgrade -y
 
-# The MINIMAL package set — ALWAYS installed (first, so it's a shared base layer): just
-# what's needed to build Crush from source, run it against the local model, run
-# `make vendor`, and host a runtime egress check (golang, git, ripgrep, strace, tcpdump …).
-# See entrypoint/00-install-minimal.sh and tasks/archive/2026/09/10/minimal-client-image.md.
+# Base packages — installed first: what's needed to build Crush from source, run it against
+# the local model, run `make vendor`, and host a runtime egress check (golang, git, ripgrep,
+# strace, tcpdump …). The full toolchain (01-install-base.sh) is layered on top below; both
+# always run, so the client is always the full dev image. See entrypoint/00-install-minimal.sh.
 COPY entrypoint/00-install-minimal.sh /usr/local/bin/
 RUN --mount=type=cache,target=/var/cache/libdnf5 \
     --mount=type=cache,target=/var/lib/dnf \
     /usr/local/bin/00-install-minimal.sh
 
 # The full runClaudeInContainer toolchain (~430 packages) — same host-runnable install
-# script, copied verbatim from the sibling repo. Gated behind FULL_TOOLCHAIN: it is a
-# SUPERSET of the minimal set above, so with FULL_TOOLCHAIN=1 the two RUNs together give
-# the batteries-included dev image; with =0 the image stays minimal (~2 GB) and fits the
-# dev sandbox's nested-podman store for in-sandbox verification. The minimal set already
-# provides the Go toolchain + git that build Crush below, so the build works either way.
-ARG FULL_TOOLCHAIN=0
+# script, copied verbatim from the sibling repo. ALWAYS installed (a superset of the base
+# above), so the client is always the batteries-included dev image with the language servers
+# the crushrc declares. Formerly gated behind FULL_TOOLCHAIN (auto-minimal when nested), which
+# silently produced a language-server-less image on `make shell NESTED_PODMAN=1`; the gate was
+# removed 2026-09-12 — see tasks/reference/nested-podman-vs-image-content.md.
 COPY entrypoint/01-install-base.sh /usr/local/bin/
 RUN --mount=type=cache,target=/var/cache/libdnf5 \
     --mount=type=cache,target=/var/lib/dnf \
-    if [ "$FULL_TOOLCHAIN" = "1" ]; then /usr/local/bin/01-install-base.sh; fi
+    /usr/local/bin/01-install-base.sh
 
 # --- RHEL 9 variant (UBI 9 / CentOS Stream 9 base): the Python language server from a /venv ---
 # Kept COMMENTED OUT on purpose: this image is Fedora, where `ty` comes from dnf (01-install-base.sh)
@@ -65,8 +64,7 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
 # inject into EVERY container it runs. That path is empty on Fedora and the mount fails under the
 # nested/label-disabled setup, so every INNER `podman run` prints a harmless "Failed to mount
 # subscriptions" WARN and skips it. Emptying the file removes the noise (we do no subscription builds).
-# Guarded: the file only exists when containers-common is present (the full toolchain, which pulls
-# podman). The minimal image (FULL_TOOLCHAIN=0) has neither the file nor a nested-podman use case.
+# Guarded: the file only exists when containers-common is present (pulled by the toolchain).
 RUN if [ -e /usr/share/containers/mounts.conf ]; then : > /usr/share/containers/mounts.conf; fi
 
 # Build Crush from source at a pinned tag, at IMAGE-BUILD time (self-contained image: the

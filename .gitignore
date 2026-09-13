@@ -21,3 +21,7 @@ client/vendor/
 
 # image-export artifacts (large; never commit)
 client/crushcontainer-*.tar
+
+# ad-hoc build-log capture for diagnosis (not tracked)
+lspbuild.log
+lsplog.txt

@@ -12,7 +12,7 @@ Crush connected to the local model), leaving only the observation that no traffi
 confirm **no** connection to `data.charm.land` or `api.github.com` while the model still answers.
 Cleared = zero egress to those two hosts. Overlaps `tasks/decide-egress-verification.md` (which
 decides whether a standing check is wanted at all — resolving that may clear or absorb this gate);
-the minimal image (`tasks/archive/2026/09/10/minimal-client-image.md`, done — nested `make image` builds it by default) makes the watch runnable in-sandbox.
+the sandbox-buildable minimal image that once made this watch runnable in-sandbox was **removed 2026-09-12** (`tasks/reference/nested-podman-vs-image-content.md`); the full client image (~22 GB) won't build in the nested store, so run the egress watch on the host (or build a purpose-built lean egress image).
 
 ## Goal
 
