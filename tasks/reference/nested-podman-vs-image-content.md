@@ -5,8 +5,8 @@
 runCrushInContainer client, and the parallel principle for runClaudeInContainer. Written
 2026-09-12 (William Emerison Six <billsix@gmail.com>) after a long diagnosis of "the crush
 client has no language servers." Companion tasks:
-`tasks/decouple-full-toolchain-from-nested-podman.md` (this repo, the implementation) and
-runClaudeInContainer `tasks/scope-lean-image-to-downstream-not-sandboxes.md` (the fleet
+`tasks/archive/2026/09/13/decouple-full-toolchain-from-nested-podman.md` (this repo, the implementation) and
+runClaudeInContainer `tasks/archive/2026/09/13/scope-lean-image-to-downstream-not-sandboxes.md` (the fleet
 rescope). Supersedes the framing in `tasks/reference/architecture.md` §"Two sizes" and
 `CLAUDE.md` "Nested = the minimal image, automatically", both of which this decision makes
 stale.
@@ -96,7 +96,7 @@ The symptom chain, for the record: `make shell NESTED_PODMAN=1` (host) → minim
 baked crushrc still `lsp add`s six servers whose binaries aren't installed → every LSP tool
 returns `no LSP client handles file`, `command -v ty` empty, and the sidebar shows the
 configured servers stuck `unstarted`. (Two *other*, independent LSP bugs surfaced alongside
-and are tracked separately: `tasks/lsp-python-server-not-registering.md` and
+and are tracked separately: `tasks/archive/2026/09/13/lsp-python-server-not-registering.md` and
 `tasks/lsp-add-root-markers-gate-startup.md` — those bite even a correct full image.)
 
 ## 4. The new design

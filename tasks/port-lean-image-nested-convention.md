@@ -17,7 +17,7 @@ umbrella adds to the original: every optional-feature build flag defaults lean w
 `FLAG=1` overrides, new projects start that way — **for downstream container-per-project repos ONLY,
 never the two sandboxes themselves** (the sandboxes are host-built and merely launched nested;
 decoupled 2026-09-12, see `tasks/reference/nested-podman-vs-image-content.md` and runClaudeInContainer
-`tasks/scope-lean-image-to-downstream-not-sandboxes.md`). Done = the paragraph (carrying that scope
+`tasks/archive/2026/09/13/scope-lean-image-to-downstream-not-sandboxes.md`). Done = the paragraph (carrying that scope
 boundary) is in the ported file, and `make image` bakes it.
 
 ## Context — read first

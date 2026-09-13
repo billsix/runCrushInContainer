@@ -69,17 +69,18 @@ misclassified as a notification, Crush's registered `HandleWorkspaceConfiguratio
 a `null` result is returned. ty rejects `null` ("expected a sequence"), never configures, and the
 `documentSymbol` request dies at Crush's hardcoded 5 s (`internal/lsp/client.go:725`). No crushrc knob
 helps (`--timeout` is only the 30 s init, `manager.go:233`). The reproducer
-`tasks/adhoc/lsp-python-server-not-registering/ty_lsp_probe.py` shows ty is fast when the reply is sent
+`tools/ty_lsp_probe.py` shows ty is fast when the reply is sent
 with the correct id, and hangs when it isn't.
 
-**Fix (shipped 2026-09-13):** `client/patches/crush-lsp-router-notif.patch` routes on `req.Notif` (the
+**Fix (shipped & verified working 2026-09-13 — `lsp_symbols` returns the full symbol table for a
+`.py` file on the maintainer's host image):** `client/patches/crush-lsp-router-notif.patch` routes on `req.Notif` (the
 jsonrpc2 field, set only for real notifications) instead of `req.ID == zero`. A second, *defensive*
 patch `crush-lsp-async.patch` wraps the handler in `jsonrpc2.AsyncHandler` (prevents a latent
 single-reader-goroutine deadlock; not the cause here). Both are applied by `03-build-crush.sh` under
 `CRUSH_LSP_ASYNC` (default on) with a build-time self-check that fails if either doesn't land. Also:
 `resolveServerName` (`manager.go:322`) misfiles a user server named `python` under the registry's
 `tvm_ffi_navigator` (command `python`), so the crushrc declares the Python server as **`ty`**, not
-`python`. Full record: `tasks/lsp-python-server-not-registering.md`. Both powernap bugs are worth
+`python`. Full record: `tasks/archive/2026/09/13/lsp-python-server-not-registering.md`. Both powernap bugs are worth
 reporting upstream to charmbracelet.
 
 ## 4. What the image ships — six dnf servers, declared explicitly (measured 2026-09-10)

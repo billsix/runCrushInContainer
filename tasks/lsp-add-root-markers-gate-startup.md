@@ -27,7 +27,7 @@ the vendored Crush turned up the root-marker gate below. **Scope note — this i
 robustness bug, NOT the cause of the Python failure the maintainer actually hit.** That failure
 (Python absent from the LSP sidebar even when crush is rooted at a project that HAS
 `pyproject.toml`/`setup.py`/`.git`) is a distinct `lsp add python` *registration* problem,
-tracked separately in `tasks/lsp-python-server-not-registering.md`. Two earlier read-outs in
+tracked separately in `tasks/archive/2026/09/13/lsp-python-server-not-registering.md`. Two earlier read-outs in
 this diagnosis were mistaken and are corrected here: (1) `grep -c 'lsp add'` returning **9** is
 **not** a stale-image tell — the count includes ~3 comment lines that mention "lsp add"; the
 current source crushrc also greps to 9 (6 real `lsp add` commands + 3 comment mentions), so it
@@ -99,6 +99,6 @@ dir) — harmless (it just runs rooted at `/work`).
 
 - `tasks/reference/crush-lsp-integration.md` (the doc being corrected — its §2/§5 "lsp add
   bypasses the root-marker check" claim is wrong).
-- `tasks/lsp-python-server-not-registering.md` — the **distinct**, currently-live issue (Python
+- `tasks/archive/2026/09/13/lsp-python-server-not-registering.md` — the **distinct**, currently-live issue (Python
   `lsp add` line not registering at all). This root-marker fix does not address that; if the
   Python diagnosis lands on a crushrc edit, coordinate the two edits (same file).
