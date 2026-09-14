@@ -1,7 +1,8 @@
 # Investigate first-query context bloat on geometricalgebra (~48K tokens)
 
-**Status:** in progress — instrumentation built (2026-09-13), awaiting the maintainer's
-`CRUSH_CONTEXT_DEBUG=1` build + run so the agent can read the log.
+**Status:** Done (diagnosed 2026-09-13) — the ~48K is attributed; two oversized context files are
+84% of the system prompt. Trim is the follow-up `tasks/trim-crush-context-files.md`. Ready to
+archive in its own commit after the work commit lands.
 **Priority:** 3
 **Difficulty:** 3
 
@@ -74,6 +75,41 @@ Decided 2026-09-13. It fits cleanly and is the right tool:
   header doc), `client/Dockerfile` (`ARG CRUSH_CONTEXT_DEBUG=0` + RUN env passthrough),
   `client/Makefile` (`CRUSH_CONTEXT_DEBUG ?= 0` + `--build-arg`). Verified `make -n image` emits
   `--build-arg CRUSH_CONTEXT_DEBUG=0` by default and `=1` when overridden.
+
+## Findings (measured 2026-09-13, `CRUSH_CONTEXT_DEBUG=1` run against geometricalgebra)
+
+The CTXDBG log (`/foo/opt/geometricalgebra/.crush/logs/crush.log`) attributed the first-turn
+context. The **coder** agent's assembled system prompt was **158,955 B ≈ 39,739 tok**, of which:
+
+| Source | Bytes | ~Tok | % of system prompt |
+|---|---|---|---|
+| project `/foo/opt/geometricalgebra/CLAUDE.md` | 74,732 | 18,683 | 47% |
+| global `/root/.config/crush/CLAUDE.md` (27 KB baked conventions **+ 32 KB personal overlay `@`-imported**) | 59,146 | 14,787 | 37% |
+| base `coder` template (derived: total − the rest) | ~21,300 | ~5,315 | 13% |
+| git-status | 2,599 | 650 | 1.6% |
+| skills-xml | 1,214 | 304 | 0.8% |
+
+The maintainer's ~48K first turn ≈ **39.7K system prompt + ~8K fixed tool schemas + the message**.
+Conclusions:
+
+- **The bloat is two context files — 33,470 tok, 84% of the system prompt.** Stage 2 (tools/messages)
+  was not needed: the system prompt alone accounts for the bulk, and the ~8K remainder is fixed,
+  project-independent tool-schema overhead, not the complaint.
+- **`@`-import is not runaway recursion.** It splices exactly one file — the 32 KB personal overlay —
+  into the global CLAUDE.md: `27,116 + 32,080 − 50 (the @line) = 59,146`, matching the logged size
+  byte-for-byte. So the personal overlay costs ~8K tok every session by being `@`-imported into the
+  always-loaded global file.
+- **Not LSP, not skills.** skills-xml is 304 tok; git-status 650; both negligible.
+- The `task` sub-agent's prompt is 943 B (236 tok) — no context files spliced; irrelevant to the
+  first-turn cost.
+
+**Recommended trim (spawned as `tasks/trim-crush-context-files.md`, proposed):**
+1. **Biggest lever — shrink geometricalgebra's `/work/CLAUDE.md` (18.7K tok).** 75 KB in an
+   always-loaded file is the exact anti-pattern the maintainer's own conventions warn against (keep
+   CLAUDE.md lean; push detail into `tasks/reference/`). Halving it saves ~9K tok every turn.
+2. **Second — the global context (14.8K tok).** The 32 KB personal overlay (~8K tok) is `@`-imported
+   into every session; trimming it, or not `@`-importing the whole of it, is a cross-project win.
+   (Judgment call — it's the maintainer's conventions body; recorded as an option, not a directive.)
 
 ## Debugging strategy (instrumentation-driven, staged)
 

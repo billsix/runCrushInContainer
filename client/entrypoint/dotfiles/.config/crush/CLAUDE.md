@@ -247,6 +247,10 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
 
 ## Code conventions
 
+- **Python: follow the shared coding standard** — ruff-enforced tiers plus the judgment calls ruff
+  can't check (naming, expression/mutation rules, annotate-generously, idioms). Read on demand:
+  `~/.config/crush/reference/python-coding-standard.md`. A project keeps only its own repo-specific
+  Python invariants inline in its `CLAUDE.md`; everything general lives in that shared doc.
 - **An externally-defined name wins over house style** — a framework override, protocol member,
   callback signature, wire-format field, env var, or CLI flag someone else specifies must match
   exactly. A linter flagging it is wrong; suppress narrowly with a reason at the site.

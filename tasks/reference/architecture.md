@@ -19,6 +19,12 @@ SSH tunnel:
 [CONTAINER]  crush → http://127.0.0.1:8080 | :8081  (podman run --network=host)
 ```
 
+**Not a template for the codebases you build with it.** It *is* a template for the assistant-runner
+itself (model, quant, and pinned tool versions are Makefile variables a fork can swap); the codebases
+you build *with* it follow the container-per-project conventions the agent is taught, which live in the
+personal overlay (`ai-coding-conventions.personal.md`), not in this repo. This repo happens to follow those same conventions
+for its own `client/` image, but that's incidental to its purpose.
+
 ## Server (`server/`, macOS-native — NOT containerized)
 
 - **llama.cpp pinned** via `LLAMACPP_TAG` (`server/Makefile`). Muse Glimmer support landed in
@@ -306,5 +312,49 @@ MODEL=gemma`, and the Gemma 4 `pull` were exercised (work record `tasks/archive/
 The task/stack/personal-overlay conventions machinery from runClaudeInContainer **is now ported** (a
 lean, always-loaded `CLAUDE.md` at `~/.config/crush/CLAUDE.md` via a `global-context-path` in `crushrc`,
 plus the diversion stack, personal overlay, slash commands, and nested podman) — see
-`tasks/port-runclaude-conventions-systems.md` and the root `CLAUDE.md` "What's in use". No auth
+`tasks/port-runclaude-conventions-systems.md`. No auth
 plumbing is needed (the endpoint is a local, keyless llama-server behind SSH).
+
+### Ported machinery inventory (detail, moved from the root `CLAUDE.md` 2026-09-13)
+
+The full working-method machinery is **ported and in use** (Phases 0–4, 2026-08-21 —
+`tasks/port-runclaude-conventions-systems.md`):
+
+- **task-doc + reference-doc systems** (`tasks/`, `tasks/archive/<YYYY>/<MM>/<DD>/`, `tasks/reference/`);
+- **cross-project conventions** — a lean, always-loaded `CLAUDE.md` baked at `~/.config/crush/CLAUDE.md`
+  and registered as a `global-context-path` in `crushrc` (the reference docs + personal overlay pulled
+  in via the `@`-import patch);
+- **diversion stack** — in-session only at `~/.config/crush/stack.md` (on the `--rm` overlay; the
+  session-end sweep folds still-open items into the task docs — decided 2026-09-03);
+- **personal-overlay layering** — the everyday per-user customization path: the baked always-loaded
+  `CLAUDE.md` (`~/.config/crush/CLAUDE.md`) `@`-imports `~/.config/crush/ai-coding-conventions.personal.md`
+  (blank tracked default), over which `make shell` mounts the host's `~/.ai-coding-conventions.personal.md`
+  (auto-`touch`ed if absent). **Filling in that one host file is how a user adds their own identity /
+  project→URL mapping / mount layout / instructions** without editing anything tracked; the agent loads
+  it every session and the tracked conventions stay maintainer-agnostic. Example to copy:
+  `client/entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md`; see `FORKING.md`;
+- **8 slash commands** (`/new-task`, `/new-reference`, `/new-reference-set`, `/archive-task`,
+  `/stack-*` — in Crush's `/` dialog under the **User** tab);
+- **nested-podman** (`make shell NESTED_PODMAN=1`; inner runs: `--network=host` needed at this depth, and the cgroups flag auto-applies via the PODMAN_RUN_FLAGS convention — see `tasks/reference/nested-podman-design.md`);
+- **`make shell-exec`** (`client/Makefile`) — the batch twin of `make shell`: `make shell-exec
+  SCRIPT=<path under the mounted PROJECT at /work> | CMD='...'` runs a script/command in the same
+  container env and exits (no TTY) — for ad-hoc/CI use. `shell` + `shell-exec` share one
+  `SHELL_RUN_FLAGS` variable so they can't drift; `client/entrypoint/shell.sh` ends `set -e … exec
+  bash "$@"`. Cross-project fan-out + design: `github.com/billsix/runClaudeInContainer`
+  `tasks/add-shell-exec-target.md` and `.../fan-out-shell-exec-to-projects.md`. The general template
+  contract for this lives in the personal overlay (`ai-coding-conventions.personal.md`), not here.
+- **fourteen local Crush patches** (`client/patches/`), each behind its own defaulted build flag — the
+  two FEATURE patches (`crush-at-import.patch` / `CRUSH_AT_IMPORT ?= 1`, and `crush-shell-history.patch`
+  / `CRUSH_SHELL_HISTORY ?= 1`, see `tasks/reference/crush-prompt-history.md`) plus twelve `PATCH_OUT_<X>`
+  egress patches. Full detail: "The egress patch/flag system" above and
+  `tasks/reference/dependency-network-audit.md` §5.
+- **no telemetry / no phone-home** — see "No telemetry / no phone-home" above; the audit of the **213
+  vendored Go deps** is DONE (2026-08-29, `tasks/reference/dependency-network-audit.md`; triage scanner
+  `tools/triage_dependency_egress.py` + patch sweep `tools/sweep_egress_patch_combos.sh`, both re-run on
+  every `CRUSH_TAG` bump). The invariant either way: **local/loopback to the model (`127.0.0.1:8080`) is
+  essential — only external egress is ever a target.**
+
+**Deliberately NOT ported:** auth plumbing (local keyless llama-server behind SSH — nothing to sign
+into), interactive GUI/Wayland + gamepad passthrough (headless Xvfb still works), and a dedicated
+`crush-config-layering.md` (optional — covered by `architecture.md` + `crush-capabilities.md`). Fork
+guidance is in `FORKING.md`.

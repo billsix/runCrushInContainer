@@ -96,6 +96,13 @@ v0.89.0-specific (several absent features are on Crush's in-repo `docs/*/FUTURE.
 - Env expansion: native in crushrc (Bash); selected string fields expanded in JSON. `$CRUSH_VERSION`
   exposed for version-gating.
 - Per-project data dir `.crush/` holds `crush.db` (SQLite) and machine state.
+- **The crushrc is executed Bash — treat edits as code (2026-09-10).** A broken crushrc means Crush
+  refuses to start (`Failed to load config … unknown flag …`), and each `lsp add` flag takes ONE value
+  per occurrence (`--filetypes a --filetypes b`, never `--filetypes a b` — see
+  `crush-lsp-integration.md` §4). Cheap gate before a `make image`: build the vendored tree
+  (`cd client/vendor/crush && GOPROXY=off go build -mod=vendor -o /tmp/crush .`) and run `crush models`
+  with the edited file at `$HOME/.config/crush/crushrc` — a parse error shows there. Origin:
+  `tasks/crushrc-startup-failure-and-model-preselect.md`.
 
 ## Other features (relevant to the port)
 

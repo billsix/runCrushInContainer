@@ -49,21 +49,34 @@ overlay, mounted unconditionally); geometricalgebra's `/work/CLAUDE.md` has no `
 same file registered twice is loaded once; distinct files that only differ in case collapse (a
 footgun on case-sensitive filesystems, not a bloat source here).
 
-### Measured sizes (2026-09-13, via `ApproxTokenCount`, unconfirmed until logged)
+### Measured sizes — CONFIRMED by the CTXDBG log (2026-09-13, geometricalgebra run)
 
 `skills.ApproxTokenCount(s) = (len(s)+3)/4` — the ~4-chars/token heuristic Crush itself uses "well
-enough for diagnostic logging" (`skills/skills.go:382`). Byte sizes are exact; token figures are
-that estimate:
+enough for diagnostic logging" (`skills/skills.go:382`). The `CRUSH_CONTEXT_DEBUG=1` run confirmed
+the whole first-turn cost. The **coder** agent's assembled system prompt was **158,955 B ≈ 39,739
+tok**:
 
-- geometricalgebra `/work/CLAUDE.md`: **74,732 B ≈ 18.7K tok** (no `@`-imports; loaded verbatim).
-- client baked global `CLAUDE.md`: **27,116 B ≈ 6.8K tok**, which `@`-imports —
-- host `ai-coding-conventions.personal.md`: **32,080 B ≈ 8.0K tok** (spliced into the global file).
+| Source | Bytes | ~Tok | % of system prompt |
+|---|---|---|---|
+| project `/work/CLAUDE.md` (geometricalgebra) | 74,732 | 18,683 | 47% |
+| global `/root/.config/crush/CLAUDE.md` (27 KB baked conventions **+ 32 KB personal overlay `@`-imported in**) | 59,146 | 14,787 | 37% |
+| base `coder` template (derived) | ~21,300 | ~5,315 | 13% |
+| git-status | 2,599 | 650 | 1.6% |
+| skills-xml | 1,214 | 304 | 0.8% |
 
-Those three total ~34 KB… no — ~134 KB ≈ **~33.5K tokens** of context files alone, before the base
-template, skills XML, tool schemas, and messages. That already plausibly reaches the observed ~48K,
-which is why the instrumentation measures rather than assumes. **Do not treat this table as the
-answer** — it is the hypothesis the CTXDBG log confirms or refutes (there may be a configured
-directory context-path being walked, a large skills XML, or a surprise).
+Findings that generalize:
+
+- **Two context files are 84% of the system prompt** (33,470 tok). The observed ~48K first turn is
+  that ~39.7K system prompt plus ~8K of fixed, project-independent tool schemas + the message — so
+  Stage 2 was unnecessary here.
+- **`@`-import is not runaway recursion.** The global file's logged 59,146 B is exactly `27,116 (baked)
+  + 32,080 (personal overlay) − 50 (the replaced @line)`, so `@`-import splices in **one** big file,
+  the personal overlay (~8K tok every session). Byte-exact confirmation of the mechanism.
+- **Not LSP, not skills** (304 tok skills XML). The `task` sub-agent's prompt is 943 B — no context
+  files spliced.
+- The always-loaded CLAUDE.md files being the entire problem is the lesson: an oversized project or
+  global CLAUDE.md is paid on **every** turn. Trim record:
+  `tasks/trim-crush-context-files.md`, work record `tasks/investigate-context-bloat-geometricalgebra.md`.
 
 ## L2 — the authoritative total, and where the gap is
 
