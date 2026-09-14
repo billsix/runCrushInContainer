@@ -251,6 +251,14 @@ The first cut was just "get it running"; the client has since grown a few things
   entries stop shuffling, and **`ctrl+r` opens a reverse search** — except while an attachment is
   pending, where `ctrl+r` remains Crush's attachment-delete prefix. How it all works:
   `tasks/reference/crush-prompt-history.md`.
+- **Context-usage debugging** (`client/patches/crush-context-debug.patch`, **off by default** —
+  build with `make image CRUSH_CONTEXT_DEBUG=1`): instruments Crush's system-prompt assembly to log
+  a per-source token/byte breakdown (every context file `@`-expanded, the skills XML, git status, and
+  the total) at Info level to `<data-dir>/logs/crush.log` (i.e. the mounted project's
+  `.crush/logs/crush.log`). Run against a project, then `grep CTXDBG .crush/logs/crush.log` to see
+  what fills the first-turn context. The patch stays in the tree but is not applied in shipped images
+  (`CRUSH_CONTEXT_DEBUG ?= 0`). How it works + the measurement method:
+  `tasks/reference/crush-context-assembly.md`.
 - **Only the two local models are offered** — the baked `crushrc` pins Muse Glimmer (`8080`) and
   Gemma 4 (`8081`) explicitly and sets `option default-providers false` to suppress Crush's built-in
   provider catalog.

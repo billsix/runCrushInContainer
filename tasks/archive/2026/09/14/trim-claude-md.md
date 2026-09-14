@@ -1,6 +1,6 @@
 # Trim runCrushInContainer's root CLAUDE.md (23,580 B ≈ 5.9K tok, loaded every session)
 
-**Status:** Done — trimmed 2026-09-13 (pending archive after the work commit)
+**Status:** Done — trimmed 2026-09-13 (archived 2026-09-14)
 **Priority:** 4
 **Difficulty:** 3
 

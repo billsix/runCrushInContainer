@@ -1,55 +1,93 @@
-# Trim the always-loaded Crush context files (~33K tok/turn on geometricalgebra)
+# Trim the always-loaded conventions layer (Lever 2 — global, every-session context)
 
-**Status:** proposed — needs go-ahead
+**Status:** in progress. **Lever 1 (per-project `CLAUDE.md` trims) is DONE** across every repo
+(2026-09-13/14, archived `trim-claude-md.md` in each). **Decision 2 DONE (2026-09-14):** the five
+`@`-imported reference docs were demoted to triggered read-on-demand pointers in runClaude's mounted
+conventions (~18.5K tok/session removed; stale `@`-import claims fixed in root `CLAUDE.md`/`README`/
+`claude-config-layering.md`; Crush already did this). **Still open: decision 1** (condense the 133 KB
+conventions body) **and decision 3** (personal overlay — the maintainer is holding off).
+
 **Priority:** 3
-**Difficulty:** 3
+**Difficulty:** 4
 
 ## BLUF
 
-The context-bloat investigation (`tasks/investigate-context-bloat-geometricalgebra.md`) measured that
-**two always-loaded context files are 84% (~33.5K tok) of Crush's first-turn system prompt** on
-geometricalgebra: the project's own `/work/CLAUDE.md` (18.7K tok) and the global
-`/root/.config/crush/CLAUDE.md` (14.8K tok, of which ~8K is the personal overlay `@`-imported in).
-Because a CLAUDE.md is spliced into the system prompt on **every** turn, trimming these cuts context
-cost for the whole session, every session. This task is the trim; it needs a go-ahead and a decision
-on how far to cut each file.
+Per-project `CLAUDE.md` files are now trimmed everywhere (Lever 1). Lever 2 is the **always-loaded
+conventions layer** — the cross-project conventions + `@`-imported reference docs + the personal
+overlay, paid on *every* turn of *every* session. Measuring both sandboxes (2026-09-14) shows this
+bloat is **almost entirely runClaudeInContainer, not the Crush client** — the Crush port is already
+lean. So Lever 2 is mostly a runClaude job plus the shared overlay, and it is **not a mechanical trim
+like Lever 1**: it partly reverses the maintainer's deliberate "auto-load conventions so they're never
+skipped" design, so it needs explicit decisions before any edit.
 
-## Context — read first
+## The always-loaded set, measured (2026-09-14)
 
-- `tasks/investigate-context-bloat-geometricalgebra.md` — the diagnosis (measured breakdown table).
-- `tasks/reference/crush-context-assembly.md` — how Crush assembles the system prompt; how to
-  re-measure with `CRUSH_CONTEXT_DEBUG=1` and read the CTXDBG log.
-- The maintainer's own convention (mounted `CLAUDE.md` → "A project's README is commands-forward"
-  and the task/reference-doc split): **CLAUDE.md stays lean; detail goes to `tasks/reference/`.** A
-  75 KB project CLAUDE.md is the anti-pattern that convention exists to prevent.
+**runClaudeInContainer — mounted every Claude Code session (`~/.claude/`):**
 
-## The two levers (measured)
+| Piece | Size | ~Tok |
+|---|---|---|
+| conventions `CLAUDE.md` (`entrypoint/dotfiles/.claude/CLAUDE.md`) | 133,501 B | ~33.4K |
+| `@`-import `llm-overused-phrases.md` | 29,341 B | ~7.3K |
+| `@`-import `nested-podman-design.md` | 15,741 B | ~3.9K |
+| `@`-import `claude-config-layering.md` | 12,695 B | ~3.2K |
+| `@`-import `print-debugging.md` | 8,721 B | ~2.2K |
+| `@`-import `sandbox-capability-map.md` | 7,203 B | ~1.8K |
+| `@`-import personal overlay (host file) | 32,080 B | ~8.0K |
+| **total** | **~239 KB** | **~60K/session** |
 
-1. **geometricalgebra `/work/CLAUDE.md` — 74,732 B ≈ 18,683 tok (47% of the system prompt).** Biggest
-   win, and it's this project's own file — trimming it does not touch the shared conventions. Push its
-   detail into `geometricalgebra/tasks/reference/` and leave a lean CLAUDE.md that points there.
-   **Note:** geometricalgebra is a separate repo (`github.com/billsix/geometricalgebra`); this edit
-   happens there, not in runCrushInContainer. Halving it saves ~9K tok/turn.
-2. **Global `/root/.config/crush/CLAUDE.md` — 59,146 B ≈ 14,787 tok (37%).** = 27 KB baked
-   cross-project conventions + 32 KB personal overlay pulled in by the `@`-import. Options: trim the
-   baked conventions body; and/or stop `@`-importing the *entire* personal overlay into the
-   always-loaded file (e.g. split the overlay so only the essential part is always-loaded). This is a
-   cross-project change (affects every Crush session), so it needs an explicit decision.
+**runCrushInContainer — baked into the client, every Crush session (`~/.config/crush/`):**
 
-## Open questions (for the maintainer)
+| Piece | Size | ~Tok |
+|---|---|---|
+| baked conventions `CLAUDE.md` (the condensed port) | 27,505 B | ~6.9K |
+| `@`-import personal overlay (host file) | 32,080 B | ~8.0K |
+| **total** | **~60 KB** | **~15K/session** |
 
-1. **Scope — which lever(s) to pull?** Recommend **(a) geometricalgebra's `/work/CLAUDE.md` first**
-   (biggest, self-contained, no shared-conventions risk); optionally **(b) also the global/overlay**
-   as a second pass. Or (c) both now. Which?
-2. **How lean for the project CLAUDE.md?** A target helps — e.g. "≤ ~20 KB, push the rest to
-   `tasks/reference/`". What budget do you want?
+The Crush client is **already lean**: the port condensed the conventions to 27.5 KB (vs runClaude's
+133.5 KB for the same rules) and made the reference docs **read-on-demand** (on disk at
+`~/.config/crush/reference/`, not `@`-imported). So the client's only Lever-2 item is the shared
+32 KB overlay. **The ~45K-tok/session excess lives in runClaude.**
+
+## The design tension (why this is not a free win)
+
+runClaude's size is **deliberate**: its own conventions state the `@`-imports exist so the content is
+"loaded by the harness, not by my choosing" — the fix for "CLAUDE.md tells me to read X but I skip
+it." Trimming Lever 2 trades that never-skipped guarantee for context savings. The Crush port already
+chose the opposite (lean + read-on-demand). So Lever 2 = **bring runClaude toward the Crush model**,
+which reverses a stated design choice — the maintainer's call, not a discretionary bulk edit. The
+personal overlay is additionally a **host file** (personal content), so how to split it is the
+maintainer's too.
+
+## Decisions needed (each with a recommendation)
+
+1. **runClaude conventions `CLAUDE.md` (133.5 KB → ?).** The Crush port proves the same rules fit in
+   ~27.5 KB. Recommend **(a) condense toward the port's density** — keep every *rule* inline, move
+   worked-examples/rationale/history to read-on-demand reference docs — saving ~25K tok/session.
+   Alt: (b) leave as-is (you want the full detail always in front of the agent).
+2. **✓ DONE 2026-09-14 — the maintainer chose (a): demote ALL five with triggered pointers.** All
+   five are now referenced read-on-demand at task triggers in runClaude's mounted conventions
+   (`llm-overused-phrases`'s distilled list stays inline); ~18.5K tok/session removed. *(Original
+   options, for the record:)* **The 5 `@`-imported reference docs (~73.7 KB / ~18K tok, runClaude only).** Recommend **(c) split**:
+   keep the always-relevant `llm-overused-phrases.md` `@`-imported; demote the situational ones
+   (`nested-podman-design`, `sandbox-capability-map`, `print-debugging`, `claude-config-layering`) to
+   read-on-demand (matching Crush), pointed at from the conventions. Alt: (a) demote all (max saving,
+   most reversal of the design) or (b) keep all auto-loaded.
+3. **Personal overlay (32 KB / ~8K tok, both sandboxes — a host file).** Recommend **(a) split**:
+   essentials (identity, project→URL map, standing authorizations) stay always-loaded; the long
+   project-template/spec detail → a read-on-demand personal reference doc. You'd steer what counts as
+   essential since it's your content. Alt: (b) leave as-is.
+
+The Crush baked conventions need no trim (already condensed); only the overlay decision (#3) touches
+the client side.
 
 ## Verification
 
-- Re-run `CRUSH_CONTEXT_DEBUG=1` against geometricalgebra and confirm the CTXDBG `context-files-total`
-  and `system-prompt-total` dropped by the expected amount; report before/after.
+- After edits, re-run each sandbox and confirm the always-loaded token count dropped as expected
+  (Crush: `CRUSH_CONTEXT_DEBUG=1` + `grep CTXDBG .crush/logs/crush.log`; runClaude: compare the
+  mounted-file sizes / the session's reported context).
 
 ## Related
 
-- `tasks/investigate-context-bloat-geometricalgebra.md` — the diagnosis this implements.
-- `tasks/reference/crush-context-assembly.md` — mechanism + the re-measure procedure.
+- `tasks/investigate-context-bloat-geometricalgebra.md` (archived) — the diagnosis + method.
+- `tasks/reference/crush-context-assembly.md` — how the system prompt is assembled; the re-measure procedure.
+- Lever 1 work records: `tasks/archive/2026/09/{13,14}/trim-claude-md.md` (this repo) and the same in every project repo.
