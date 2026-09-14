@@ -1,14 +1,16 @@
 # Trim the always-loaded conventions layer (Lever 2 — global, every-session context)
 
-**Status:** in progress. **Lever 1 (per-project `CLAUDE.md` trims) is DONE** across every repo
-(2026-09-13/14, archived `trim-claude-md.md` in each). **Decision 2 DONE (2026-09-14):** the five
-`@`-imported reference docs were demoted to triggered read-on-demand pointers in runClaude's mounted
-conventions (~18.5K tok/session removed; stale `@`-import claims fixed in root `CLAUDE.md`/`README`/
-`claude-config-layering.md`; Crush already did this). **Still open: decision 1** (condense the 133 KB
-conventions body) **and decision 3** (personal overlay — the maintainer is holding off).
+**Status:** parked — only the overlay split (decision 3) remains, **deferred by the maintainer
+(2026-09-14)**. Done so far: **Lever 1** (per-project `CLAUDE.md` trims) across every repo
+(2026-09-13/14). **Decision 2** (2026-09-14) — the five `@`-imported reference docs demoted to
+triggered read-on-demand pointers in runClaude's mounted conventions (~18.5K tok/session; Crush
+already did this). **Decision 1** (2026-09-14) — runClaude's conventions body condensed 134.5 KB →
+49.9 KB (−63%), rationale/examples relocated verbatim into 10 new topic reference docs + `print-debugging.md`;
+runCrush's baked conventions were already the lean port, so no change there.
+**Only decision 3 is left** (see below), and the maintainer has put it off.
 
-**Priority:** 3
-**Difficulty:** 4
+**Priority:** 8 (parked — deferred)
+**Difficulty:** 3
 
 ## BLUF
 
@@ -60,7 +62,12 @@ maintainer's too.
 
 ## Decisions needed (each with a recommendation)
 
-1. **runClaude conventions `CLAUDE.md` (133.5 KB → ?).** The Crush port proves the same rules fit in
+1. **✓ DONE 2026-09-14 — did (a): condensed to 49.9 KB (−63%), all rules kept inline, rationale/examples
+   relocated verbatim into 10 new topic reference docs (`task-doc-conventions`, `reference-doc-conventions`,
+   `communication-conventions`, `code-style-conventions`, `git-workflow-conventions`, `versioning-and-changelogs`,
+   `codegen-conventions`, `nested-run-and-gates`, `shell-and-gate-scripts`, `diversion-stack-and-scope`) +
+   appended to `print-debugging.md`; all 53 headings preserved. runCrush's baked conventions were already lean.**
+   *(Original framing:)* **runClaude conventions `CLAUDE.md` (133.5 KB → ?).** The Crush port proves the same rules fit in
    ~27.5 KB. Recommend **(a) condense toward the port's density** — keep every *rule* inline, move
    worked-examples/rationale/history to read-on-demand reference docs — saving ~25K tok/session.
    Alt: (b) leave as-is (you want the full detail always in front of the agent).
