@@ -1,9 +1,23 @@
 # Bulk operations: shell-first discovery → data-file worklog → iterate → verify
 
-**Status:** ready — decisions taken 2026-09-18; implementation awaits go-ahead
+**Status:** implemented 2026-09-18 — staged; archive owed after the work commit
 **Priority:** 3
 **Difficulty:** 4
 Created 2026-09-18 (William Emerison Six <billsix@gmail.com>).
+
+> **Implemented (2026-09-18).** Two edits landed (staged, not committed — the maintainer commits):
+> 1. Baked/nested `client/entrypoint/dotfiles/.config/crush/CLAUDE.md` "Ad-hoc scripts" section — added
+>    the bulk-op paragraph (shell-first discovery, `discover.sh` + `data/` worklog, content-matching
+>    fix, idempotency optional, POSIX-sh portability note).
+> 2. **New reference doc `client/entrypoint/dotfiles/.config/crush/reference/bulk-edit-shell-first.md`**
+>    — NOT `tasks/reference/` (correction: that set holds docs *about* runCrush; the **baked** set is
+>    what's delivered to the Crush agent at `~/.config/crush/reference/`, cited from the baked CLAUDE.md).
+>
+> **Owed follow-ups:** (a) archive this task as its own commit AFTER the work commit; (b) the maintainer
+> rebuilds the client image (`make -C client image`) so the baked CLAUDE.md + new doc reach the agent
+> (they're `COPY`'d into the image, not mounted). Verified at execution: Crush's bash tool runs an
+> embedded POSIX-sh interpreter (`internal/shellconfig/load.go`), so the doc says POSIX-portable, not
+> the zsh `bash -c` rule.
 
 > **Decisions (William Emerison Six <billsix@gmail.com>, 2026-09-18):**
 > 1. Data-file location: **per-slug `tasks/adhoc/<slug>/data/`** (removed with the script).
@@ -12,8 +26,9 @@ Created 2026-09-18 (William Emerison Six <billsix@gmail.com>).
 >    required.** Content/marker-matching and bottom-up processing stay as *correctness* advice (don't
 >    edit the wrong line via a stale offset), not an idempotence mandate. The data file is a
 >    snapshot/audit worklog, never a line-number replay driver.
-> 3. Reference-doc home: **new focused `tasks/reference/bulk-edit-shell-first.md`** (this repo has no
->    shell doc), NOT the fuller ported doc.
+> 3. Reference-doc home: **new focused `bulk-edit-shell-first.md`** in the baked delivered set
+>    (`client/entrypoint/dotfiles/.config/crush/reference/`, cited as `~/.config/crush/reference/…`),
+>    NOT `tasks/reference/` and not the fuller ported doc.
 > 4. Scope: this is the Crush agent's baked convention layer — it directs how the agent develops any
 >    project, which is the point of the image (coordinated with the runClaude sibling task).
 
@@ -81,12 +96,13 @@ Add after the "Skip one-liners" sentence, and amend it:
 > model works a list instead of reading every file front-to-back; idempotency is a bonus, not
 > required. Verify by re-grep = zero.
 
-### Edit 2 — new reference doc `tasks/reference/bulk-edit-shell-first.md`
+### Edit 2 — new reference doc in the baked set `client/entrypoint/dotfiles/.config/crush/reference/bulk-edit-shell-first.md`
 
-Create it (this repo has no shell reference doc). Contents = the idiom appendix below + the tension
-resolutions + the repo-root/`/work`-relative rule + (if the shell is zsh) the `bash -c` wrapping
-rule. Give `tasks/reference/` a `.keep` if missing. Optionally add a one-line read-on-demand pointer
-where the nested `CLAUDE.md` indexes its reference docs.
+Create it in the **baked/delivered** reference set (what the Crush agent reads at
+`~/.config/crush/reference/`), NOT `tasks/reference/` (which holds docs *about* runCrush). Contents =
+the idiom appendix below + the tension resolutions + the repo-root/`/work`-relative rule + the
+POSIX-sh portability note (Crush runs an embedded POSIX-sh interpreter, so no zsh `bash -c` rule).
+The baked CLAUDE.md's bulk-op paragraph cites it.
 
 ## Tensions to resolve IN THE TEXT
 

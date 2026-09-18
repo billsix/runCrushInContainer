@@ -213,6 +213,17 @@ at) when you create it, and never `git rm` the `.keep`** — the first cleanup t
 file would otherwise remove the directory from the repo (2026-09-06, mvp: archiving the last one-shot
 codemods `git rm`'d `tasks/adhoc/` itself; the maintainer restored it with a `.keep`).
 
+**Bulk op (find-many → fix-each)? Discover with a shell tool, don't tree-walk in Python** — one
+`rg -n` / `git grep -n` returns just the matches instead of spending the model's small context
+reading every file front-to-back. Log them to `tasks/adhoc/<slug>/data/` (a committed *snapshot*
+worklog, `git rm`'d with the script) and save the discovery command as `discover.sh` — a bulk
+discovery command IS substantive (its output drove the diff), so it is exempt from "skip one-liners"
+above. The fix matches on **content or a marker, not the saved line numbers** (they rot as edits
+shift lines); process bottom-up if it changes line count; idempotency is a bonus, not required (the
+point is the worklog). Verify by re-grep = zero. Keep discovery commands POSIX-sh-portable — Crush's
+bash tool runs an embedded POSIX shell, not zsh/bash. Command idioms + gotchas:
+`~/.config/crush/reference/bulk-edit-shell-first.md`.
+
 ## The diversion stack (`~/.config/crush/stack.md`) — you maintain it
 
 A global (cross-repo) markdown breadcrumb trail of **diversions**, read **bottom-up**: the bottom entry
