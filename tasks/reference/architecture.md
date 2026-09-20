@@ -152,7 +152,9 @@ for its own `client/` image, but that's incidental to its purpose.
   network-aware `bash` PreToolUse hook was built then dropped as more than needed — recoverable from
   git history.) Record: the archived `auto-allow-local-file-tools.md`.
 - **`--network=host`** (Linux-only) so `127.0.0.1:8080` in the container is the host's
-  SSH-forwarded port.
+  SSH-forwarded port. Opt-in **`LOCALHOST_ONLY=1`** (`make shell LOCALHOST_ONLY=1`) instead runs
+  `--network=none` + a `socat` unix-socket bridge, so the container reaches ONLY the model — no other
+  egress (default off). Impl: `tasks/archive/2026/09/20/localhost-only-network-mode.md`.
 - **SELinux: runs UNCONFINED** (`SELINUX_OPT ?= --security-opt label=disable`, `client/Makefile`).
   Without it, on an enforcing host the confined container can't access bind-mounted host dirs
   and — the case that bit us — **can't follow symlinks that jump out to a host path** like

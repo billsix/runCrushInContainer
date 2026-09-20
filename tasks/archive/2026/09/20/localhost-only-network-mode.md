@@ -1,9 +1,10 @@
 # Localhost-only network mode for the Crush client container (opt-in egress lockdown)
 
-**Status:** implemented 2026-09-20 — **awaiting maintainer local testing** (the unix-socket SSH forward +
-Crush generating against the model under `--network=none`, and confirming other hosts are unreachable).
-Filed 2026-09-20 (William Emerison Six <billsix@gmail.com>), applying **Option H** of the `whitelistnetwork`
-sandbox writeup (sibling repo, `tasks/whitelist-only-network-sandbox.md`).
+**Status:** DONE (implemented) 2026-09-20 — the `LOCALHOST_ONLY` toggle landed and passed in-sandbox static
+checks; the end-to-end behaviour (model reachable + all other egress blocked) is the maintainer's local
+test, tracked separately in `tasks/verify-localhost-only-network-mode.md`. Filed 2026-09-20
+(William Emerison Six <billsix@gmail.com>), applying **Option H** of the `whitelistnetwork` sandbox writeup
+(sibling repo, `tasks/whitelist-only-network-sandbox.md`). Archived.
 
 ## Implementation (2026-09-20) — awaiting local testing
 
@@ -55,7 +56,7 @@ maintainer does the local testing (SSH tunnel + Crush generating against the mod
   the correctness gate**: under `--network=none` Crush must need *nothing* but the model (see the
   correctness open question; telemetry is handled by `tasks/disable-crush-telemetry.md`).
 
-## Proposed mechanism (recommended; confirm in local testing)
+## Mechanism (as built)
 
 A `LOCALHOST_ONLY=1` toggle on the client `make` that flips three things:
 
@@ -74,7 +75,7 @@ preferred: a private podman network allowing only `host.containers.internal` at 
 the rest — heavier and less airtight than `--network=none`; the writeup rejects `--network=host` for this
 since it exposes everything.)
 
-## Plan
+## Plan (as executed)
 1. **Client `make` toggle:** add `LOCALHOST_ONLY` (default off) that sets `NET_FLAGS=--network=none`, adds
    the socket mount, and signals the entrypoint to start the socat bridge. Keep `NET_FLAGS ?= --network=host`
    as the default. Thread through both `shell` and `shell-exec` (share their run-flag block so they can't

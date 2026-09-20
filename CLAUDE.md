@@ -24,6 +24,9 @@ a template for the codebases you build with it are in `tasks/reference/architect
   (~430 packages) plus **Crush built from source at a pinned tag**. It reaches the Mac through an
   **SSH port-forward** (`ssh -L`, run on the Linux host), with `podman run --network=host` so
   `127.0.0.1:8080` / `:8081` in the container are the forwarded ports (one tunnel forwards both).
+  Opt-in `make shell LOCALHOST_ONLY=1` instead runs `--network=none` + a unix-socket/`socat` bridge so the
+  container reaches **only** the model (no other egress); default stays `--network=host`. See the README
+  "Network modes" and `tasks/archive/2026/09/20/localhost-only-network-mode.md`.
 
 The pins (llama.cpp `LLAMACPP_TAG` `b10883`; floors `b10353` for Glimmer, PR #28335 for Gemma 4;
 Crush `v0.89.0`; the MLX serve alternative), the quant ladder, and the serve tuning are in

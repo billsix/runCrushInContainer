@@ -17,7 +17,9 @@ policy, and decision history live there). Regenerate the phase-1 table with
 
 **FOUNDATIONAL:** this deployment's only intended traffic is Crush → the **local models at
 `127.0.0.1:8080` / `:8081`** (llama.cpp behind an SSH tunnel, `--network=host`; two loopback
-providers since 2026-09-10). Loopback/local-model traffic
+providers since 2026-09-10). The opt-in `make shell LOCALHOST_ONLY=1` mode (2026-09-20) makes exactly
+that mandatory — `--network=none` so the container reaches *only* the model — i.e. this audit's ideal
+enforced (`tasks/archive/2026/09/20/localhost-only-network-mode.md`). Loopback/local-model traffic
 is the essential core — never a finding, never patched. Everything below concerns **external**
 egress only.
 
