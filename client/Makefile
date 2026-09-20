@@ -137,6 +137,25 @@ EXTRA_MOUNTS ?=
 # port. This is why the client is Linux-only for now.
 NET_FLAGS ?= --network=host
 
+# Localhost-only egress mode (opt-in: `make shell LOCALHOST_ONLY=1`). Default off = the
+# --network=host above (full host network). When on, the container gets ONLY its own
+# loopback (--network=none) and reaches the model through unix sockets bind-mounted from
+# $(MUSE_SOCK_DIR) -> /run/muse, which a socat bridge in shell.sh re-exposes as
+# 127.0.0.1:8080/8081 -- so Crush's config is unchanged, but the container can reach
+# NOTHING but the model (no internet, no other host). Requires the host to SSH-forward the
+# model to those unix sockets instead of TCP (the shell.sh banner + README show both forms).
+# For running Crush against the model; not meant to combine with NESTED_PODMAN=1 (nested
+# builds need network). Design: tasks/localhost-only-network-mode.md.
+LOCALHOST_ONLY ?= 0
+MUSE_SOCK_DIR ?= $(HOME)/.cache/runcrush-muse-sockets
+ifeq ($(LOCALHOST_ONLY),1)
+NET_FLAGS := --network=none
+$(shell mkdir -p $(MUSE_SOCK_DIR))
+LOCALHOST_ONLY_MOUNT := -v $(MUSE_SOCK_DIR):/run/muse:Z
+else
+LOCALHOST_ONLY_MOUNT :=
+endif
+
 # Extra flags for every container `run` THIS Makefile performs. Auto-set when this Makefile
 # itself runs nested inside a runClaudeInContainer/runCrushInContainer sandbox (which exports
 # NESTED_PODMAN=1 — the three-deep client case); empty, and byte-identical behavior, on a normal
@@ -261,8 +280,11 @@ SHELL_RUN_FLAGS = \
 		$(PODMAN_RUN_FLAGS) \
 		-v ./entrypoint/shell.sh:/shell.sh:Z \
 		-e NESTED_PODMAN=$(NESTED_PODMAN) \
+		-e LOCALHOST_ONLY=$(LOCALHOST_ONLY) \
+		-e MUSE_SOCK_DIR=$(MUSE_SOCK_DIR) \
 		$(SELINUX_OPT) \
 		$(NET_FLAGS) \
+		$(LOCALHOST_ONLY_MOUNT) \
 		-v $(PROJECT):/work \
 		$(TMUX_MOUNT) \
 		$(GNUPG_MOUNT) \

@@ -152,8 +152,16 @@ crushrc reaches each provider on its own port; Crush's models dialog (`ctrl+l`) 
 ```sh
 cd client
 make image     # build the image: full toolchain + Crush compiled from source (pinned)
-make shell     # podman run --rm --network=host … then launch `crush`
-make shell-exec SCRIPT=path/to/script.sh   # run a script in that same env (no TTY), then exit
+
+# If running with NO internet access (recommended): the container reaches ONLY the model,
+# nothing else on the network (podman run --network=none + a socket bridge). See "Network
+# modes" below for the matching host-side SSH forward.
+make shell LOCALHOST_ONLY=1
+
+# If you want the FULL internet: the container shares the host network (--network=host).
+make shell
+
+make shell-exec SCRIPT=path/to/script.sh   # batch twin: run a script (no TTY), then exit
 make shell-exec CMD='some command'         # ^ or an inline command
 make manifest  # print the container file layout (baked vs mounted paths; no build)
 ```
@@ -166,9 +174,26 @@ make manifest  # print the container file layout (baked vs mounted paths; no bui
 script (`SCRIPT=`, relative to the mounted PROJECT at `/work`) or an inline `CMD=` and exits,
 instead of dropping you into an interactive shell — for ad-hoc/CI use.
 
-`--network=host` makes the container share the host's network, so Crush talking to
-`127.0.0.1:8080` / `:8081` hits the SSH-forwarded ports and, through them, the Mac. The baked
-`crushrc` preconfigures exactly two local providers, **pins Muse Glimmer (`8080`) and Gemma 4
+### Network modes
+
+Two ways the container reaches the model — both land on `127.0.0.1:8080`/`:8081`, so Crush's config is
+identical either way:
+
+- **Localhost-only (`make shell LOCALHOST_ONLY=1`, recommended) — no internet.** The container runs
+  `--network=none`, so it has ONLY its own loopback and can reach **nothing but the model** (no internet,
+  no other host). The model arrives as unix sockets bind-mounted at `/run/muse` (from a unix-socket SSH
+  forward), which a `socat` bridge re-exposes as `127.0.0.1:8080`/`:8081`. On the host, forward to those
+  sockets instead of TCP (into `$MUSE_SOCK_DIR`, default `~/.cache/runcrush-muse-sockets`) **before**
+  launching:
+  ```sh
+  ssh -N -L ~/.cache/runcrush-muse-sockets/8080.sock:127.0.0.1:8080 \
+          -L ~/.cache/runcrush-muse-sockets/8081.sock:127.0.0.1:8081 you@mac-studio.local
+  ```
+- **Full internet (`make shell`, the bare default) — `--network=host`.** The container shares the host's
+  network, so `127.0.0.1:8080`/`:8081` hits the TCP SSH-forwarded ports (the `ssh -N -L 8080:… -L 8081:…`
+  from "Connecting" above). Use this when Crush needs the internet.
+
+The baked `crushrc` preconfigures exactly two local providers, **pins Muse Glimmer (`8080`) and Gemma 4
 (`8081`) explicitly and suppresses Crush's built-in model catalog** so only those two are offered.
 At startup it probes both ports and **preselects whichever model is being served** (Glimmer when
 both or neither answer); switch any time with the models dialog (`ctrl+l`).

@@ -1,8 +1,28 @@
 # Localhost-only network mode for the Crush client container (opt-in egress lockdown)
 
-**Status:** ready — decisions locked 2026-09-20 (below); awaiting go-ahead to implement. Filed 2026-09-20
-(William Emerison Six <billsix@gmail.com>), applying **Option H** of the `whitelistnetwork` sandbox writeup
-(sibling repo, `tasks/whitelist-only-network-sandbox.md`) to this project's concrete need.
+**Status:** implemented 2026-09-20 — **awaiting maintainer local testing** (the unix-socket SSH forward +
+Crush generating against the model under `--network=none`, and confirming other hosts are unreachable).
+Filed 2026-09-20 (William Emerison Six <billsix@gmail.com>), applying **Option H** of the `whitelistnetwork`
+sandbox writeup (sibling repo, `tasks/whitelist-only-network-sandbox.md`).
+
+## Implementation (2026-09-20) — awaiting local testing
+
+Landed as an additive `LOCALHOST_ONLY` toggle (default off; the default `make shell` path is unchanged —
+verified via `make -n`):
+- **`client/Makefile`:** `LOCALHOST_ONLY ?= 0` + `MUSE_SOCK_DIR ?= $(HOME)/.cache/runcrush-muse-sockets`.
+  When `=1`: `NET_FLAGS := --network=none`, `mkdir -p` the socket dir, and add
+  `-v $(MUSE_SOCK_DIR):/run/muse:Z` to the shared `SHELL_RUN_FLAGS` (so `shell` AND `shell-exec` get it);
+  also passes `-e LOCALHOST_ONLY` + `-e MUSE_SOCK_DIR` in.
+- **`client/entrypoint/shell.sh`:** when `LOCALHOST_ONLY=1`, starts a `socat` bridge per port
+  (`TCP-LISTEN:PORT,bind=127.0.0.1,reuseaddr,fork` → `UNIX-CONNECT:/run/muse/PORT.sock`) for any socket
+  present, so Crush's unchanged `127.0.0.1:8080/8081` probe still reaches the model; the launch banner is
+  mode-aware (shows the unix-socket SSH forward in localhost-only mode, the TCP form otherwise).
+- **`README.md`:** the shown `make shell` example is `LOCALHOST_ONLY=1` (recommended, "no internet"); a
+  "Network modes" section documents both — localhost-only (`--network=none` + the unix-socket SSH forward)
+  and full-internet (`--network=host`, the bare default) — with the matching host SSH command for each.
+- **Verified in-sandbox:** `make -n shell` → `--network=host`, no socket mount; `make -n shell
+  LOCALHOST_ONLY=1` → `--network=none` + the `/run/muse` mount; `shell.sh` parses. The end-to-end model
+  reachability + egress-blocked check is the maintainer's local test (needs the Mac + SSH).
 **Priority:** 5
 **Difficulty:** 4 (mechanism is straightforward — the moving part is the SSH-forward → socket → socat bridge)
 
