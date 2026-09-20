@@ -1,6 +1,22 @@
 # Add coding-agent models with a country-of-origin allowlist (default USA)
 
-**Status:** proposed — needs go-ahead. Filed 2026-09-20 (William Emerison Six <billsix@gmail.com>).
+**Status:** DONE — implemented + sandbox-verified 2026-09-20 (the real `make serve` runs on the Mac —
+Metal — as the operator's normal path). Filed 2026-09-20 (William Emerison Six <billsix@gmail.com>). Archived.
+
+## Implemented (2026-09-20)
+
+5-model registry in `server/Makefile` (glimmer/gemma/granite = US, devstral = FR, qwen = CN; ports
+8080–8084; **all Apache-2.0 weights**), the `MODEL_COUNTRIES` allowlist (default `US`, aliases, `ALL`;
+gates pull/serve/offer together — verified via `make -n`: US→3, US,FR→4, ALL→5, China→qwen), client
+autodiscovery in `crushrc` (probes each port, offers the live ones), and the 5-port localhost-only bridge in
+`shell.sh`. All 5 HF repos resolved + downloaded (~80 GB) + multi-hash checksums generated. Durable design
+is now in **`tasks/reference/model-registry-country-gate-and-checksums.md`** (read that, not this).
+- **Client autodiscovery note (logged before archival, per the maintainer):** the vendored Go
+  `client/vendor/crush/internal/discover/llamacpp.go` enricher was **left untouched** — the crushrc
+  liveness probe is the delivering mechanism; touching the Go needs a full Crush rebuild that can't be
+  verified in-sandbox. Revisit only if the Go enricher is wanted too.
+- **Known gap → follow-up:** the opt-in `MODEL_FILES` extras path isn't country-gated —
+  `tasks/model-files-extras-country-gate.md`.
 Research-heavy first half — a good **Fable** candidate for the research/decide phases.
 **Priority:** 5
 **Difficulty:** 6 (Phase 3 touches the server model registry, `vendor.sh`, and the client crushrc)

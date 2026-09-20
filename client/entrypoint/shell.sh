@@ -16,11 +16,14 @@ cd /work 2>/dev/null || cd /
 # ONLY its own loopback and NO route off the box. The model is bind-mounted in as unix sockets
 # at /run/muse (from the host's unix-socket SSH forward); bridge each to the 127.0.0.1 port
 # Crush's crushrc probes, so the model still works while the container reaches nothing else.
+# One port per model (server/Makefile MODEL_PORT_<m>): 8080 glimmer, 8081 gemma, 8082 granite,
+# 8083 devstral, 8084 qwen. Only sockets the host actually forwards get bridged (the `-S` test),
+# so listing all five is harmless when fewer are served.
 # socat backgrounds (the `&` returns 0, so `set -e` is fine) and dies with the --rm container.
 # Set the forward up on the host BEFORE launching (the sockets must exist for the bridge). See
 # tasks/localhost-only-network-mode.md.
 if [ "${LOCALHOST_ONLY:-0}" = "1" ]; then
-    for port in 8080 8081; do
+    for port in 8080 8081 8082 8083 8084; do
         if [ -S "/run/muse/$port.sock" ]; then
             socat "TCP-LISTEN:$port,bind=127.0.0.1,reuseaddr,fork" \
                   "UNIX-CONNECT:/run/muse/$port.sock" &
@@ -36,13 +39,14 @@ if [ "$#" -eq 0 ]; then
     if [ "${LOCALHOST_ONLY:-0}" = "1" ]; then
         sd="${MUSE_SOCK_DIR:-\$HOME/.cache/runcrush-muse-sockets}"
         printf '  \033[33mlocalhost-only mode\033[0m (--network=none; the container reaches ONLY the model).\n'
-        printf '  Forward the model to UNIX SOCKETS on the host (not TCP):\n'
-        printf '    \033[36mssh -N -L %s/8080.sock:127.0.0.1:8080 -L %s/8081.sock:127.0.0.1:8081 you@mac-studio\033[0m\n' "$sd" "$sd"
+        printf '  Forward the model to UNIX SOCKETS on the host (not TCP), one per served port:\n'
+        printf '    \033[36mssh -N -L %s/8080.sock:127.0.0.1:8080 ... -L %s/8084.sock:127.0.0.1:8084 you@mac-studio\033[0m\n' "$sd" "$sd"
     else
-        printf '    \033[36mssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac-studio\033[0m\n'
+        printf '    \033[36mssh -N -L 8080:127.0.0.1:8080 ... -L 8084:127.0.0.1:8084 you@mac-studio\033[0m\n'
     fi
-    printf '  (8080 = Muse Glimmer, 8081 = Gemma 4; forward both, serve whichever you like)\n'
-    printf '  then run:  \033[36mcrush\033[0m   (it starts on whichever model answers; ctrl+l switches)\n\n'
+    printf '  (ports: 8080 glimmer, 8081 gemma, 8082 granite, 8083 devstral, 8084 qwen; forward\n'
+    printf '   whichever you serve — MODEL_COUNTRIES on the Mac gates which models exist)\n'
+    printf '  then run:  \033[36mcrush\033[0m   (it starts on whichever port answers; ctrl+l switches)\n\n'
 fi
 
 # No args -> interactive shell (as before). Args (a `-c '...'` payload from

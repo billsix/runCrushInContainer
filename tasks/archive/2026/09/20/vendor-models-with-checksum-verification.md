@@ -1,8 +1,19 @@
 # Vendor the models with pinned checksums; verify on pull, fail loudly on mismatch
 
-**Status:** proposed — needs go-ahead. Filed 2026-09-20 (William Emerison Six <billsix@gmail.com>).
-**Depends on** the model set from
-[country-gated-model-selection.md](country-gated-model-selection.md) (which models get vendored).
+**Status:** DONE — implemented + failure-path-proven in-sandbox 2026-09-20 (the real `make serve` runs on
+the Mac). Filed 2026-09-20 (William Emerison Six <billsix@gmail.com>). Archived.
+**Depended on** the model set from `country-gated-model-selection.md`.
+
+## Implemented (2026-09-20)
+
+`server/tools/checksum.py` (stdlib-only, **fully type-annotated** — ruff + ty clean) computes **MD5 +
+SHA-256 + BLAKE2b** in one pass; a file passes only if all three (+ size) match. `server/models.CHECKSUMS`
+(Gentoo-Manifest style, tracked) pins all five GGUFs. `make pull` verifies after download (fail +
+quarantine `<file>.corrupt`); `make serve` re-verifies the selected model's file(s) and **refuses to launch
+llama-server on mismatch**; `make checksums-refresh` regenerates the manifest as a reviewable diff. Failure
+path proven end-to-end (byte-flip → both gates fail loudly, exit nonzero, llama-server never reached). All
+five real checksums generated + re-verified OK (gemma's SHA-256 matches HF's LFS pointer). Durable design:
+**`tasks/reference/model-registry-country-gate-and-checksums.md`**.
 **Priority:** 5
 **Difficulty:** 4
 
@@ -26,24 +37,27 @@ refusal to serve** when a file doesn't match.
   `MODEL_PORT_<m>`. `make pull` walks all rows and `hf download --include`s the files into
   `MODEL_DIR ?= ./models`. Opt-in extras: `MODEL_FILES` (the quant ladder — `*.gguf`, mmproj), and
   `FULL_MODEL_FILES` (full-precision `*.safetensors`). `vendor.sh` wraps this (incl. a `FULL=1` preset).
-- **"Multiple checksums of each model"** = a checksum **per file**: a model isn't one file — it's the
-  default GGUF **plus** whatever quant-ladder / mmproj / full-weight files get vendored. Each pinned file
-  gets its own checksum. (Optionally also a second hash algorithm per file for defense in depth — open
-  question 2.)
+- **"Multiple checksums" — two senses, both wanted:** (a) a checksum set **per file** (a model isn't one
+  file — it's the default GGUF **plus** any quant-ladder / mmproj / full-weight files vendored); and (b),
+  **Gentoo-style, MULTIPLE ALGORITHMS per file** (decided 2026-09-20): pin **SHA-256 + BLAKE2b + MD5** (like
+  Gentoo's Manifest) so strength comes from agreement across independent hashes — a file passes only if
+  **every** algorithm matches. (MD5 is weak alone; it's kept as a legacy/extra per the maintainer's
+  Gentoo-style request — the security comes from SHA-256 + BLAKE2b, MD5 is belt-and-suspenders.)
 - **No checksum today** — grep confirms `server/Makefile`/`vendor.sh` have no `sha256`/`checksum` step.
 
 ## Plan
 
-1. **A pinned checksum manifest** — e.g. `server/models.sha256` (or per-model `<file>.sha256`), one line per
-   vendored file: `<sha256>  <repo>/<filename>`. Covers each model's vendored GGUF(s) + any mmproj/full
-   weights that are part of the vendored set.
+1. **A pinned multi-hash manifest** (Gentoo-Manifest style) — e.g. `server/models.CHECKSUMS`, holding
+   **SHA-256 + BLAKE2b + MD5** for every vendored file (each model's GGUF(s) + any mmproj/full weights).
+   One entry per file with all three hashes.
 2. **Populate authoritatively.** Hugging Face stores each LFS file's **SHA-256 in its pointer metadata**
    (the `git lfs`/`hf` API exposes `sha256:<hash>`) — pull *those* as the source of truth (no
    trust-on-first-use gap), rather than only computing from a local download. A `make checksums-refresh`
    target re-derives the manifest from HF so a pin/quant change is a **reviewable diff** (a silently-changed
    upstream file shows up as a checksum change to eyeball, not a silent swap).
-3. **Verify on pull** — in `make pull`/`vendor.sh`, after each file downloads, verify it against the
-   manifest (`sha256sum -c`, or compute + compare). On **match**, proceed. On **mismatch**, FAIL:
+3. **Verify on pull** — in `make pull`/`vendor.sh`, after each file downloads, compute **all three** hashes
+   (SHA-256, BLAKE2b, MD5) and compare to the manifest. A file passes only if **every** algorithm matches.
+   On **any** mismatch, FAIL:
    - print a clear error: the **filename**, the **expected** vs **actual** SHA-256, and **why** ("refusing:
      this file does not match its pinned checksum — it may be corrupted in transit or tampered upstream; it
      will NOT be served"),
@@ -70,8 +84,9 @@ refusal to serve** when a file doesn't match.
 ## Open questions
 1. **Checksum source** — HF LFS `sha256` pointer metadata (authoritative, recommended) vs compute-on-first-
    trusted-pull (has a TOFU gap). Recommend HF-provided where available, compute as fallback.
-2. **One algorithm or multiple.** SHA-256 per file is standard; add a second (SHA-512/BLAKE2) per file for
-   defense in depth? Recommend SHA-256 only to start; note the option.
+2. **Algorithms — DECIDED (2026-09-20): multiple, Gentoo-style — SHA-256 + BLAKE2b + MD5** per file; a file
+   passes only if all three match. (SHA-256 + BLAKE2b are the strong pair; MD5 is a legacy extra per the
+   maintainer's request.)
 3. **Manifest location/format** — one `server/models.sha256` (simple, `sha256sum -c`-compatible) vs
    per-model files. Recommend the single `sha256sum`-compatible file.
 4. **Scope** — checksum only the *vendored* files (the default GGUF + explicitly-vendored extras), or the

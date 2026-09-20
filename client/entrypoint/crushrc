@@ -2,18 +2,25 @@
 # SPDX-License-Identifier: Apache-2.0
 # ~/.config/crush/crushrc — baked default for the runCrushInContainer client.
 #
-# Declares exactly two providers -- the local models served by llama.cpp on the Mac, reached
-# through the host's SSH tunnel: Muse Glimmer on port 8080 and Gemma 4 on port 8081. Both models
-# are pinned EXPLICITLY (not auto-discovered) and the built-in provider catalog is suppressed --
-# see the provider/model blocks below. At load this file probes both ports and preselects the one
-# that answers (Glimmer when both/neither do); switch any time with Crush's model dialog (ctrl+l).
+# AUTODISCOVERS the local models served by llama.cpp on the Mac, reached through the host's SSH
+# tunnel. Each model has a FIXED port in server/Makefile (MODEL_PORT_<m>): Muse Glimmer 8080,
+# Gemma 4 8081, IBM Granite Code 8082, Devstral 8083, Qwen3-Coder 8084. At load this file PROBES
+# each port and registers a provider ONLY for the ones that answer, then preselects the first live
+# one; switch any time with Crush's model dialog (ctrl+l). The built-in provider catalog is
+# suppressed (see `option default-providers` below).
 #
-# Reachability: the client runs with `podman run --network=host`, so 127.0.0.1:8080/8081 inside
-# the container are the host's forwarded ports. On the host, keep the tunnel open (both ports):
-#     ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac-studio
-# The ports are FIXED per model in server/Makefile (MODEL_PORT_glimmer / MODEL_PORT_gemma), on
-# purpose: this file and the tunnel never have to be told which model is where. Keep the three
-# in sync if a port ever changes.
+# Which models are actually live is gated on the SERVER by MODEL_COUNTRIES (server/Makefile,
+# default US) -- the server only serves an allowed-country model, so only its port answers, so only
+# it is offered here. That is how the country allowlist reaches the client: by liveness, NOT by
+# this file knowing the flag. (A 36 GB Mac serves ONE model at a time, so usually one port answers.)
+#
+# Reachability: the client runs with `podman run --network=host`, so 127.0.0.1:808x inside the
+# container are the host's forwarded ports. On the host, keep the tunnel open for whichever ports
+# you serve (forwarding a port nothing serves is harmless):
+#     ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 -L 8082:127.0.0.1:8082 \
+#            -L 8083:127.0.0.1:8083 -L 8084:127.0.0.1:8084 you@mac-studio
+# KEEP THE PORT/ALIAS TABLE BELOW IN SYNC with server/Makefile (MODEL_PORT_<m> / MODEL_ALIAS_<m>)
+# and client/entrypoint/shell.sh (the LOCALHOST_ONLY socket-bridge port list).
 #
 # NOTE: crushrc runs as a full shell script at load time — treat it as trusted code.
 
@@ -41,58 +48,65 @@ option metrics false
 # tasks/suppress-embedded-provider-catalog.md.
 option default-providers false
 
-provider add muse-glimmer \
-  --name "Muse Glimmer (local llama.cpp)" \
-  --type llamacpp \
-  --base-url "http://127.0.0.1:8080" \
-  --api-key "local-no-key-needed"
+# --- Autodiscover the live models (decided 2026-09-20) ---
+# This file is a real shell script (internal/shellconfig/load.go — same interpreter as the bash
+# tool: functions, $(cmd) and external commands work, bounded by a 30 s load timeout). For each
+# model in the server's table, PROBE its port and register a provider ONLY if it answers. A refused
+# loopback connect returns instantly, so probing five closed ports costs nothing. This replaces the
+# old "pin exactly two providers" scheme: Crush now offers whichever active ports are live, and the
+# server's MODEL_COUNTRIES flag decides which those are (a disallowed model is never served, so its
+# port never answers). The model ID registered (`<alias>/<alias>`) must match what the server
+# reports at /v1/models — the server pins `--alias <MODEL_ALIAS_m>`, so these stay constant across
+# quant/file changes. --context-window matches the server's -c/CTX (65536) so Crush's compaction
+# math lines up (see tasks/archive/2026/08/20/context-window-sizing.md).
+#
+# PORT / ALIAS / NAME / CONTEXT table — keep in sync with server/Makefile MODEL_PORT_<m> +
+# MODEL_ALIAS_<m>. (Gemma-4 licence check that let it in: tasks/reference/gemma-4-alongside-glimmer.md.)
+first_live=""
+have_curl=0
+command -v curl >/dev/null 2>&1 && have_curl=1
 
-# Pin the model EXPLICITLY rather than relying on runtime auto-discovery. Discovery hits
-# GET /v1/models with a 3s timeout at startup; if the tunnel/server isn't reachable yet, Crush
-# deletes the provider and shows the built-in catalog. An explicit model has no such
-# dependency. The ID must match what the server reports at /v1/models — the server is pinned to
-# `--alias muse-glimmer` (server/Makefile MODEL_ALIAS), so this stays constant across quant/file
-# changes. --context-window matches the server's -c/CTX (65536) so Crush's compaction math lines
-# up (see tasks/archive/2026/08/20/context-window-sizing.md).
-model add muse-glimmer/muse-glimmer --name "Muse Glimmer 30B" --context-window 65536
+try_model() {
+  # $1 port  $2 alias/id  $3 display-name  $4 context-window
+  [ "$have_curl" = 1 ] || return 0
+  if curl -sf -m 2 -o /dev/null "http://127.0.0.1:$1/v1/models"; then
+    provider add "$2" \
+      --name "$3 (local llama.cpp)" \
+      --type llamacpp \
+      --base-url "http://127.0.0.1:$1" \
+      --api-key "local-no-key-needed"
+    model add "$2/$2" --name "$3" --context-window "$4"
+    [ -z "$first_live" ] && first_live="$2"
+  fi
+}
 
-# The second model: Google's Gemma 4 26B-A4B (Apache-2.0), served by `make serve MODEL=gemma` on
-# its fixed port 8081 with `--alias gemma-4` (server/Makefile MODEL_ALIAS_gemma). Same explicit-pin
-# reasoning as above; same CTX (65536). Rationale and the licence check that let it in:
-# tasks/reference/gemma-4-alongside-glimmer.md.
-provider add gemma-4 \
-  --name "Gemma 4 26B-A4B (local llama.cpp)" \
-  --type llamacpp \
-  --base-url "http://127.0.0.1:8081" \
-  --api-key "local-no-key-needed"
+try_model 8080 muse-glimmer "Muse Glimmer 30B"        65536
+try_model 8081 gemma-4      "Gemma 4 26B-A4B"         65536
+try_model 8082 granite-code "IBM Granite 34B Code"    65536
+try_model 8083 devstral     "Devstral Small 2 (24B)"  65536
+try_model 8084 qwen3-coder  "Qwen3-Coder 30B-A3B"     65536
 
-model add gemma-4/gemma-4 --name "Gemma 4 26B-A4B" --context-window 65536
-
-# --- Preselect whichever model is actually being served (decided 2026-09-10) ---
-# Crush never probes an explicitly-pinned provider at startup and shows no picker when more than
-# one is configured (onboarding runs only with ZERO enabled providers — internal/ui/model/ui.go
-# `IsConfigured`), so a wrong preselect only surfaces as a connection error on the first message.
-# Since a 36 GB Mac serves ONE model at a time, ask both ports which one is up: this file is a real
-# shell script (internal/shellconfig/load.go — same interpreter as the bash tool, $(cmd) and
-# external commands work, bounded by a 30 s load timeout), and a refused loopback connect returns
-# instantly. Rule: only Gemma answering → Gemma; both, neither, or no curl → Glimmer (the default).
-# NOTE: a ctrl+l choice is written to ~/.local/share/crush/crush.json (UpdatePreferredModel,
-# ScopeGlobal), which is merged AFTER this file and wins — but that path is on the ephemeral --rm
-# overlay, so the probe decides again at every `make shell`. See
-# tasks/reference/crush-capabilities.md § "Provider & model selection".
-glimmer_up=0
-gemma_up=0
-if command -v curl >/dev/null 2>&1; then
-  curl -sf -m 2 -o /dev/null http://127.0.0.1:8080/v1/models && glimmer_up=1
-  curl -sf -m 2 -o /dev/null http://127.0.0.1:8081/v1/models && gemma_up=1
+# --- Preselect whichever model is actually being served ---
+# Crush shows no onboarding picker as long as >=1 provider is enabled (onboarding runs only with
+# ZERO enabled providers — internal/ui/model/ui.go `IsConfigured`), so preselect the first port
+# that answered. If NONE answered (the tunnel isn't up yet at startup), pin the US default
+# (Muse Glimmer, 8080) EXPLICITLY so Crush still never falls into the onboarding picker — it
+# becomes reachable the moment the tunnel comes up; the wrong-preselect case only surfaces as a
+# connection error on the first message. NOTE: a ctrl+l choice is written to
+# ~/.local/share/crush/crush.json (UpdatePreferredModel, ScopeGlobal), merged AFTER this file and
+# winning — but that path is on the ephemeral --rm overlay, so the probe decides again at every
+# `make shell`. See tasks/reference/crush-capabilities.md § "Provider & model selection".
+if [ -z "$first_live" ]; then
+  provider add muse-glimmer \
+    --name "Muse Glimmer 30B (local llama.cpp)" \
+    --type llamacpp \
+    --base-url "http://127.0.0.1:8080" \
+    --api-key "local-no-key-needed"
+  model add muse-glimmer/muse-glimmer --name "Muse Glimmer 30B" --context-window 65536
+  first_live=muse-glimmer
 fi
-if [ "$gemma_up" = 1 ] && [ "$glimmer_up" = 0 ]; then
-  model large gemma-4/gemma-4
-  model small gemma-4/gemma-4
-else
-  model large muse-glimmer/muse-glimmer
-  model small muse-glimmer/muse-glimmer
-fi
+model large "$first_live/$first_live"
+model small "$first_live/$first_live"
 
 # --- Language servers: declared explicitly, dnf-installed, one per toolchain Fedora packages ---
 # Crush bundles no servers; without these lines it auto-starts registry-known servers only when
