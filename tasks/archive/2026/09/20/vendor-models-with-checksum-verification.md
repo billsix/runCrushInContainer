@@ -45,7 +45,7 @@ refusal to serve** when a file doesn't match.
   Gentoo-style request — the security comes from SHA-256 + BLAKE2b, MD5 is belt-and-suspenders.)
 - **No checksum today** — grep confirms `server/Makefile`/`vendor.sh` have no `sha256`/`checksum` step.
 
-## Plan
+## Plan (as executed)
 
 1. **A pinned multi-hash manifest** (Gentoo-Manifest style) — e.g. `server/models.CHECKSUMS`, holding
    **SHA-256 + BLAKE2b + MD5** for every vendored file (each model's GGUF(s) + any mmproj/full weights).

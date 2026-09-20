@@ -160,9 +160,11 @@ set (`provider.go:175,186` short-circuit to custom-only). Two behaviors that sur
 **To offer only local models** (crushrc): `option default-providers false` (inverted → sets
 `disable_default_providers`, `options.go:191`) **plus** an explicit `model add <provider>/<id>` per
 provider so each survives without discovery. runCrushInContainer's baked `crushrc` does exactly this
-for its two providers (`muse-glimmer` on 8080, `gemma-4` on 8081; the models dialog `ctrl+l` — also
-`ctrl+m`, `keys.go:89` — switches) — verified `crush models` drops from **1532 → 1**. Full history +
-before/after: `tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md`.
+for its local providers (since 2026-09-20 it **autodiscovers** the live ones across the fixed model ports
+`8080`–`8084`, registering only those answering — default the US set; the models dialog `ctrl+l` — also
+`ctrl+m`, `keys.go:89` — switches). Verified `crush models` drops from **1532** to just the local ones.
+Full history: `tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md`; the model set + gate:
+`tasks/reference/model-registry-country-gate-and-checksums.md`.
 
 ### Which model is active at startup, and what a `ctrl+l` switch does (verified v0.89.0, 2026-09-10)
 
