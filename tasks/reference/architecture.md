@@ -5,8 +5,7 @@ during bring-up. Not a task; update in place. Last updated 2026-09-10.
 
 ## What this is
 
-A local coding LLM (Meta **Muse Glimmer 30B**, or Google **Gemma 4 26B-A4B** — one at a time, on
-fixed ports 8080 / 8081) served on a Mac, driven by **Crush** (Charm's
+A local coding LLM (one at a time, on fixed ports) served on a Mac, driven by **Crush** (Charm's
 terminal agent, `github.com/charmbracelet/crush`) from a disposable Linux container — a tool for
 developing your codebases with a private local assistant, and a fork-friendly sibling of
 `github.com/billsix/runClaudeInContainer` (swap the model/agent via Makefile vars). Two machines, one
@@ -38,14 +37,15 @@ for its own `client/` image, but that's incidental to its purpose.
   — before 2026-09-10 a tag bump was silently ignored by a pre-existing clone. A stale
   `build/CMakeCache.txt` can fail the configure step (a cpp-httplib `OpenSSL::SSL` error on the Mac,
   2026-09-10); `rm -rf server/llama.cpp/build` is the fix.
-- **Two models, one `MODEL=` switch, fixed ports (2026-09-10).** The Makefile carries a two-row
-  table (`MODELS := glimmer gemma`; per row `MODEL_REPO_<m>`, `MODEL_FILE_<m>`, `MODEL_ALIAS_<m>`,
-  `MODEL_PORT_<m>`). `MODEL=glimmer` (default) or `MODEL=gemma` selects the row for
-  `serve`/`probe`/`smoke`/`check-repo`; `pull`/`vendor` walk both rows. The port is `override`-fixed
-  per row — **Glimmer 8080, Gemma 8081, not configurable** — because the client crushrc's two
-  `--base-url`s and the one two-`-L` SSH tunnel hardcode them; the maintainer wanted "one way to run a
-  server, two models, different ports, non-configurable" so nothing downstream ever has to be told
-  which model is where. An unknown `MODEL=` is a `$(error …)` naming the two valid values. One model
+- **A country-gated model SET, one `MODEL=` switch, fixed ports (2026-09-10; expanded to 5 models +
+  `MODEL_COUNTRIES` on 2026-09-20 — full design in `model-registry-country-gate-and-checksums.md`).** The
+  Makefile carries a per-model table (`MODELS`; per row `MODEL_REPO_<m>`, `MODEL_FILE_<m>`,
+  `MODEL_ALIAS_<m>`, `MODEL_PORT_<m>`, `MODEL_COUNTRY_<m>`). `MODEL=<m>` selects the row for
+  `serve`/`probe`/`smoke`/`check-repo`; `pull`/`vendor` walk the **country-allowed** rows
+  (`MODEL_COUNTRIES`, default `US`). The port is `override`-fixed per row — **each model on its own fixed
+  port (8080–8084), not configurable** — and the client crushrc now **autodiscovers** the live ports
+  (rather than hardcoding two); the maintainer wanted "one way to run a server, different models on
+  different fixed ports, non-configurable" so nothing downstream ever has to be told which model is where. An unknown `MODEL=` is a `$(error …)` naming the two valid values. One model
   at a time on a 36 GB Mac (~31 GB of weights for both). Research + trade-offs:
   `tasks/reference/gemma-4-alongside-glimmer.md`.
 - **Gemma 4 row.** Repo `google/gemma-4-26B-A4B-it-qat-q4_0-gguf`, file `gemma-4-26B_q4_0-it.gguf`

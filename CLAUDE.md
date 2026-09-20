@@ -17,9 +17,12 @@ a template for the codebases you build with it are in `tasks/reference/architect
 ## Two parts, two machines
 
 - **`server/` — macOS, native (NOT containerized).** llama.cpp built for Apple Silicon (Metal),
-  serving **one of two models** over an OpenAI-compatible HTTP endpoint bound to **loopback only**
-  (`127.0.0.1`): Muse Glimmer on the **fixed** port `8080`, Gemma 4 on the **fixed** port `8081`
-  (`make serve MODEL=glimmer|gemma`; the ports are deliberately not knobs).
+  serving one model at a time over an OpenAI-compatible HTTP endpoint bound to **loopback only**
+  (`127.0.0.1`), each on its own **fixed** port. **As of 2026-09-20 there are FIVE OSI (Apache-2.0)
+  models** — glimmer `8080`, gemma `8081`, granite `8082` (all US), devstral `8083` (FR), qwen `8084` (CN)
+  — gated by the **`MODEL_COUNTRIES`** country allowlist (default `US`), pinned with multi-hash checksums,
+  and autodiscovered by the client. Full design: `tasks/reference/model-registry-country-gate-and-checksums.md`.
+  (`make serve MODEL=<m>`; ports are deliberately not knobs.)
 - **`client/` — Linux, containerized.** A Podman image = the full runClaudeInContainer toolchain
   (~430 packages) plus **Crush built from source at a pinned tag**. It reaches the Mac through an
   **SSH port-forward** (`ssh -L`, run on the Linux host), with `podman run --network=host` so

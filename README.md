@@ -24,34 +24,42 @@ agent is taught, which live in your personal overlay (`ai-coding-conventions.per
 Two machines, one tunnel:
 
 ```
-  [MAC STUDIO]  llama.cpp (Metal) serving Muse Glimmer  ──  127.0.0.1:8080  (OpenAI /v1)
-                                     and/or Gemma 4   ──  127.0.0.1:8081  (fixed ports)
+  [MAC STUDIO]  llama.cpp (Metal) serving ONE active model  ──  127.0.0.1:808x  (OpenAI /v1)
+                8080 glimmer · 8081 gemma · 8082 granite · 8083 devstral · 8084 qwen  (fixed ports)
+                which models exist is gated by MODEL_COUNTRIES (default US)
         ▲
-        │   ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081  you@mac-studio   (Linux host)
+        │   ssh -N -L 8080:127.0.0.1:8080 … -L 8084:127.0.0.1:8084  you@mac-studio   (Linux host)
         │
-  [LINUX HOST]  localhost:8080 / localhost:8081
+  [LINUX HOST]  localhost:808x
         │
-  [CONTAINER]   crush  →  http://127.0.0.1:8080 | :8081          (podman run --network=host)
+  [CONTAINER]   crush  →  http://127.0.0.1:808x   (podman run --network=host; autodiscovers live ports)
 ```
 
 The model runs on the Mac (the strongest local hardware here — a 36 GB Mac Studio). The
 agent runs in a throwaway container on Linux. The server listens on **loopback only**; the
 one way in is an SSH port-forward, so nothing is exposed on the network.
 
-## The models — Meta Muse Glimmer 30B and Google Gemma 4 26B-A4B
+## The models — five open-weight coders, gated by country of origin
 
-Two models, both **Apache-2.0** (OSI-approved), both served by the same llama.cpp build, each on
-its own **fixed** port:
+Five models, **every one Apache-2.0** (OSI-approved *weights* — a hard requirement; OSI is enforced
+when a model is added, so there is no runtime licence flag), all served by the same llama.cpp build,
+each on its own **fixed** port. Which ones are actually pulled/served/offered is gated by
+**`MODEL_COUNTRIES`** — a country allowlist, **default `US`** (override `US,FR` or `ALL`):
 
-| `make serve MODEL=` | model | GGUF | port |
-|---|---|---|---|
-| `glimmer` (default) | [Muse Glimmer 30B](https://huggingface.co/blog/muse-glimmer), Meta's agentic coding model | Q4_K_M, ~16.8 GB | `8080` |
-| `gemma` | [Gemma 4 26B-A4B](https://huggingface.co/google/gemma-4-26B-A4B-it-qat-q4_0-gguf), Google's MoE (3.8B active) | official QAT Q4_0, ~14.4 GB | `8081` |
+| `make serve MODEL=` | model | org / country | GGUF | port |
+|---|---|---|---|---|
+| `glimmer` (default) | [Muse Glimmer 30B](https://huggingface.co/blog/muse-glimmer), agentic coding model | Meta / 🇺🇸 US | Q4_K_M, ~16.8 GB | `8080` |
+| `gemma` | [Gemma 4 26B-A4B](https://huggingface.co/google/gemma-4-26B-A4B-it-qat-q4_0-gguf), MoE (3.8B active) | Google / 🇺🇸 US | official QAT Q4_0, ~14.4 GB | `8081` |
+| `granite` | [Granite 34B Code Instruct](https://huggingface.co/ibm-granite/granite-34b-code-instruct-8k-GGUF) | IBM / 🇺🇸 US | Q4_K_M, ~21.4 GB | `8082` |
+| `devstral` | [Devstral Small 2507](https://huggingface.co/mistralai/Devstral-Small-2507_gguf), agentic coder | Mistral / 🇫🇷 FR | Q4_K_M, ~14.3 GB | `8083` |
+| `qwen` | [Qwen3-Coder 30B-A3B](https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF), MoE (~3.3B active) | Alibaba / 🇨🇳 CN | Q4_K_M, ~18.6 GB | `8084` |
 
-Either fits a 36 GB Mac with room for a 64k context; **both at once (~31 GB of weights) does not** —
-serve one at a time, or size the second's `CTX` down. The Glimmer quant ladder (Q5_K_M, Q6_K, …) and
-the MLX backend are in `tasks/reference/architecture.md`; why Gemma 4 (and not 1–3, which are not
-OSI-licensed) and why the 26B-A4B is in `tasks/reference/gemma-4-alongside-glimmer.md`.
+Any one fits a 36 GB Mac with room for a 64k context; **serve one at a time** (several at once won't
+fit). `MODEL_COUNTRIES=US` (the default) pulls/serves only glimmer, gemma, granite; `US,FR` adds
+Devstral; `ALL` adds Qwen. DeepSeek-Coder was considered and **excluded** — its *weights* carry use
+restrictions (not OSI). The Glimmer quant ladder and the MLX backend are in
+`tasks/reference/architecture.md`; the model set + country decisions are in
+`tasks/archive/2026/09/20/country-gated-model-selection.md`.
 
 llama.cpp gained Muse Glimmer support in release **`b10353`** (2026-08-10) and Gemma 4 vision
 handling in PR #28335 (2026-09-04); the server pins **`b10883`** (2026-09-09).
@@ -65,15 +73,19 @@ Prerequisites `[MAC]`: Xcode command-line tools (`xcode-select --install`), `cma
 cd server
 make deps      # check the prerequisites above (Xcode CLT + cmake) are installed
 make llama     # clone + build llama.cpp for Metal, pinned to a known-good tag
-make pull      # download BOTH GGUFs (Glimmer Q4_K_M + Gemma 4 Q4_0, ~31 GB total) into ./models
-make serve                # start llama-server for Muse Glimmer on 127.0.0.1:8080 (OpenAI /v1) ...
-make serve MODEL=gemma    # ... or for Gemma 4 on 127.0.0.1:8081 -- one at a time on a 36 GB Mac
+make pull      # download the ACTIVE models' GGUFs (default US: glimmer+gemma+granite, ~53 GB) into ./models
+make checksums-refresh    # pin MD5+SHA-256+BLAKE2b for the downloaded GGUFs -> models.CHECKSUMS
+make serve                # verify checksum, then start llama-server for Muse Glimmer on :8080 (OpenAI /v1) ...
+make serve MODEL=gemma    # ... or Gemma 4 on :8081 -- one at a time on a 36 GB Mac
 make probe [MODEL=gemma]  # (in another terminal) does it ANSWER? -- lists the model alias + live context size
 make smoke [MODEL=gemma]  # (in another terminal) does it GENERATE? -- one chat round-trip that must reply "OK"
 ```
-> `MODEL=` is the only switch: it picks the GGUF, the alias, and the port together. The ports are
-> **not** configurable (the client's crushrc and the SSH tunnel hardcode them). Anything else you
-> pass — `CTX`, `NGL`, `NP` — applies to whichever model you're serving.
+> `MODEL=` picks the GGUF, the alias, and the port together; it must name a model whose country is in
+> `MODEL_COUNTRIES` (default `US`) — `make serve MODEL=devstral` refuses unless you add `FR`. Pull all
+> five with `make pull MODEL_COUNTRIES=ALL`. The ports are fixed per model; the client **autodiscovers**
+> whichever are live (no longer hardcoded to two). `make serve` re-verifies the model's checksum first
+> and **refuses to serve** on a mismatch. Anything else — `CTX`, `NGL`, `NP` — applies to whichever
+> model you're serving.
 > **New machine (airgap box, bigger or smaller Mac)?** Run `probe`, then `smoke`, then size the
 > knobs in this order — quant → `NGL` → `CTX` → `NP` — following
 > `tasks/reference/new-hardware-bringup.md`; it names the three server-log lines that decide it.
@@ -82,12 +94,15 @@ make smoke [MODEL=gemma]  # (in another terminal) does it GENERATE? -- one chat 
 Quant file and context size are Makefile variables — override per run, e.g.
 `make serve CTX=32768` or `make serve MODEL_FILE=<another downloaded quant>`.
 
-**How much to download** — `make pull` always fetches the two default GGUFs; `MODEL_FILES` adds more
+**How much to download** — `make pull` fetches one GGUF per **active** model (the countries in
+`MODEL_COUNTRIES`, default US); `MODEL_FILES` adds more
 from the *selected* model's repo:
 
 ```sh
-# DEFAULT: one GGUF per model — Glimmer Q4_K_M (~16.8 GB) + Gemma 4 Q4_0 (~14.4 GB):
+# DEFAULT (MODEL_COUNTRIES=US): glimmer Q4_K_M + gemma Q4_0 + granite Q4_K_M (~53 GB):
 make pull
+# ALL five models (adds Devstral FR + Qwen CN, ~86 GB total):
+make pull MODEL_COUNTRIES=ALL
 
 # + EVERY Glimmer quant GGUF in its repo:
 make pull MODEL_FILES="*.gguf"
@@ -193,15 +208,19 @@ identical either way:
   network, so `127.0.0.1:8080`/`:8081` hits the TCP SSH-forwarded ports (the `ssh -N -L 8080:… -L 8081:…`
   from "Connecting" above). Use this when Crush needs the internet.
 
-The baked `crushrc` preconfigures exactly two local providers, **pins Muse Glimmer (`8080`) and Gemma 4
-(`8081`) explicitly and suppresses Crush's built-in model catalog** so only those two are offered.
-At startup it probes both ports and **preselects whichever model is being served** (Glimmer when
-both or neither answer); switch any time with the models dialog (`ctrl+l`).
+The baked `crushrc` **autodiscovers the local models**: at startup it probes each model's fixed port
+(8080–8084) and registers a provider **only for the ones that answer**, then preselects the first
+live one; Crush's built-in model catalog is suppressed. Because the server only serves an
+allowed-country model (its `MODEL_COUNTRIES`), only that model's port answers — so the country
+allowlist reaches the client by liveness, not by the client knowing the flag. If no port answers
+(tunnel not up yet), it pins Muse Glimmer (`8080`) so Crush never falls into onboarding. Switch any
+time with the models dialog (`ctrl+l`).
 
 ## Airgapped rebuild — vendoring the sources
 
 Rebuild the whole system on an airgapped machine. Only the three internet-sourced artifacts are
-vendored — **Crush** (+ Go deps), **llama.cpp**, and the **model GGUFs** (both models). The Fedora base
+vendored — **Crush** (+ Go deps), **llama.cpp**, and the **model GGUFs** (the active models, per
+`MODEL_COUNTRIES`). The Fedora base
 image and dnf packages are the airgapped box's own (not vendored). Design details:
 `tasks/reference/architecture.md`.
 
@@ -284,9 +303,10 @@ The first cut was just "get it running"; the client has since grown a few things
   what fills the first-turn context. The patch stays in the tree but is not applied in shipped images
   (`CRUSH_CONTEXT_DEBUG ?= 0`). How it works + the measurement method:
   `tasks/reference/crush-context-assembly.md`.
-- **Only the two local models are offered** — the baked `crushrc` pins Muse Glimmer (`8080`) and
-  Gemma 4 (`8081`) explicitly and sets `option default-providers false` to suppress Crush's built-in
-  provider catalog.
+- **Only the live local models are offered** — the baked `crushrc` probes each model's fixed port
+  (8080–8084) and registers a provider only for the ones answering, and sets
+  `option default-providers false` to suppress Crush's built-in provider catalog. Which models are
+  live is gated on the server by `MODEL_COUNTRIES`.
 - **Host config mounts** — `~/.tmux.conf` / `~/.gitconfig` / `~/.gnupg` / `~/.vimrc` are mounted in when present,
   plus a baked `.extrabashrc` (prompt, aliases).
 
