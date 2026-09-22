@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stub harness for client/runCrush{NoInternet,WithInternet}.sh — proves the launcher LIFECYCLE
+# Regression gate for client/runCrush{NoInternet,WithInternet}.sh — proves the launcher LIFECYCLE
 # (image → mktemp → blocking ssh → poll → make shell → cleanup) without a Mac, an sshd, or
 # podman: `ssh` and `make` are shadowed by PATH shims that record their argv and mimic the
 # observable side effects the launcher depends on (ssh creates the forwarded unix sockets / a
@@ -13,10 +13,10 @@
 #   6  usage errors (0 args, 1 arg) → exit 2, ssh/make never called
 # Plus `bash -n` + shellcheck on the three scripts and a `make -n` render of the shell target.
 # Paths are relative to this script / the repo root — nothing container-absolute.
-# Run from anywhere:  bash tasks/adhoc/runcrush-launcher-scripts/stub_harness.sh
+# Run from anywhere:  bash tools/check_launchers.sh   (promoted from tasks/adhoc/runcrush-launcher-scripts/ 2026-09-22)
 set -u
 
-repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 client="$repo_root/client"
 work=$(mktemp -d)
 shim="$work/shim"

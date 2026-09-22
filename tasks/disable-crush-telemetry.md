@@ -4,13 +4,19 @@
 **Priority:** 6
 **Difficulty:** 2
 **Started:** 2026-08-27
-**Blocked on:** a runtime egress watch — the **rebuild half of the original gate cleared
+**Blocked on:** a runtime egress watch **in with-internet mode only** (`runCrushWithInternet.sh` /
+bare `make shell`, `--network=host`). In no-internet mode (`runCrushNoInternet.sh` /
+`LOCALHOST_ONLY=1`, `--network=none` + a unix-socket model link) the gate is met by construction —
+no DNS, no route off the box — and the maintainer decided 2026-09-22 to keep this task open for the
+with-internet case specifically (`tasks/archive/2026/09/22/decide-egress-verification.md` records the
+broader "no standing gate" decision). History: the **rebuild half of the original gate cleared
 2026-08-29** (the maintainer built a default-flag `make -C client image` on the real machine and
 Crush connected to the local model), leaving only the observation that no traffic reaches
 `data.charm.land` / `api.github.com` at runtime.
-**Recheck:** start Crush with egress watched (`strace -f -e trace=connect,sendto` or a tcpdump) and
+**Recheck:** start Crush **via `runCrushWithInternet.sh`** with egress watched on the host
+(`strace -f -e trace=connect,sendto` on the container's crush, or a tcpdump on the host interface) and
 confirm **no** connection to `data.charm.land` or `api.github.com` while the model still answers.
-Cleared = zero egress to those two hosts. Overlaps `tasks/decide-egress-verification.md` (which
+Cleared = zero egress to those two hosts. Overlaps `tasks/archive/2026/09/22/decide-egress-verification.md` (which
 decides whether a standing check is wanted at all — resolving that may clear or absorb this gate);
 the sandbox-buildable minimal image that once made this watch runnable in-sandbox was **removed 2026-09-12** (`tasks/reference/nested-podman-vs-image-content.md`); the full client image (~22 GB) won't build in the nested store, so run the egress watch on the host (or build a purpose-built lean egress image).
 

@@ -1,6 +1,22 @@
 # Crush wouldn't start: the crushrc `lsp add` syntax bug — and what the client should do at startup with two models
 
-**Status:** implemented and proven in-sandbox 2026-09-10; **awaiting the maintainer's host rebuild** (`make -C client image`, then `crush` starts and `ctrl+l` lists two models). Created retroactively 2026-09-10 at the maintainer's request (William Emerison Six <billsix@gmail.com>) after the first real run of the 2026-09-10 image failed.
+**Status:** REOPENED 2026-09-22 — **the real-machine check FAILED**: with Gemma 4 served on the Mac
+(`make serve MODEL=gemma`) and Crush launched via `client/runCrushNoInternet.sh` /
+`runCrushWithInternet.sh` on a freshly rebuilt image, Crush "failed to connect, it was still trying
+the glimmer port" and `ctrl+l` showed Glimmer (maintainer, William Emerison Six <billsix@gmail.com>).
+That is the crushrc's *fallback* branch (no port answered the probe → pin Glimmer), so the probe's
+`curl` failed on the machine. **In-sandbox re-proof the same day PASSED** on the HEAD (five-port,
+`try_model`-function) crushrc: vendored `v0.89.0` rebuilt offline, stub `/v1/models` on 8081 only →
+`crush models` lists exactly `gemma-4/gemma-4`, `crush --debug run` dials `127.0.0.1:8081` (9×) and
+never 8080. `curl` IS in the image (`00-install-minimal.sh:47`). So the crushrc + interpreter are
+cleared; the cause is environmental. Leads, unverified: (1) llama-server answers `/v1/models` with
+**503 "Loading model"** until the weights are loaded — `curl -f` treats that as failure, so starting
+`crush` before `make probe MODEL=gemma` answers on the Mac reproduces the symptom exactly; (2) podman
+forwards host `http_proxy`/`https_proxy` into the container by default (`--http-proxy=true`), and a
+proxy without `no_proxy=127.0.0.1` breaks a loopback `curl` (Crush's own Go client would misbehave
+too); (3) the 2 s `-m` timeout on a cold ssh channel. **Next:** instrument the probe (log each port's
+curl exit + HTTP code, warn loudly on fallback) so the machine says which — proposed 2026-09-22,
+awaiting go-ahead. Earlier status: implemented and proven in-sandbox 2026-09-10; **awaiting the maintainer's host rebuild** (`make -C client image`, then `crush` starts and `ctrl+l` lists two models). Created retroactively 2026-09-10 at the maintainer's request (William Emerison Six <billsix@gmail.com>) after the first real run of the 2026-09-10 image failed.
 **Priority:** 2
 **Difficulty:** 2
 **Started:** 2026-09-10

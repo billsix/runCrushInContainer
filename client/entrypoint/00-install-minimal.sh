@@ -40,7 +40,7 @@ fi
 #                      so this is for a usable dev experience, not correctness
 #   strace           - runtime egress check (observe connect/sendto syscalls)
 #   tcpdump          - runtime egress check (watch the bridge) — pairs with strace for
-#                      tasks/decide-egress-verification.md; the minimal image is that env
+#                      tasks/archive/2026/09/22/decide-egress-verification.md; the minimal image is that env
 #   which            - PATH lookups in scripts and the interactive shell
 dnf install -y --setopt=install_weak_deps=False \
     ca-certificates \

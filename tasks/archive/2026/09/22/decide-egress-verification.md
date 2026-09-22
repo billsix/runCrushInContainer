@@ -1,6 +1,8 @@
 # Decide whether the dependency-egress audit needs an enforced verification check
 
-**Status:** proposed — **askable now**: the audit landed and was implemented 2026-08-29
+**Status:** DONE — decided 2026-09-22 (William Emerison Six <billsix@gmail.com>): **enforced by
+construction, no standing runtime check.** See "Decision" below. Archived 2026-09-22.
+Pre-decision status, kept for the record: proposed — **askable now**: the audit landed and was implemented 2026-08-29
 (`tasks/reference/dependency-network-audit.md` — findings, D1–D12, flag index), so the decision has
 its numbers. Deferred originally by the maintainer (William Emerison Six <billsix@gmail.com>,
 2026-08-29: "no verification needed for now … a follow up task, to decide if we even need to").
@@ -34,8 +36,12 @@ Read first:
 
 Decisions already made, with rationale:
 
-- **`--network=none` is the WRONG mechanism** — under `--network=host` it severs the container's path
-  to the host's `127.0.0.1:8080`, killing the essential local-model link, so it proves nothing.
+- ~~**`--network=none` is the WRONG mechanism** — under `--network=host` it severs the container's path
+  to the host's `127.0.0.1:8080`, killing the essential local-model link, so it proves nothing.~~
+  **Superseded 2026-09-20:** true only when the model arrives over TCP. With the model forwarded to
+  a *unix socket* bind-mounted into the container and a `socat` bridge inside (`LOCALHOST_ONLY=1`),
+  `--network=none` keeps the model link and *is* the mechanism —
+  `tasks/reference/client-network-modes-and-launchers.md`.
 - The candidate mechanisms, if we do build a check (from the audit task):
   1. **Observe:** run Crush normally under `strace -f -e trace=connect,sendto` (or `tcpdump`),
      exercise startup + a chat + each KEPT online feature, assert every destination is
@@ -63,13 +69,31 @@ want a runtime egress check as a standing gate? If wanted: pick observe-vs-enfor
       and implemented 2026-08-29. The numbers: zero unsolicited egress with default flags; the
       remaining intentional surface is the web tools (D1), sourcegraph (D2), and operator-
       configured MCP servers.
-- [ ] Put the yes/no to the maintainer with the audit's numbers in hand.
-- [ ] If yes: pick mechanism (observe vs enforce) and environment (in-sandbox minimal image with a
-      stub endpoint, vs real machine against the live model), write the procedure/target, run it.
+- [x] Put the yes/no to the maintainer with the audit's numbers in hand — asked and answered
+      2026-09-22 (see Decision).
+- [x] ~~If yes: pick mechanism …~~ Not needed: enforcement exists by construction.
+
+## Decision (2026-09-22, William Emerison Six <billsix@gmail.com>)
+
+**No standing runtime egress check.** The question had a third answer once the localhost-only mode
+landed (2026-09-20) and its one-command launcher made it the recommended way in (2026-09-22):
+
+- **No-internet mode (`runCrushNoInternet.sh` / `make shell LOCALHOST_ONLY=1`) is enforcement by
+  construction.** The container runs `--network=none` and reaches the model only through a
+  bind-mounted unix socket — a file, not a network path — so there is no egress to observe or to
+  firewall. The maintainer's real-machine probe set (`curl https://1.1.1.1`, `getent hosts
+  github.com` failing inside; `tasks/archive/2026/09/22/runcrush-launcher-scripts.md` step 5) is the one-time proof.
+- **With-internet mode (`runCrushWithInternet.sh` / bare `make shell`, `--network=host`) relies on
+  the source-level audit + the default-on build patches** (`tasks/reference/dependency-network-audit.md`,
+  `PATCH_OUT_*`). The one observed check the maintainer still wants for *that* mode — zero traffic to
+  `data.charm.land` / `api.github.com` — stays tracked in `tasks/disable-crush-telemetry.md`
+  (re-scoped 2026-09-22); it is a targeted watch, not the standing gate this task asked about.
 
 ## Notes / decisions
 
+- 2026-09-22 — the archived-verify path (`tasks/archive/2026/09/22/verify-localhost-only-network-mode.md`)
+  and the launcher task are where the enforcement is exercised; this doc records only the decision.
+
 ## Open questions
 
-1. Is a runtime check needed at all, or is the source-level audit sufficient? (Deferred until the
-   audit's findings exist — that's this task's whole point.)
+None — the one question (runtime check needed at all?) is answered above.

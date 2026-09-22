@@ -4,7 +4,7 @@
 two network modes) and how the two launcher scripts, `client/runCrushNoInternet.sh` and
 `client/runCrushWithInternet.sh`, drive a whole session as one unit. Not a task; update in place.
 Written 2026-09-22 by William Emerison Six <billsix@gmail.com> (harvested from
-`tasks/runcrush-launcher-scripts.md`; the mode itself landed 2026-09-20,
+`tasks/archive/2026/09/22/runcrush-launcher-scripts.md`; the mode itself landed 2026-09-20,
 `tasks/archive/2026/09/20/localhost-only-network-mode.md`, applying "Option H" of the sibling
 `whitelistnetwork` repo's `tasks/whitelist-only-network-sandbox.md`).
 
@@ -123,8 +123,9 @@ Lifecycle (`runcrush_main` in `runCrush-common.sh`):
 
 ## Verification status
 
-- **In-sandbox (2026-09-22): 40/40 checks pass** —
-  `tasks/adhoc/runcrush-launcher-scripts/stub_harness.sh` shadows `ssh` and `make` with PATH
+- **In-sandbox (2026-09-22): 40/40 checks pass** — `tools/check_launchers.sh` (run from anywhere:
+  `bash tools/check_launchers.sh`; promoted from the task's ad-hoc harness at archive time because
+  the launchers will be edited again) shadows `ssh` and `make` with PATH
   shims that record argv and mimic the side effects the launcher depends on (the fake ssh creates
   the `.sock` files / a real TCP listener + the ControlMaster socket; `-O exit` tears them down).
   Static: `bash -n`, `shellcheck -x`, and a `make -n` render showing `--network=none`, the
@@ -132,16 +133,19 @@ Lifecycle (`runcrush_main` in `runCrush-common.sh`):
   (argv exact, five forwards in the right form, tunnel closed, temp dir gone), ssh forward failure
   (exit 1, `make shell` never runs, nothing left behind), SIGINT mid-session (exit 130 + cleanup),
   `make shell` exit 7 propagated, and the three usage errors (exit 2, ssh/make never called).
-- **End-to-end on the real machines: NOT yet run** — needs the Mac serving and a real SSH forward;
-  the steps are `tasks/runcrush-launcher-scripts.md` Plan step 5 (model reachable inside; under
-  no-internet `curl https://1.1.1.1` and `getent hosts github.com` fail; tunnel and temp dir gone
-  after exit and after ctrl-C). A passing no-internet run is *enforced* egress isolation, which
-  partly answers `tasks/decide-egress-verification.md`.
+- **End-to-end on the real machines (2026-09-22, William Emerison Six <billsix@gmail.com>): egress
+  confirmed both ways** — "no egress happened when I ran the script with no internet, and it did when
+  I ran it with internet". Teardown after exit was not separately reported (it is harness-proven). A
+  passing no-internet run is *enforced* egress isolation; that is the basis of the "no standing
+  runtime egress check" decision in `tasks/archive/2026/09/22/decide-egress-verification.md`.
+- **Seen in the same run, not a launcher defect:** with Gemma served, Crush pinned Muse Glimmer (the
+  crushrc probe's fallback) — tracked in `tasks/crushrc-startup-failure-and-model-preselect.md`
+  (reopened; the crushrc itself re-proved in-sandbox the same day).
 
 ## Related
 
 - Mode implementation: `tasks/archive/2026/09/20/localhost-only-network-mode.md`.
-- Launcher task (work record + the pending end-to-end test): `tasks/runcrush-launcher-scripts.md`.
+- Launcher task (work record): `tasks/archive/2026/09/22/runcrush-launcher-scripts.md`.
 - Egress surface: `tasks/reference/dependency-network-audit.md`; telemetry:
   `tasks/disable-crush-telemetry.md`.
 - Big picture: `tasks/reference/architecture.md` § Client, § Connecting.

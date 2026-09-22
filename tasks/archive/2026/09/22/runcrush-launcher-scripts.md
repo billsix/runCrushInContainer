@@ -1,8 +1,11 @@
 # One-shot launcher scripts for the Crush client: `runCrushNoInternet.sh` / `runCrushWithInternet.sh`
 
-**Status:** implemented + proven in-sandbox 2026-09-22 (40/40 harness checks); **awaiting the
-maintainer's end-to-end run on the real machines** (Plan step 5 — the one step that needs the Mac).
-Filed 2026-09-22 (William Emerison Six <billsix@gmail.com>); go-ahead the same day. Absorbs the former
+**Status:** DONE 2026-09-22 — implemented + proven in-sandbox (40/40 harness checks) and run on the
+real machines by the maintainer the same day (William Emerison Six <billsix@gmail.com>): "no egress
+happened when I ran the script with no internet, and it did when I ran it with internet" — step 5's
+egress halves, both modes. Teardown after exit was not separately reported (harness-proven). **Archive
+owed** (own commit after the work commit; promote the harness to `tools/check_launchers.sh` then).
+Filed 2026-09-22; go-ahead the same day. Absorbs the former
 `tasks/verify-localhost-only-network-mode.md` (now `tasks/archive/2026/09/22/…`, superseded): its
 end-to-end test is this task's final verification step.
 **Priority:** 3 — it is the on-ramp to the mode the README already calls "recommended", and the two
@@ -41,7 +44,7 @@ Read first, in order:
    override.
 4. `tasks/reference/dependency-network-audit.md` — the enumerated egress surface (D1–D12); the
    correctness gate for the no-internet flavour (under `--network=none` Crush must need nothing but the
-   model). Related decision task: `tasks/decide-egress-verification.md` (a passing no-internet run is
+   model). Related decision task: `tasks/archive/2026/09/22/decide-egress-verification.md` (a passing no-internet run is
    enforced egress isolation, which partly answers it).
 5. Source of the design: the sibling `whitelistnetwork` repo, `tasks/whitelist-only-network-sandbox.md`
    ("Option H": `--network=none` + unix-socket SSH forward + socat).
@@ -125,7 +128,7 @@ the design as decided 2026-09-22, kept for the record.
   `client/Makefile:148` — fix the stale pointer `tasks/localhost-only-network-mode.md` →
   `tasks/archive/2026/09/20/localhost-only-network-mode.md`; `tasks/reference/architecture.md` — one
   line pointing at the scripts.
-- [ ] **5. Maintainer end-to-end test (THE REMAINING STEP) (absorbed from the folded verify task; needs the Mac):**
+- [x] **5. Maintainer end-to-end test — egress halves confirmed 2026-09-22 (see Status) (absorbed from the folded verify task; needs the Mac):**
   1. Mac: `cd server && make serve` (and/or `make serve MODEL=gemma`).
   2. Linux host, from a project dir: `…/client/runCrushNoInternet.sh you@mac-studio.local ""`.
   3. **(a) model reachable:** inside, `curl -s http://127.0.0.1:8080/v1/models` lists the model; `crush`
@@ -151,8 +154,8 @@ the design as decided 2026-09-22, kept for the record.
 ## Work record (2026-09-22)
 
 - Files: `client/runCrush-common.sh`, `client/runCrushNoInternet.sh`, `client/runCrushWithInternet.sh`
-  (all `+x`); harness `tasks/adhoc/runcrush-launcher-scripts/stub_harness.sh` (run from anywhere:
-  `bash tasks/adhoc/runcrush-launcher-scripts/stub_harness.sh` → `ALL PASS`, 40 checks); docs:
+  (all `+x`); harness `tools/check_launchers.sh` (run from anywhere:
+  `bash tools/check_launchers.sh` → `ALL PASS`, 40 checks); docs:
   README (launchers lead the Client section; "Network modes" points at the reference doc),
   `client/Makefile` + `client/entrypoint/shell.sh` (stale `tasks/localhost-only-network-mode.md`
   pointers → the reference doc), `tasks/reference/architecture.md` (two one-liners), and the new
@@ -167,7 +170,13 @@ the design as decided 2026-09-22, kept for the record.
   130. Recorded as a gotcha in the reference doc.
 - shellcheck: clean with `-x`; the wrappers carry `# shellcheck source-path=SCRIPTDIR` so the
   shared body is followed from any cwd.
-- Archive when step 5 passes: own commit after the work commit; `git rm` the harness then (one-shot).
+- Archive when step 5 passes: own commit after the work commit. The harness is a re-runnable
+  regression gate for scripts that will be edited, so it is **promoted to `tools/check_launchers.sh`**
+  at archive time rather than `git rm`'d (maintainer left this to discretion, 2026-09-22).
+- **Found during the maintainer's run, NOT a launcher defect:** with Gemma served on the Mac, Crush
+  pinned Muse Glimmer (8080) and failed to connect — the crushrc probe found no live port and took its
+  fallback. Tracked in `tasks/crushrc-startup-failure-and-model-preselect.md` (real-machine run
+  FAILED; in-sandbox re-proof of the HEAD crushrc PASSED).
 
 ## Notes / decisions
 

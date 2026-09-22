@@ -526,5 +526,5 @@ at `127.0.0.1:8080` and `:8081`):
 - `tasks/archive/2026/08/29/audit-dependency-network-egress.md` — the investigation task (policy, decisions, method).
 - `tasks/disable-crush-telemetry.md` — the prior audit of Crush's own code (the four charm.land /
   github.com vectors).
-- `tasks/decide-egress-verification.md` — whether to add a runtime egress check enforcing this audit.
+- `tasks/archive/2026/09/22/decide-egress-verification.md` — whether to add a runtime egress check enforcing this audit.
 - `tools/triage_dependency_egress.py` — the phase-1 scanner.

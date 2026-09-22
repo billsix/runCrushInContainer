@@ -2,7 +2,7 @@
 
 **Status:** DONE (implemented) 2026-09-20 — the `LOCALHOST_ONLY` toggle landed and passed in-sandbox static
 checks; the end-to-end behaviour (model reachable + all other egress blocked) is the maintainer's local
-test, tracked separately in `tasks/archive/2026/09/22/verify-localhost-only-network-mode.md` (superseded 2026-09-22 by `tasks/runcrush-launcher-scripts.md`). Filed 2026-09-20
+test, tracked separately in `tasks/archive/2026/09/22/verify-localhost-only-network-mode.md` (superseded 2026-09-22 by `tasks/archive/2026/09/22/runcrush-launcher-scripts.md`). Filed 2026-09-20
 (William Emerison Six <billsix@gmail.com>), applying **Option H** of the `whitelistnetwork` sandbox writeup
 (sibling repo, `tasks/whitelist-only-network-sandbox.md`). Archived.
 
