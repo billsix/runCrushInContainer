@@ -145,7 +145,8 @@ NET_FLAGS ?= --network=host
 # NOTHING but the model (no internet, no other host). Requires the host to SSH-forward the
 # model to those unix sockets instead of TCP (the shell.sh banner + README show both forms).
 # For running Crush against the model; not meant to combine with NESTED_PODMAN=1 (nested
-# builds need network). Design: tasks/localhost-only-network-mode.md.
+# builds need network). The one-shot launchers runCrush{NoInternet,WithInternet}.sh drive it
+# end-to-end. Design: tasks/reference/client-network-modes-and-launchers.md.
 LOCALHOST_ONLY ?= 0
 MUSE_SOCK_DIR ?= $(HOME)/.cache/runcrush-muse-sockets
 ifeq ($(LOCALHOST_ONLY),1)

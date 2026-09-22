@@ -154,7 +154,10 @@ for its own `client/` image, but that's incidental to its purpose.
 - **`--network=host`** (Linux-only) so `127.0.0.1:8080` in the container is the host's
   SSH-forwarded port. Opt-in **`LOCALHOST_ONLY=1`** (`make shell LOCALHOST_ONLY=1`) instead runs
   `--network=none` + a `socat` unix-socket bridge, so the container reaches ONLY the model — no other
-  egress (default off). Impl: `tasks/archive/2026/09/20/localhost-only-network-mode.md`.
+  egress (default off). Impl: `tasks/archive/2026/09/20/localhost-only-network-mode.md`. The
+  one-shot launchers `client/runCrushNoInternet.sh` / `runCrushWithInternet.sh` wrap either mode
+  end-to-end (image → per-run `mktemp -d` → blocking ssh forward → `make shell` → trap cleanup):
+  `tasks/reference/client-network-modes-and-launchers.md`.
 - **SELinux: runs UNCONFINED** (`SELINUX_OPT ?= --security-opt label=disable`, `client/Makefile`).
   Without it, on an enforcing host the confined container can't access bind-mounted host dirs
   and — the case that bit us — **can't follow symlinks that jump out to a host path** like
@@ -276,6 +279,9 @@ vendoring only guarantees the sources are present and offline-buildable. `server
 
 ## Connecting
 
+- **Simplest:** from the project dir, `client/runCrushNoInternet.sh you@mac ""` (or
+  `runCrushWithInternet.sh`) — it opens the forward, blocks until it is up, runs the container, and
+  tears the tunnel down on exit. The bullets below are the manual equivalent.
 - On the **Linux host**: `ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac` — both
   model ports in one command, so switching models never touches the tunnel. **`-N` makes it look
   hung — that's correct** (foreground tunnel, no prompt); use another terminal, or `-fN` to background.

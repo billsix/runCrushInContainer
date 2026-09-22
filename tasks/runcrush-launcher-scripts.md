@@ -1,7 +1,8 @@
 # One-shot launcher scripts for the Crush client: `runCrushNoInternet.sh` / `runCrushWithInternet.sh`
 
-**Status:** proposed — needs go-ahead (design settled 2026-09-22; not implemented). Filed 2026-09-22
-(William Emerison Six <billsix@gmail.com>). Absorbs the former
+**Status:** implemented + proven in-sandbox 2026-09-22 (40/40 harness checks); **awaiting the
+maintainer's end-to-end run on the real machines** (Plan step 5 — the one step that needs the Mac).
+Filed 2026-09-22 (William Emerison Six <billsix@gmail.com>); go-ahead the same day. Absorbs the former
 `tasks/verify-localhost-only-network-mode.md` (now `tasks/archive/2026/09/22/…`, superseded): its
 end-to-end test is this task's final verification step.
 **Priority:** 3 — it is the on-ramp to the mode the README already calls "recommended", and the two
@@ -61,7 +62,11 @@ session against the Mac's model with the container locked to that model only; th
 does the same with the container on the host network. When they exit Crush (or hit ctrl-C, or the
 script dies), the SSH tunnel is gone and no temp files remain.
 
-## Design (decided 2026-09-22 with the maintainer)
+## Design
+
+Harvested into **`tasks/reference/client-network-modes-and-launchers.md`** (the durable copy: the
+two modes, the launcher lifecycle, why each choice, gotchas, verification status). What follows is
+the design as decided 2026-09-22, kept for the record.
 
 - **Location:** `client/runCrushNoInternet.sh`, `client/runCrushWithInternet.sh`, plus a shared
   `client/runCrush-common.sh` that both `source` (they differ in ~6 lines — the `-L` form and the
@@ -101,26 +106,26 @@ script dies), the SSH tunnel is gone and no temp files remain.
 
 ## Plan
 
-- [ ] **1. Write `client/runCrush-common.sh`** — arg parsing + usage, `make image`, `mktemp -d`, trap +
+- [x] **1. Write `client/runCrush-common.sh`** — arg parsing + usage, `make image`, `mktemp -d`, trap +
   `cleanup`, the ssh-with-ControlMaster launcher, the poll-with-timeout helper, the `make shell` call.
   Parameterised by two variables the wrapper sets: the forward spec builder (socket vs TCP) and the
   `LOCALHOST_ONLY` value.
-- [ ] **2. Write the two wrappers** (`runCrushNoInternet.sh`, `runCrushWithInternet.sh`): a header
+- [x] **2. Write the two wrappers** (`runCrushNoInternet.sh`, `runCrushWithInternet.sh`): a header
   comment (what it does, the two args, the one-line example, "host-only, not nested"), set the two
   variables, `source` common, `main "$@"`. `chmod +x` all three and `git add --chmod=+x` (a `Write`
   drops the bit — see the global convention).
-- [ ] **3. In-sandbox verification (what CAN be proven here):** `bash -n` on all three; `shellcheck`;
+- [x] **3. In-sandbox verification (what CAN be proven here):** `bash -n` on all three; `shellcheck`;
   a dry run with `ssh` and `make` shadowed by stub functions/PATH shims that (a) succeed, (b) fail at
   the forward step, (c) get SIGINT mid-session — asserting in each case that the temp dir is removed
   and `ssh -O exit` was attempted; `make -n -C client shell LOCALHOST_ONLY=1 MUSE_SOCK_DIR=/tmp/x
   PROJECT=/p EXTRA_MOUNTS="-v /a:/b:z"` shows `--network=none`, the `/run/muse` mount, `/p:/work`, and
   the extra mount. Save the stub harness under `tasks/adhoc/runcrush-launcher-scripts/`.
-- [ ] **4. Docs:** README — make the shown `make shell` example the one-line script invocation, keep the
+- [x] **4. Docs:** README — make the shown `make shell` example the one-line script invocation, keep the
   manual `ssh` + `make shell` form under "Network modes" as the "what the script does" expansion;
   `client/Makefile:148` — fix the stale pointer `tasks/localhost-only-network-mode.md` →
   `tasks/archive/2026/09/20/localhost-only-network-mode.md`; `tasks/reference/architecture.md` — one
   line pointing at the scripts.
-- [ ] **5. Maintainer end-to-end test (absorbed from the folded verify task; needs the Mac):**
+- [ ] **5. Maintainer end-to-end test (THE REMAINING STEP) (absorbed from the folded verify task; needs the Mac):**
   1. Mac: `cd server && make serve` (and/or `make serve MODEL=gemma`).
   2. Linux host, from a project dir: `…/client/runCrushNoInternet.sh you@mac-studio.local ""`.
   3. **(a) model reachable:** inside, `curl -s http://127.0.0.1:8080/v1/models` lists the model; `crush`
@@ -135,13 +140,34 @@ script dies), the SSH tunnel is gone and no temp files remain.
      (poll bug) or socat didn't start (check `/run/muse/*.sock` inside); a feature that needs another
      host under `--network=none` → cross-check `tasks/reference/dependency-network-audit.md` and decide
      whether that endpoint gets allowed (then it isn't "localhost only").
-- [ ] **6. LAST STEP — reference doc:** `tasks/reference/client-network-modes-and-launchers.md` — what
+- [x] **6. LAST STEP — reference doc (written 2026-09-22):** `tasks/reference/client-network-modes-and-launchers.md` — what
   is TRUE about the two network modes (`--network=host` vs `--network=none` + unix-socket forward +
   socat), the launcher lifecycle (image → mktemp → blocking ssh → shell → trap), why each design choice
   (ControlMaster for teardown, `-f` + `ExitOnForwardFailure` as the "block until up" primitive,
   per-invocation temp dir vs the fixed cache dir), and the logged private-network alternative. Harvest
   this task's Design + Notes into it, slim this task to a work record pointing at it, then archive
   (own commit, after the work commit).
+
+## Work record (2026-09-22)
+
+- Files: `client/runCrush-common.sh`, `client/runCrushNoInternet.sh`, `client/runCrushWithInternet.sh`
+  (all `+x`); harness `tasks/adhoc/runcrush-launcher-scripts/stub_harness.sh` (run from anywhere:
+  `bash tasks/adhoc/runcrush-launcher-scripts/stub_harness.sh` → `ALL PASS`, 40 checks); docs:
+  README (launchers lead the Client section; "Network modes" points at the reference doc),
+  `client/Makefile` + `client/entrypoint/shell.sh` (stale `tasks/localhost-only-network-mode.md`
+  pointers → the reference doc), `tasks/reference/architecture.md` (two one-liners), and the new
+  `tasks/reference/client-network-modes-and-launchers.md`.
+- No Makefile logic change: `PROJECT=`, `EXTRA_MOUNTS=`, `LOCALHOST_ONLY=`, `MUSE_SOCK_DIR=` were
+  already command-line overrides.
+- Two harness mistakes found and fixed in the same unit: (a) `command make` still resolved to the
+  PATH shim (`command` bypasses functions, not PATH) — the `make -n` render now uses the real make
+  captured before the shim is prepended; (b) the SIGINT case returned 0 because an `&` child of a
+  non-interactive shell has SIGINT ignored (bash's async-child rule; confirmed via
+  `/proc/self/status` SigIgn) — the case now launches under `set -m`, and the same launcher exits
+  130. Recorded as a gotcha in the reference doc.
+- shellcheck: clean with `-x`; the wrappers carry `# shellcheck source-path=SCRIPTDIR` so the
+  shared body is followed from any cwd.
+- Archive when step 5 passes: own commit after the work commit; `git rm` the harness then (one-shot).
 
 ## Notes / decisions
 

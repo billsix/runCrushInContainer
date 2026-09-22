@@ -20,8 +20,8 @@ cd /work 2>/dev/null || cd /
 # 8083 devstral, 8084 qwen. Only sockets the host actually forwards get bridged (the `-S` test),
 # so listing all five is harmless when fewer are served.
 # socat backgrounds (the `&` returns 0, so `set -e` is fine) and dies with the --rm container.
-# Set the forward up on the host BEFORE launching (the sockets must exist for the bridge). See
-# tasks/localhost-only-network-mode.md.
+# Set the forward up on the host BEFORE launching (the sockets must exist for the bridge) — or
+# let runCrushNoInternet.sh do all of it. See tasks/reference/client-network-modes-and-launchers.md.
 if [ "${LOCALHOST_ONLY:-0}" = "1" ]; then
     for port in 8080 8081 8082 8083 8084; do
         if [ -S "/run/muse/$port.sock" ]; then

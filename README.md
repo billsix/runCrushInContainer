@@ -1,5 +1,27 @@
 # runCrushInContainer
 
+## BLUF
+
+Serve a model on the Mac, then run Crush against it from any project directory on Linux with **one
+command**. The launcher builds the client image if needed, opens the SSH tunnel to the Mac (blocking
+until it is up), starts the container with your project at `/work`, and closes the tunnel and cleans
+up after itself when you exit:
+
+```sh
+# [MAC]    serve a model (leave it running)
+cd server && make serve                                    # Muse Glimmer on 127.0.0.1:8080 (MODEL=gemma etc. for the others)
+
+# [LINUX]  from the project you want Crush to work on — pick one:
+cd /path/to/your/project
+/path/to/runCrushInContainer/client/runCrushNoInternet.sh   you@mac-studio.local ""   # recommended: the container reaches ONLY the model
+/path/to/runCrushInContainer/client/runCrushWithInternet.sh you@mac-studio.local ""   # the model + full internet
+```
+
+Then type `crush` at the prompt. The second argument is the extra `-v` mounts for the container
+(required — `""` for none, or e.g. `"-v /host/data:/data:z"`). The first run builds a ~22 GB image
+and takes a while; every run after that starts in seconds. Everything below is what those lines do
+(server, tunnel, client) and how to run each piece by hand.
+
 Run a **local coding LLM** on your Mac and drive it from **[Crush](https://github.com/charmbracelet/crush)**
 (Charm's terminal coding agent) in a disposable Linux container — a **tool for developing your own
 codebases with a private, local coding assistant**, the way
@@ -164,18 +186,70 @@ crushrc reaches each provider on its own port; Crush's models dialog (`ctrl+l`) 
 
 ## Client — the container (on Linux)
 
+**The one-command way in (recommended).** From the directory of the project you want Crush to
+work on, run a launcher. It builds the image if needed, opens the SSH forward to the Mac (blocking
+until it is up — you get ssh's password/passphrase prompt if it needs one), starts the container
+with that directory at `/work`, and on exit (normal, error, or ctrl-C) closes the tunnel and cleans
+up after itself. Arguments: the ssh target, then the extra `-v` mounts for the container (required;
+`""` for none). No second terminal needed.
+
+```sh
+cd /path/to/your/project
+/path/to/runCrushInContainer/client/runCrushNoInternet.sh   you@mac-studio.local ""   # NO internet: the container reaches only the model
+/path/to/runCrushInContainer/client/runCrushWithInternet.sh you@mac-studio.local ""   # model + full internet
+/path/to/runCrushInContainer/client/runCrushNoInternet.sh   you@mac-studio.local "-v /host/data:/data:z"   # extra mount (":z", never ":Z")
+```
+
+### By hand — the SSH forward, `make image` and `make shell` as separate steps
+
+The launcher is exactly these three steps plus cleanup. Run them yourself when you want the tunnel
+to outlive one session, to share one tunnel across several containers, or to debug a step in
+isolation. All three are `[LINUX]`.
+
+**1. Build the image** (once; layer-cached afterwards, so re-running is cheap):
+
 ```sh
 cd client
-make image     # build the image: full toolchain + Crush compiled from source (pinned)
+make image     # full toolchain + Crush compiled from source (pinned CRUSH_TAG); ~22 GB
+```
 
-# If running with NO internet access (recommended): the container reaches ONLY the model,
-# nothing else on the network (podman run --network=none + a socket bridge). See "Network
-# modes" below for the matching host-side SSH forward.
-make shell LOCALHOST_ONLY=1
+**2. Open the SSH forward** in its own terminal and leave it running — the form depends on the
+network mode you'll pick in step 3 (the container's `127.0.0.1:808x` must end up pointing at the
+Mac either way; "Connecting" above explains the forward in depth):
 
-# If you want the FULL internet: the container shares the host network (--network=host).
-make shell
+```sh
+# NO-internet mode: forward to UNIX SOCKETS in a directory the container will mount
+mkdir -p ~/.cache/runcrush-muse-sockets
+ssh -N -L ~/.cache/runcrush-muse-sockets/8080.sock:127.0.0.1:8080 \
+        -L ~/.cache/runcrush-muse-sockets/8081.sock:127.0.0.1:8081 you@mac-studio.local
 
+# WITH-internet mode: forward to TCP ports on this host's loopback
+ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac-studio.local
+```
+
+> `-N` makes ssh look hung — that's correct; it *is* the tunnel. Add `-f` to background it
+> (`pkill -f 'ssh -fN -L'` to tear it down later). Forward the ports of the models you serve
+> (8080 glimmer, 8081 gemma, 8082 granite, 8083 devstral, 8084 qwen); a forward to an unserved
+> port is harmless. **Socket gotcha:** a `.sock` left behind by a killed ssh makes the next
+> `ssh -L …sock` fail with "Address already in use" — `rm` it, or add
+> `-o StreamLocalBindUnlink=yes`. (The launcher sidesteps this with a fresh `mktemp -d` per run.)
+
+**3. Start the container**, pointing it at your project. `PROJECT` defaults to the directory you
+run `make` from — `client/` itself — so pass it:
+
+```sh
+cd client
+make shell LOCALHOST_ONLY=1 PROJECT=/path/to/your/project   # NO internet: --network=none + a socat bridge; the container reaches ONLY the model
+make shell PROJECT=/path/to/your/project                    # WITH internet: --network=host
+make shell LOCALHOST_ONLY=1 PROJECT=... MUSE_SOCK_DIR=/dir  # if you forwarded the sockets somewhere other than ~/.cache/runcrush-muse-sockets
+make shell PROJECT=... EXTRA_MOUNTS="-v /host/data:/data:z" # extra bind mounts (":z" or no label — never ":Z")
+```
+
+Inside, the banner repeats the matching `ssh` command for the mode you're in; then `crush`.
+
+Other client targets:
+
+```sh
 make shell-exec SCRIPT=path/to/script.sh   # batch twin: run a script (no TTY), then exit
 make shell-exec CMD='some command'         # ^ or an inline command
 make manifest  # print the container file layout (baked vs mounted paths; no build)
@@ -192,7 +266,9 @@ instead of dropping you into an interactive shell — for ad-hoc/CI use.
 ### Network modes
 
 Two ways the container reaches the model — both land on `127.0.0.1:8080`/`:8081`, so Crush's config is
-identical either way:
+identical either way. The launchers above set up the matching forward for you (into a per-run temp
+dir, torn down on exit); what follows is the manual equivalent. Design and gotchas:
+`tasks/reference/client-network-modes-and-launchers.md`.
 
 - **Localhost-only (`make shell LOCALHOST_ONLY=1`, recommended) — no internet.** The container runs
   `--network=none`, so it has ONLY its own loopback and can reach **nothing but the model** (no internet,
