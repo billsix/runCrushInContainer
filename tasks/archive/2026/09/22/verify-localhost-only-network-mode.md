@@ -1,5 +1,8 @@
 # Verify the localhost-only network mode works end-to-end (maintainer local test)
 
+> **SUPERSEDED 2026-09-22** — folded into `tasks/runcrush-launcher-scripts.md` (Plan step 5 carries this
+> end-to-end test; the launcher script replaces steps 2–3 below). Archived unrun; kept for the record.
+
 **Status:** proposed — **maintainer hands-on test**, deferred (needs the Mac serving a model + a real SSH
 forward; can't run in the sandbox). Filed 2026-09-20 (William Emerison Six <billsix@gmail.com>) as the
 verification follow-up to the now-implemented
