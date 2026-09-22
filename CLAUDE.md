@@ -28,8 +28,11 @@ a template for the codebases you build with it are in `tasks/reference/architect
   **SSH port-forward** (`ssh -L`, run on the Linux host), with `podman run --network=host` so
   `127.0.0.1:8080` / `:8081` in the container are the forwarded ports (one tunnel forwards both).
   Opt-in `make shell LOCALHOST_ONLY=1` instead runs `--network=none` + a unix-socket/`socat` bridge so the
-  container reaches **only** the model (no other egress); default stays `--network=host`. See the README
-  "Network modes" and `tasks/archive/2026/09/20/localhost-only-network-mode.md`.
+  container reaches **only** the model (no other egress); default stays `--network=host`. **The one-command
+  way in is `client/runCrushNoInternet.sh` / `runCrushWithInternet.sh`** (image → per-run `mktemp -d` →
+  blocking ssh forward → `make shell` → trap cleanup; verified on the real machines 2026-09-22). Both modes,
+  the launcher lifecycle and its gotchas: `tasks/reference/client-network-modes-and-launchers.md`; the
+  regression gate is `tools/check_launchers.sh`.
 
 The pins (llama.cpp `LLAMACPP_TAG` `b10883`; floors `b10353` for Glimmer, PR #28335 for Gemma 4;
 Crush `v0.89.0`; the MLX serve alternative), the quant ladder, and the serve tuning are in
@@ -41,7 +44,8 @@ Three environments are in play; label instructions so it's unambiguous:
 
 - **`[MAC]`** — the Mac Studio running `server/` natively (Homebrew, Xcode CLT, `make serve`).
 - **`[LINUX HOST]`** — the Linux box running the client container and the SSH tunnel.
-- **`[CONTAINER]`** — the Podman sandbox launched by `client/make shell`, where Crush runs.
+- **`[CONTAINER]`** — the Podman sandbox launched by `client/make shell` (or by a `client/runCrush*.sh`
+  launcher, which wraps it), where Crush runs.
 
 ## Conventions for changing this repo
 
@@ -115,6 +119,10 @@ The egress patch/flag system and the 213-Go-dep dependency network audit are in
   `COPY`, every `SHELL_RUN_FLAGS` mount, final runtime paths, the repo↔baked reference-doc mapping and
   **the cite-by-baked-path rule**). Printable via `make -C client manifest`. Consult before citing a
   container path.
+- `tasks/reference/client-network-modes-and-launchers.md` — the two client network modes
+  (`--network=host` vs `--network=none` + unix-socket forward + socat) side by side, the one-shot
+  launchers' lifecycle and why each design choice, the gotchas (ctrl-C goes to the container, async
+  children ignore SIGINT, `:Z`), and the verification status.
 - `tasks/reference/gemma-4-alongside-glimmer.md` — Google's open-weights models against the OSI-licence
   bar (Gemma 4 is Apache-2.0), the family table, and the two-models/two-fixed-ports design.
 - `tasks/reference/new-hardware-bringup.md` — the first hour on a new box (`make probe`/`make smoke`,

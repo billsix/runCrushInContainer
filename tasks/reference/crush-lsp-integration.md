@@ -114,7 +114,7 @@ bare token is looked up as a flag name and the whole config load aborts — Crus
 start with `lsp add: unknown flag setup.py`. The first version of these six lines shipped that way
 (commit `77e78e8`) because the servers were proven in throwaway containers but the crushrc itself
 was never loaded through Crush; work record `tasks/archive/2026/09/10/crushrc-startup-failure-and-model-preselect.md`
-(if archived) or `tasks/crushrc-startup-failure-and-model-preselect.md`.
+(if archived) or `tasks/archive/2026/09/22/crushrc-startup-failure-and-model-preselect.md`.
 
 "push" = `textDocumentSync` advertised, so `publishDiagnostics` flows; "pull" = the newer
 `diagnosticProvider` too. GLSL is definition-and-diagnostics only — kept because it is free and

@@ -102,7 +102,7 @@ v0.89.0-specific (several absent features are on Crush's in-repo `docs/*/FUTURE.
   `crush-lsp-integration.md` §4). Cheap gate before a `make image`: build the vendored tree
   (`cd client/vendor/crush && GOPROXY=off go build -mod=vendor -o /tmp/crush .`) and run `crush models`
   with the edited file at `$HOME/.config/crush/crushrc` — a parse error shows there. Origin:
-  `tasks/crushrc-startup-failure-and-model-preselect.md`.
+  `tasks/archive/2026/09/22/crushrc-startup-failure-and-model-preselect.md`.
 
 ## Other features (relevant to the port)
 

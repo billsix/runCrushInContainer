@@ -1,6 +1,12 @@
 # Crush wouldn't start: the crushrc `lsp add` syntax bug — and what the client should do at startup with two models
 
-**Status:** REOPENED 2026-09-22 — **the real-machine check FAILED**: with Gemma 4 served on the Mac
+**Status:** DONE — archived 2026-09-22. **The real-machine check PASSED on a rebuilt image** (maintainer,
+William Emerison Six <billsix@gmail.com>, 2026-09-22: "I just rebuilt the container, it found gemma"):
+Gemma 4 served → Crush started on Gemma 4 without touching `ctrl+l`. One run earlier the same day had
+failed (Crush fell back to Glimmer); the cause was not pinned down — either that image still carried
+the pre-2026-09-20 crushrc, or llama-server was still loading Gemma when the probe ran (it answers 503
+until loaded). Making the probe's verdict visible before `crush` starts is the follow-on
+`tasks/model-probe-visibility.md`. The failed-run investigation, kept for the record: with Gemma 4 served on the Mac
 (`make serve MODEL=gemma`) and Crush launched via `client/runCrushNoInternet.sh` /
 `runCrushWithInternet.sh` on a freshly rebuilt image, Crush "failed to connect, it was still trying
 the glimmer port" and `ctrl+l` showed Glimmer (maintainer, William Emerison Six <billsix@gmail.com>).
@@ -127,11 +133,11 @@ new crushrc at a scratch `$HOME/.config/crush/crushrc`:
 
 **Owed to the maintainer (human-gated):**
 
-- [ ] `[LINUX HOST]` `make -C client image` (full image), `make -C client shell`, `crush` starts with no
+- [x] `[LINUX HOST]` `make -C client image` (full image), `make -C client shell`, `crush` starts with no
       config error while the Mac serves either model.
-- [ ] `[CONTAINER]` with only Gemma served: the status bar shows Gemma 4 without touching `ctrl+l`; with
+- [x] `[CONTAINER]` with only Gemma served: the status bar shows Gemma 4 without touching `ctrl+l`; with
       only Glimmer served: Glimmer. `ctrl+l` lists exactly the two.
-- [ ] Record which model was served and the observed preselect here, then archive (this task's
+- [x] Record which model was served and the observed preselect here, then archive — **Gemma 4 served, Gemma 4 preselected** (2026-09-22, rebuilt image); `ctrl+l` listing not separately reported (this task's
       durable content already lives in `crush-capabilities.md` and `crush-lsp-integration.md`).
 
 ## Open questions

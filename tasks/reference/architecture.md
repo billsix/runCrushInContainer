@@ -302,7 +302,7 @@ minimal variant to sidestep this nested — see "One image, always the full tool
 `tasks/reference/nested-podman-vs-image-content.md`.) See runClaudeInContainer's
 `tasks/reference/nested-podman-design.md` and its `dir-backed-nested-podman-storage.md`.
 
-## Verification status (updated 2026-09-10)
+## Verification status (updated 2026-09-22)
 
 Verified: client image builds + `crush v0.89.0` runs + `crushrc` parses; HF download plumbing;
 server serving on Metal (~21 t/s); the `@`-import patch splices live; the provider-suppression fix
@@ -314,6 +314,16 @@ the bumped `b10883`, then `make serve MODEL=gemma` + `make smoke MODEL=gemma` (a
 re-`smoke` at the new tag); off the Mac, `make -n` for every target/MODEL, `make check-repo
 MODEL=gemma`, and the Gemma 4 `pull` were exercised (work record `tasks/archive/2026/09/10/add-gemma-4-alongside-glimmer.md`; the Mac run is
 `tasks/verify-gemma-4-on-the-mac.md`).
+
+**2026-09-22 (real machines, maintainer):** the one-shot launchers work end-to-end — under
+`runCrushNoInternet.sh` no egress left the container, under `runCrushWithInternet.sh` it did (the basis
+of the "enforced by construction, no standing runtime egress check" decision,
+`tasks/archive/2026/09/22/decide-egress-verification.md`); and the five-port crushrc **autodiscovery
+preselected Gemma** when Gemma was served — after one failed run on the same day in which Crush fell back
+to Glimmer (cause undetermined: a stale-crushrc image or llama-server still loading; a rebuilt image
+found Gemma). Follow-on to make that fallback visible before it bites: `tasks/model-probe-visibility.md`.
+In-sandbox the same day: `tools/check_launchers.sh` 40/40, and the HEAD crushrc through a vendored
+Crush against a stub on 8081 registered only `gemma-4` and dialed 8081.
 
 ## Conventions machinery — ported (2026-08-21)
 

@@ -30,10 +30,12 @@ make probe                      # [ANY] in another terminal — alias + n_ctx as
 make smoke                      # [ANY] does it say OK?
 ```
 
-From the client host, the tunnel is one command even for two models —
-`ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac-studio` (drop the second `-L` until
-Gemma is served); `probe` through the tunnel (`curl http://127.0.0.1:<port>/v1/models`) is the
-end-to-end check the README describes.
+From the client host, the simplest end-to-end check is the launcher itself —
+`client/runCrushNoInternet.sh you@mac-studio ""` from a project dir opens the forward, waits for it, and
+drops you in the container, where `curl http://127.0.0.1:<port>/v1/models` is the `probe` through the
+tunnel (`tasks/reference/client-network-modes-and-launchers.md`). By hand, the tunnel is one command
+even for several models — `ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac-studio` (add an
+`-L` per served port; an unserved port's forward is harmless).
 
 Then read the **`llama-server` log** from `make serve` — three lines decide everything below:
 the `load_tensors: … offloaded N/N layers to GPU` line (did all layers fit?), the KV-cache size

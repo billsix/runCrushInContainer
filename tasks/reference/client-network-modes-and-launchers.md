@@ -138,9 +138,11 @@ Lifecycle (`runcrush_main` in `runCrush-common.sh`):
   I ran it with internet". Teardown after exit was not separately reported (it is harness-proven). A
   passing no-internet run is *enforced* egress isolation; that is the basis of the "no standing
   runtime egress check" decision in `tasks/archive/2026/09/22/decide-egress-verification.md`.
-- **Seen in the same run, not a launcher defect:** with Gemma served, Crush pinned Muse Glimmer (the
-  crushrc probe's fallback) — tracked in `tasks/crushrc-startup-failure-and-model-preselect.md`
-  (reopened; the crushrc itself re-proved in-sandbox the same day).
+- **Seen in the same run, not a launcher defect:** with Gemma served, Crush once pinned Muse Glimmer (the
+  crushrc probe's fallback); a rebuilt image found Gemma. Cause undetermined (stale-crushrc image, or
+  llama-server still loading — it answers 503 until the weights are in). Record:
+  `tasks/archive/2026/09/22/crushrc-startup-failure-and-model-preselect.md`; follow-on that makes the
+  probe's verdict visible before `crush` starts: `tasks/model-probe-visibility.md`.
 
 ## Related
 

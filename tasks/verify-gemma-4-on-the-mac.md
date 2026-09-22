@@ -56,6 +56,23 @@ two models in `ctrl+l` and routes a Gemma chat to 8081. Then record the numbers 
    `[CONTAINER]` `crush models` → exactly `muse-glimmer` and `gemma-4`, no catalog entries; in
    `crush`, `ctrl+l`, pick Gemma 4, send one prompt, confirm the request lands in the 8081 serve log.
 
+## Checks to do first (recorded 2026-09-22 at session end)
+
+The maintainer served Gemma 4 on the Mac on 2026-09-22 and, on a rebuilt client image, Crush's
+five-port probe found it (`tasks/archive/2026/09/22/crushrc-startup-failure-and-model-preselect.md`).
+That implies `make llama` built and `make serve MODEL=gemma` answered `/v1/models` — so most of this
+task may already be satisfied. Before running the full Steps:
+
+- [ ] Did Crush actually **generate a reply** against Gemma that day (a chat came back)? If yes, that is
+      `make smoke MODEL=gemma` in effect — tick the Gemma line below with the observed t/s/memory/CTX
+      if you have them (or "not recorded").
+- [ ] Which llama.cpp tag did that build use — `b10883` (the pinned `LLAMACPP_TAG`) or something else?
+- [ ] Still owed regardless: the Glimmer re-`smoke` on 8080 at the same tag (the pin bump could have
+      regressed it), and the `ctrl+l` listing (also asked in `tasks/model-probe-visibility.md`).
+
+If the first two are "yes" and `b10883`, tick the matching lines below and close this task; only the
+Glimmer re-smoke remains.
+
 ## Record when done
 
 - [ ] `make llama` at `b10883` built (or the tag actually used: ______).

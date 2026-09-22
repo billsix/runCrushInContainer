@@ -131,7 +131,7 @@ A flag that selects the **set of models used AND vendored** by country:
 4. **One port per model**, and **Crush autodiscovers the active ports and offers them** in its model dialog.
    Build on the EXISTING mechanism (confirmed 2026-09-20): the vendored Crush has an `internal/discover/`
    package (`client/vendor/crush/internal/discover/llamacpp.go`, `omlx.go`) plus the crushrc's load-time
-   probe of the local endpoints (`00-install-minimal.sh`, `tasks/crushrc-startup-failure-and-model-preselect.md`).
+   probe of the local endpoints (`00-install-minimal.sh`, `tasks/archive/2026/09/22/crushrc-startup-failure-and-model-preselect.md`).
    Extend that from the fixed 8080/8081 pair to a **port-per-model range** (each allowed model gets a port;
    discovery enumerates whichever are live) rather than hardcoding two providers.
 5. **OSI-approved licenses ONLY — hard requirement.** Every model in the set/registry must be OSI-approved

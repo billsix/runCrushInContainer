@@ -356,6 +356,7 @@ not the airgap path.
 | --- | --- |
 | `server/` | macOS-native llama.cpp server (Makefile: `llama` / `pull` / `serve` / `serve-mlx`) |
 | `client/` | Linux Podman image with Crush built in (Dockerfile + Makefile); `client/patches/` holds the local Crush patches (the `@`-import feature + the flag-guarded egress patch set — see `tasks/reference/dependency-network-audit.md`) |
+| `tools/` | Repo dev tooling: `check_launchers.sh`, the regression gate for the `client/runCrush*.sh` launchers (run from anywhere: `bash tools/check_launchers.sh`) |
 | `tasks/` | Task docs (`tasks/`), durable reference docs (`tasks/reference/`), and the dated archive (`tasks/archive/`) |
 
 ## Beyond the basics (still local + keyless — no auth to set up)
