@@ -285,6 +285,8 @@ dnf install -y \
     openldap-devel \
     openssh-clients \
     openssl-devel \
+    opus-devel \
+    opusfile-devel \
     p7zip \
     PackageKit-gtk3-module \
     pandoc \
