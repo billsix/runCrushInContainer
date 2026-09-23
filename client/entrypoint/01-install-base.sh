@@ -77,6 +77,8 @@ dnf install -y \
     cscope \
     ctags \
     curl \
+    cvs \
+    cvsps \
     dbus-devel \
     ddrescue \
     diffutils \
@@ -107,6 +109,7 @@ dnf install -y \
     flex \
     fontconfig-devel \
     freeglut \
+    freeimage-devel \
     freeglut-devel \
     freetype-devel \
     fuse-overlayfs \
@@ -118,10 +121,12 @@ dnf install -y \
     gettext \
     gettext-devel \
     gh \
+    git-filter-repo \
     ghc \
     giflib-devel \
     git \
     git-lfs \
+    git-svn \
     glew-devel \
     glfw-devel \
     glib \
@@ -294,6 +299,7 @@ dnf install -y \
     parallel \
     patch \
     patchutils \
+    pcre-devel \
     pcre2-devel \
     perf \
     perl \
@@ -375,8 +381,11 @@ dnf install -y \
     samba-client \
     sbcl \
     scons \
+    SDL2-devel \
     SDL2_image-devel \
+    SDL2_mixer-devel \
     SDL2_net-devel \
+    SDL2_ttf-devel \
     SDL3-devel \
     SDL3_sound \
     SDL3_sound-devel \
