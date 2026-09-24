@@ -80,9 +80,21 @@ never rewrites vendored deps) is the right tool for the mechanical modernization
 ownership change, but on 2000s code several "safe" checks misfire — always diff and build:
 
 - `modernize-loop-convert` names each range-for variable after its **container**, so a member
-  container `m_foos` yields a local `m_foo` — which violates the `m_` = member convention. Fix the
-  generated names (a scoped, collision-guarded rename codemod), or skip the check on `m_`-prefixed
-  containers.
+  container `m_foos` yields a local `m_foo` — which violates the `m_` = member convention, and an
+  awkward singular (`m_properties` → `propertie`). Fix the generated names (a scoped,
+  collision-guarded rename codemod), or skip the check on `m_`-prefixed containers. When you do the
+  rename pass, name the handle for the **element type**, not the container word — `sprite`, not
+  `obj`/`propertie`; but leave a **shared generic collection** (a base-template member like
+  `cObject_Manager<T>::objects`, inherited by 12 managers each with a different `T`) named
+  generically — it is a different type in each context, so anchor the type at the loop *variable*,
+  not the collection. **Two codemod-mechanics lessons from doing this at scale (smc,
+  2026-09-24):** (a) **key the rename on the container expression (or the enclosing class/scope), not
+  a per-file-uniform assumption** — a file with heterogeneous loops (one over a particle list, one
+  over an overworld list) will get one mislabeled if you assume "this file's loops are all X"; the
+  smc pass misfired exactly there and had to be redone container-keyed. (b) The codemod only
+  **generates** the diff — a human picks each name and eyeballs each hunk, because the *choice* is
+  judgment, not mechanical (the collision guard catches shadowing a param/local, but not a wrong-
+  but-legal name).
 - `modernize-use-equals-default` will **botch** an empty copy constructor with a member-init list
   (emits `: , = default;`, won't compile) and will rewrite a hand-written `operator=` to
   `= default` — a copy/assign **semantics** change. Keep its destructor/default-ctor conversions;
