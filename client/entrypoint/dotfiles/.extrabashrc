@@ -2,4 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 alias ls='ls --color=auto'
 export GPG_TTY=$(tty)
+
+# Maintainer default: turn on the nested-podman ENV flag so downstream project `make`
+# targets inside this sandbox auto-apply --cgroups=disabled without passing
+# NESTED_PODMAN=1 on every launch. Guarded to the maintainer's git identity so forks /
+# other users are NOT forced into nested mode, and only set when not already provided by
+# the host launch (`make shell NESTED_PODMAN=1` already exports it). This is the ENV half
+# only — the host launch still supplies /dev/fuse + caps that make nested podman work.
+if [ "$(git config --get user.email 2>/dev/null)" = "billsix@gmail.com" ] && [ -z "${NESTED_PODMAN:-}" ]; then
+    export NESTED_PODMAN=1
+fi
 PS1='\[\e[36m\]┌─(\t) \[\e[32m\]\u@\h:\w\n\[\e[36m\]└─λ \[\e[0m\]'
