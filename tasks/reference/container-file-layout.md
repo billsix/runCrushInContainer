@@ -48,6 +48,7 @@ the session log alongside it).
 | `entrypoint/vendor/` | `/usr/local/bin/vendor/` (`chmod +x`) | no |
 | `entrypoint/03-build-crush.sh` | `/usr/local/bin/03-build-crush.sh` | no |
 | — (built by `03-build-crush.sh`) | `/usr/local/bin/crush` (via `GOBIN`) | no |
+| `entrypoint/install-lean.sh` | `/usr/local/bin/install-lean.sh` | no (Lean 4 via elan; offline-copies /vendor/elan iff `CRUSH_VENDORED=1`, else online) |
 | `entrypoint/dotfiles/.extrabashrc` | `/root/.extrabashrc` | no |
 | `entrypoint/dotfiles/.vimrc` | `/root/.vimrc` | yes — by the host's `~/.vimrc` when it exists (2026-09-10) |
 | `entrypoint/dotfiles/.config/containers/storage.conf` | `/root/.config/containers/storage.conf` | no (nested-podman fuse-overlayfs) |
