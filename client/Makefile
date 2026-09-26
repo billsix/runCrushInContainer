@@ -115,7 +115,10 @@ ifeq ($(CRUSH_VENDORED),1)
 # --volume mounts the vendored checkout into every build RUN step; :ro keeps it read-only. If an
 # enforcing-SELinux host denies the mount, add ,z (e.g. :ro,z).
 CRUSH_VENDOR_FLAGS := --volume $(VENDOR_DIR)/crush:/vendor/crush:ro --build-arg CRUSH_VENDORED=1 \
-    $(if $(wildcard $(VENDOR_DIR)/wheels),--volume $(VENDOR_DIR)/wheels:/vendor/wheels:ro)
+    $(if $(wildcard $(VENDOR_DIR)/wheels),--volume $(VENDOR_DIR)/wheels:/vendor/wheels:ro) \
+    $(if $(wildcard $(VENDOR_DIR)/elan),--volume $(VENDOR_DIR)/elan:/vendor/elan:ro)
+# ^ the elan volume (only when `make vendor` produced it) lets entrypoint/install-lean.sh
+#   install Lean OFFLINE from the vendored toolchain instead of curl'ing elan online.
 # ^ the second volume (only when `make vendor` produced it) is for the RHEL 9 Dockerfile block's
 #   offline `pip install --no-index --find-links /vendor/wheels ty`; unused by the Fedora build.
 else
@@ -271,7 +274,15 @@ vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/cr
 		-v $(VENDOR_DIR):/vendor:Z \
 		$(CONTAINER_NAME) \
 		-c 'python3 -m pip download --only-binary=:all: --python-version 3.11 -d /vendor/wheels ty==$(TY_VERSION)'
-	@echo "vendored Crush into $(VENDOR_DIR)/crush + the ty $(TY_VERSION) wheel into $(VENDOR_DIR)/wheels — carry the repo (with ./vendor and server/) to the airgap box, then: make image CRUSH_VENDORED=1"
+	@# elan + the stable Lean 4 toolchain, for an OFFLINE Lean install: install-lean.sh copies
+	@# /vendor/elan → /root/.elan under CRUSH_VENDORED=1. Mirrors the Crush/ty vendoring above.
+	$(CONTAINER_CMD) run --rm --entrypoint /bin/bash \
+		$(PODMAN_RUN_FLAGS) \
+		$(SELINUX_OPT) \
+		-v $(VENDOR_DIR):/vendor:Z \
+		$(CONTAINER_NAME) \
+		-c '/usr/local/bin/vendor/vendor-lean.sh /vendor/elan'
+	@echo "vendored Crush into $(VENDOR_DIR)/crush + the ty $(TY_VERSION) wheel into $(VENDOR_DIR)/wheels + elan/Lean into $(VENDOR_DIR)/elan — carry the repo (with ./vendor and server/) to the airgap box, then: make image CRUSH_VENDORED=1"
 
 # --- shell / shell-exec share ONE container invocation, defined here so the two
 # targets can never drift. Scoped to this pair ONLY. See runClaudeInContainer

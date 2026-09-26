@@ -137,6 +137,14 @@ RUN CRUSH_TAG="$CRUSH_TAG" CRUSH_VENDORED="$CRUSH_VENDORED" CRUSH_AT_IMPORT="$CR
     PATCH_OUT_COPILOT="$PATCH_OUT_COPILOT" \
     /usr/local/bin/03-build-crush.sh
 
+# Lean 4 (theorem prover) via elan. install-lean.sh installs OFFLINE from the vendored
+# /vendor/elan when CRUSH_VENDORED=1 (airgap; the elan volume is mounted by the Makefile
+# when `make vendor` produced it), else ONLINE via the official curl installer. The
+# vendor/vendor-lean.sh helper is already COPY'd into /usr/local/bin/vendor/ above.
+COPY entrypoint/install-lean.sh /usr/local/bin/
+RUN /usr/local/bin/install-lean.sh
+ENV PATH="/root/.elan/bin:${PATH}"
+
 # Baked dotfiles (prompt, ls alias, GPG_TTY): /root/.extrabashrc, sourced from ~/.bashrc.
 # Host ~/.tmux.conf / ~/.gitconfig / ~/.gnupg are mounted conditionally by the Makefile.
 COPY entrypoint/dotfiles/ /root/
