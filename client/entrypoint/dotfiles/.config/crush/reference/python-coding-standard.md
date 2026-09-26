@@ -257,6 +257,38 @@ where it reads worse; the point is to stop *defaulting* to the old spelling. (ga
 `requires-python = ">=3.13"`, and compatibility with older Pythons is explicitly not a
 concern.)
 
+### Docstrings — Google / napoleon style
+
+**Write docstrings in Google style (parsed by `sphinx.ext.napoleon`), and on any symbol a
+Sphinx book renders via autodoc, put the full field set — `Args:`, `Returns:`, `Raises:`,
+`Example:` — on EVERY documented method, including trivial ones.** This is the maintainer's
+standard (chosen 2026-09-26; NumPy style rejected). Shape:
+
+```
+def zero(cls) -> Self:
+    """The additive identity 0.
+
+    Returns:
+        Self: the multivector with every coefficient zero.
+    """
+```
+
+- The **summary line + extended description** carry the real prose (and any citations, e.g.
+  "from Hestenes & Sobczyk p. 13"); the field lists come after. Keep the project's math /
+  domain voice — Google structure is a *frame*, not a flattening.
+- `self` / `cls` are **not** listed in `Args:` (napoleon convention). Document the rest with
+  types + meaning.
+- An existing doctest moves under an `Example:` header (napoleon renders it; it still runs
+  under `pytest --doctest-modules`).
+- When the book sets `autodoc_typehints = "none"` (recommended — see the sphinx-book doc),
+  the types you write in `Args:`/`Returns:` ARE the rendered type info, so get them right.
+- The book must enable `sphinx.ext.napoleon`. The **rendering/config** side of a Sphinx book
+  (autodoc typehints, `api.rst` coverage, fonts/glyphs, reading real build warnings) is its
+  own topic: `sphinx-book-conventions.md`.
+
+The non-Python analog (C/C++, …): the same "structured doc-comment with parameter/return
+sections" discipline via doxygen/javadoc; the language changes the marker, not the habit.
+
 ## modelviewprojection-specific additions
 
 These are modelviewprojection's own rules and worked examples that specialize or extend the
