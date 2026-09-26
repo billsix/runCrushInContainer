@@ -112,7 +112,14 @@ archaeological pile of appended notes, not a document. Whenever you harvest befo
 finalize or substantially update a task or reference doc, **rewrite it so it reads in one consistent tense** —
 past/perfective for completed work ("extracted X", "rejected Y because…"; present only for what is still true of
 the code now) — a single coherent retrospective in one voice, not the accumulation of its own edit history. The
-reader wants the story, not the sediment.
+reader wants the story, not the sediment. **Harvest from git, NOT from session memory, and include the
+STAGED/UNSTAGED work, not just commits** (learned 2026-09-26): conversation context is lossy once summarized and
+non-reproducible, so read the artifacts even when you think you remember. `<upstream>..HEAD` is **commits only** —
+when part of the work is committed but the rest is still staged (e.g. I committed some mid-session and you staged
+the remainder), `git log`/`git diff <upstream>..HEAD` silently omits it, so also read `git diff --cached` (staged)
+and `git diff` (unstaged) and fold all three in. **Decide whether the task is actually *done* from those artifacts**
+(the diff, the passing gate output, the sibling-task boundaries), not from a recollection that you finished it — a
+sibling task can look done from memory while its real scope is untouched.
 
 ## Task documents (`tasks/<slug>.md`)
 
