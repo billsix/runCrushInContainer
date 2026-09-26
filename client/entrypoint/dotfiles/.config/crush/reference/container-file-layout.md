@@ -53,7 +53,7 @@ the session log alongside it).
 | `entrypoint/dotfiles/.config/containers/storage.conf` | `/root/.config/containers/storage.conf` | no (nested-podman fuse-overlayfs) |
 | `entrypoint/dotfiles/.config/crush/CLAUDE.md` | `/root/.config/crush/CLAUDE.md` | no (always-loaded conventions) |
 | `entrypoint/dotfiles/.config/crush/commands/` (8 files) | `/root/.config/crush/commands/` | no (slash commands) |
-| `entrypoint/dotfiles/.config/crush/reference/` (6 files) | `/root/.config/crush/reference/` | no (see doc mapping below) |
+| `entrypoint/dotfiles/.config/crush/reference/` (9 files) | `/root/.config/crush/reference/` | no (see doc mapping below) |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.md` (blank default) | `/root/.config/crush/ai-coding-conventions.personal.md` | **YES — host overlay mounted over it** |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md` | `/root/.config/crush/ai-coding-conventions.personal.example.md` | no |
 | `entrypoint/crushrc` | `/root/.config/crush/crushrc` | no (model pin, catalog off, file-tool auto-allow) |
@@ -76,6 +76,7 @@ GOBIN=/usr/local/bin GOFLAGS=-trimpath`.
 | `~/.vimrc` | `/root/.vimrc` | only if it exists on the host — shadows the baked `entrypoint/dotfiles/.vimrc` (2026-09-10) |
 | `~/.ai-coding-conventions.personal.md` | `/root/.config/crush/ai-coding-conventions.personal.md` | always (`touch`ed blank if absent) — **overrides the baked blank**; note the dotted host name → un-dotted container name |
 | `EXTRA_MOUNTS` | user-chosen | user-supplied; no doc covers these paths |
+| `$(MUSE_SOCK_DIR)` (default `~/.cache/runcrush-muse-sockets`; the launchers pass a per-run `mktemp -d`) | `/run/muse` | only under `LOCALHOST_ONLY=1` — the SSH-forwarded model unix sockets (`808x.sock`) that `shell.sh`'s socat bridge re-exposes as `127.0.0.1:808x`; carries `:Z` (harmless on a throwaway dir). See `client-network-modes-and-launchers.md` |
 
 > The **diversion stack** (`~/.config/crush/stack.md`) is **not** a host mount and is **not** baked (as of
 > 2026-09-03) — it is in-session only: created on the ephemeral `--rm` overlay inside the container and discarded
@@ -83,7 +84,8 @@ GOBIN=/usr/local/bin GOFLAGS=-trimpath`.
 > conventions `CLAUDE.md` ("The diversion stack" / "Ending a session").
 
 Non-mount run flags that also shape the environment: `--network=host`
-(`NET_FLAGS`), `--security-opt label=disable` (`SELINUX_OPT`),
+(`NET_FLAGS`; `--network=none` under `LOCALHOST_ONLY=1`, plus `-e LOCALHOST_ONLY -e MUSE_SOCK_DIR`),
+`--security-opt label=disable` (`SELINUX_OPT`),
 `-e NESTED_PODMAN=0|1`, and under `NESTED_PODMAN=1` the device/cap flags plus
 the tmpfs image store at `/var/lib/containers` — see `nested-podman-design.md`.
 
@@ -102,10 +104,13 @@ the baked `~/.config/crush/reference/…` path**; in repo docs cite
 | `glimmer-models-and-airgap-quant-selection.md` | yes | no (repo-only) |
 | `nested-podman-design.md` | yes | yes — **keep the two copies in sync** |
 | `container-file-layout.md` (this doc) | yes | yes — **keep the two copies in sync** |
+| `python-coding-standard.md` | yes | yes — **keep the two copies in sync** |
+| `sphinx-book-conventions.md` | yes | yes — **keep the two copies in sync** |
 | `bluf-bottom-line-up-front.md` | no | yes (copied from runClaudeInContainer) |
 | `llm-overused-phrases.md` | no | yes (copied from runClaudeInContainer) |
 | `print-debugging.md` | no | yes (copied from runClaudeInContainer) |
 | `sandbox-capability-map.md` | no | yes (copied from runClaudeInContainer) |
+| `bulk-edit-shell-first.md` | no | yes (delivered convention, added 2026-09-18) |
 
 Caveat: when the mounted project is runCrushInContainer itself, a filename
 search finds up to THREE copies of a baked doc (the baked one, the
