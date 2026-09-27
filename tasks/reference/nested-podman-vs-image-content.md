@@ -104,8 +104,16 @@ and are tracked separately: `tasks/archive/2026/09/13/lsp-python-server-not-regi
 ## 4. The new design
 
 **Principle: image content is an explicit build-time choice; `NESTED_PODMAN` is run-time
-launch capability only. The two sandboxes are always built full; only *downstream* projects
-go lean when nested.**
+launch capability only. The two sandboxes are always built full; a *downstream* project
+builds lean only on an explicit opt-in.**
+
+> **Update 2026-09-27:** that opt-in became a dedicated **`MINIMAL_IMAGE`** flag — the
+> build-content meaning was split out of `NESTED_PODMAN` fleet-wide, and it is NOT inferred
+> from being nested (a nested `make image` builds FULL now that the inner store is disk-backed;
+> pass `MINIMAL_IMAGE=1` for a lean export/airgap image). See runClaudeInContainer
+> `tasks/reference/minimal-nested-images.md` and `tasks/archive/2026/09/27/decouple-minimal-image-from-nested-podman.md`.
+> The 2026-09-12 design below stands except that the downstream signal is `MINIMAL_IMAGE`, not
+> a nested-inferred `NESTED_PODMAN`.
 
 - **runCrush client:** `FULL_TOOLCHAIN ?= 1` — full toolchain always, decoupled from
   `NESTED_PODMAN`. The minimal/lean build is **removed** (its only user, the agent's
@@ -119,10 +127,11 @@ go lean when nested.**
   The action there is to **not** add a `NESTED_PODMAN`-coupled minimal variant (the proposed
   `minimal-sandbox-image.md` would re-introduce exactly this bug, and reusing the
   `claudecontainer` tag would let a nested build clobber the real image).
-- **Downstream projects (geometricalgebra, modelviewprojection, …): unchanged.** There
-  `NESTED_PODMAN` is inherited (meaning #2), the agent genuinely builds them nested, and
-  lean-when-nested + `PODMAN_RUN_FLAGS` are correct. The scoping the maintainer named — "the
-  crux is the sandbox Makefiles, not the other projects" — is exactly right.
+- **Downstream projects (geometricalgebra, modelviewprojection, …).** `NESTED_PODMAN` is
+  inherited (meaning #2) for the run flags; image content keys off the separate opt-in
+  `MINIMAL_IMAGE` (`FLAG ?= $(if $(filter 1,$(MINIMAL_IMAGE)),0,1)`, renamed from the overloaded
+  `NESTED_PODMAN` 2026-09-27) + `PODMAN_RUN_FLAGS` for `--cgroups`. The scoping the maintainer
+  named — "the crux is the sandbox Makefiles, not the other projects" — is exactly right.
 - **Fleet convention rescope:** the "optional build flags default lean when `NESTED_PODMAN=1`"
   standard (`port-lean-image-nested-convention.md` + the runClaude umbrella) applies to
   **downstream projects only, never the sandboxes themselves**. Otherwise this bug returns
