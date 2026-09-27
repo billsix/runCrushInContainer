@@ -328,7 +328,12 @@ needs BOTH `--cgroups=disabled`** (the sandbox `/sys/fs/cgroup` is read-only, el
 `cgroup.subtree_control: Read-only file system`) **and `--network=host`** (bridged netavark fails
 nested with `setns: Operation not permitted`; host networking sidesteps it). A project's Makefile
 won't have those flags — **don't silently edit their build files**; add them to a one-off run, or
-propose the edit and wait. The inner image store is RAM-backed and ephemeral. Full detail:
+propose the edit and wait. The inner image store is disk-backed and ephemeral by default (RAM tmpfs
+is opt-in via `NESTED_PODMAN_STORE=tmpfs`), and reuses the host image store read-only. **`NESTED_PODMAN`
+is run capability ONLY; a downstream project's image *content* keys off a separate opt-in `MINIMAL_IMAGE`**
+(renamed from the old overloaded `NESTED_PODMAN` 2026-09-27) — pass `MINIMAL_IMAGE=1` to a downstream
+`make image` for a lean export/airgap image; the sandbox doesn't set it, so a nested `make image` builds
+FULL by default (the disk store fits it), and it never applies to the sandboxes themselves. Full detail:
 `~/.config/crush/reference/nested-podman-design.md`. For **what tools/services this sandbox ships and its
 limits** (before assuming something isn't available), read
 `~/.config/crush/reference/sandbox-capability-map.md`. For **where your own files live** — which

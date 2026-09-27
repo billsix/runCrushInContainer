@@ -150,6 +150,15 @@ ENV PATH="/root/.elan/bin:${PATH}"
 COPY entrypoint/dotfiles/ /root/
 RUN echo "source ~/.extrabashrc" >> ~/.bashrc
 
+# The nested podman runs ROOTFUL (uid 0 inside a userns), so it reads the store config from
+# /etc/containers/storage.conf, NOT the rootless ~/.config/containers/ path the dotfiles COPY
+# above delivers. Ship the same storage.conf there too, or additionalimagestores (host image
+# reuse) and mount_program=fuse-overlayfs are silently ignored. Verified 2026-09-27: with the
+# file only at the rootless path, `podman images` was empty and the effective additional store
+# was the default /usr/lib/containers/storage; with it here, host-built images are reused R/O.
+# See runClaudeInContainer tasks/dir-backed-nested-podman-storage.md.
+COPY entrypoint/dotfiles/.config/containers/storage.conf /etc/containers/storage.conf
+
 # Baked default Crush config: a local llama.cpp provider with the model pinned explicitly and
 # the built-in catalog suppressed (see tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md).
 # crushrc is the modern config format (crush.json is deprecated); ~/.config/crush/crushrc is the
