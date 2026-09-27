@@ -21,7 +21,7 @@ in with `make shell NESTED_PODMAN=1` (default off, so a normal session stays min
 | `--security-opt unmask=ALL` | The inner rootful podman uses **netavark**, which writes per-interface sysctls to bring the bridge up; the sandbox `/proc/sys` is read-only without this, so bridged networking breaks. |
 | `--cap-add=sys_admin,mknod,net_admin` | Baseline mount/device work + `net_admin` for netavark's veth/bridge over netlink (else `netavark: Operation not permitted`). |
 | `--device /dev/net/tun` | Retained for the rootless/pasta path; harmless. |
-| `--tmpfs /var/lib/containers:rw,size=$(NESTED_PODMAN_TMPFS_SIZE)` | The inner image store — **RAM-backed**, default **8g** (`NESTED_PODMAN_TMPFS_SIZE` overrides). |
+| `--tmpfs /var/lib/containers:rw,size=$(NESTED_PODMAN_TMPFS_SIZE)` | The inner image store **in the opt-in `NESTED_PODMAN_STORE=tmpfs` mode** (the default is now an on-disk dir — see the disk-store bullet under "Operating it" below) — **RAM-backed**, default **8g** (`NESTED_PODMAN_TMPFS_SIZE` overrides). |
 
 `--security-opt label=disable` is already **always-on** in the client (`SELINUX_OPT`), so it's not
 repeated. Inner storage is driven by the baked `entrypoint/dotfiles/.config/containers/storage.conf`
@@ -58,8 +58,21 @@ flag (see runClaude's doc).
   Fine for building/testing (most project containers don't need isolated networking). So the working
   inner invocation is: `podman run --cgroups=disabled --network=host …`. (The image *pull* works
   without it — storage/fuse-overlayfs is fine; only container *networking* needs this.)
-- **The inner store is RAM.** `/var/lib/containers` is a tmpfs; every pulled/built inner image costs
-  RAM. Budget before big builds; bump `NESTED_PODMAN_TMPFS_SIZE`. Images don't survive the session.
+- **The inner store defaults to an on-disk DIR (2026-09-27) — IMPLEMENTED and VERIFIED in both sandboxes.**
+  `/var/lib/containers` is now an ephemeral host directory (`NESTED_PODMAN_STORE=dir`; a `mktemp -d`
+  under `NESTED_PODMAN_STORE_BASE`, default `~/.cache`, relocatable per launch — e.g. to an HDD to
+  spare an SSD — and `rm`'d by an `EXIT INT TERM HUP` trap) with the host image store reused read-only
+  (`additionalimagestores`) — no RAM ceiling. The RAM tmpfs is opt-in via `NESTED_PODMAN_STORE=tmpfs`
+  (then bump `NESTED_PODMAN_TMPFS_SIZE`). **The nested podman is rootful, so `storage.conf` must live
+  at `/etc/containers/storage.conf`** (the client Dockerfile now `COPY`s it there) — delivering it only
+  to the rootless `~/.config/containers/` path left `additionalimagestores` silently ignored.
+  **Verified in-session in both sandboxes 2026-09-27** (each relaunched with the disk store): the store
+  is on an `ext4` host disk (not tmpfs), `/var/lib/shared-images` is mounted read-only, host-built
+  images (`crushcontainer`, `claudecontainer`, `smc`) list read-only, a
+  `FROM localhost/crushcontainer:latest` build reused the base with no pull, and a forced ~20 GB fresh
+  layer committed cleanly to the disk store (a 46 GB image, no `no space left on device` — the tmpfs
+  OOM-at-commit class is retired). Host test + details: runClaudeInContainer
+  `tasks/dir-backed-nested-podman-storage.md`.
 - **Short names need `localhost/<tag>` and no TTY** in agent-driven runs; `make -n <target>` to print
   the expanded `podman run`, then re-run by hand with `--cgroups=disabled` added and `-it` dropped.
 - **Networking just works** (bridged netavark, verified in runClaude); `--network=host` is a fallback.

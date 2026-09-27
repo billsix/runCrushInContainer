@@ -166,8 +166,9 @@ for its own `client/` image, but that's incidental to its purpose.
   redundant and would relabel the user's project).
 - **Nested podman (2026-08-21):** `make shell NESTED_PODMAN=1` runs podman inside the client so Crush
   can build/run a project's own containers nested (opt-in, default off). Flag set (`/dev/fuse`,
-  `unmask=ALL`, `cap-add=sys_admin,mknod,net_admin`, RAM-backed tmpfs `/var/lib/containers` sized by
-  `NESTED_PODMAN_TMPFS_SIZE`) + baked `storage.conf` (fuse-overlayfs). Every inner run needs
+  `unmask=ALL`, `cap-add=sys_admin,mknod,net_admin`, an on-disk-dir inner store `/var/lib/containers`
+  by default — RAM tmpfs opt-in via `NESTED_PODMAN_STORE=tmpfs`) + baked `storage.conf`
+  (fuse-overlayfs). Every inner run needs
   `--cgroups=disabled`; the client itself is often nested, so project builds inside it are three-deep
   (run the client on the host for a clean level). Full detail: `tasks/reference/nested-podman-design.md`.
 - **Dotfiles + host config (2026-08-20):** the Dockerfile bakes `client/entrypoint/dotfiles/.extrabashrc`
@@ -294,9 +295,11 @@ vendoring only guarantees the sources are present and offline-buildable. `server
 ## Nested-build gotcha (build the client on the host, not nested)
 
 The client image is the full toolchain (**~22.3 GB**) and is meant to be built on the host. Building
-it in a RAM-backed nested podman store fails at the *layer commit* (not install) with `no space left
-on device` — commit peak (base+diff+temp) exceeds the final size. A 32 GB store overflowed; `mount -o
-remount,size=50g /var/lib/containers` (or a bigger `NESTED_PODMAN_TMPFS_SIZE`) worked around it, but
+it in the **opt-in RAM tmpfs** nested store fails at the *layer commit* (not install) with `no space
+left on device` — commit peak (base+diff+temp) exceeds the final size. A 32 GB store overflowed;
+`mount -o remount,size=50g /var/lib/containers` (or a bigger `NESTED_PODMAN_TMPFS_SIZE`) worked around
+it — and this failure is exactly what motivated the on-disk-dir store now being the default (no RAM
+ceiling; see runClaudeInContainer `tasks/dir-backed-nested-podman-storage.md`), but
 the intended path is a real disk-backed host build, which has no such ceiling. (There is no longer a
 minimal variant to sidestep this nested — see "One image, always the full toolchain" above and
 `tasks/reference/nested-podman-vs-image-content.md`.) See runClaudeInContainer's

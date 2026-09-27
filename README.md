@@ -213,6 +213,30 @@ cd client
 make image     # full toolchain + Crush compiled from source (pinned CRUSH_TAG); ~22 GB
 ```
 
+> **Where the ~22 GB image lives (and how to reclaim disk).** `make image` writes the
+> `crushcontainer` image to your **host** rootless store, `~/.local/share/containers/storage` —
+> that is what grows over time. Reclaim it with `podman rmi crushcontainer`, `podman system
+> prune -a`, or by deleting that directory (podman recreates it). The **nested** inner store —
+> where `podman` *inside* the sandbox writes its layers — is a throwaway dir under `~/.cache/`
+> removed on exit (leaked ones: `rm -rf ~/.cache/crush-nested.*`), disk-backed by default and
+> reusing the host images read-only. Full build-and-storage pipeline (the two podman levels,
+> where every layer lands): `tasks/reference/image-build-and-storage-pipeline.md`.
+>
+> **Put that throwaway store on a different disk with `NESTED_PODMAN_STORE_BASE`** (default
+> `~/.cache`) — e.g. to keep the build write-churn off an SSD by pointing it at an HDD:
+>
+> ```sh
+> make shell NESTED_PODMAN=1 NESTED_PODMAN_STORE_BASE=/mnt/sda1/tmpContainerStorage PROJECT=/path/to/your/project
+> ```
+>
+> The base is created if missing, and the per-session store under it (`crush-nested.XXXXXX`) is
+> still deleted on exit — a hard kill would leak it there instead
+> (`rm -rf /mnt/sda1/tmpContainerStorage/crush-nested.*`). The base must be a **real filesystem
+> that supports overlay xattrs** — ext4/xfs are ideal; btrfs works but has had overlay quirks —
+> and an HDD trades build speed for fewer SSD writes. `export NESTED_PODMAN_STORE_BASE=…` in your
+> shell to make it the default. (Only used in the default `dir` mode; ignored under
+> `NESTED_PODMAN_STORE=tmpfs`, which is RAM.)
+
 **2. Open the SSH forward** in its own terminal and leave it running — the form depends on the
 network mode you'll pick in step 3 (the container's `127.0.0.1:808x` must end up pointing at the
 Mac either way; "Connecting" above explains the forward in depth):

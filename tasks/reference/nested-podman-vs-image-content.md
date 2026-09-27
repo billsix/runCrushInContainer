@@ -59,8 +59,9 @@ The single variable carries two unrelated meanings, distinguished by *who sets i
    (geometricalgebra, mvp, …) from the *inherited* environment (the sandbox exports
    `-e NESTED_PODMAN=1`). Correct effect: add `--cgroups=disabled` to inner runs
    (`PODMAN_RUN_FLAGS`) and default optional build features lean so a big image fits the
-   RAM-backed store. This is a **build-content** concern, and it is legitimate *for downstream
-   projects the agent builds nested*.
+   inner store. (This mattered most under the old RAM tmpfs; the on-disk-dir store, now the
+   default, largely lifts the size ceiling.) This is a **build-content** concern, and it is
+   legitimate *for downstream projects the agent builds nested*.
 
 These never collide for downstream projects, because there `NESTED_PODMAN` is only ever
 *inherited*, never typed. They collide for the **sandboxes themselves**, because that is the
@@ -80,8 +81,9 @@ meaning #2.
   maintainer got "minimal image + nested," never "full toolchain + nested."
 - **The minimal image's real (and only) purpose was the agent's in-sandbox verification
   build**, not anything in the maintainer's workflow. The full client image is ~22.3 GB and
-  does not fit the RAM-backed nested store (it failed to *commit* even in a 32 GB store; a
-  `remount,size=50g` was needed — `tasks/reference/architecture.md` "Nested-build gotcha").
+  did not fit the **RAM tmpfs** nested store (it failed to *commit* even in a 32 GB store; a
+  `remount,size=50g` was needed — `tasks/reference/architecture.md` "Nested-build gotcha") —
+  the motivation for the on-disk-dir store now being the default.
   So `install-language-servers-for-crush` / `minimal-client-image` (archived 2026-09-10)
   introduced the ~1.65 GB minimal image so the *agent* could build-verify client changes
   nested without a real-machine visit. A repo-wide check found **no other rationale** — not

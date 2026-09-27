@@ -115,6 +115,9 @@ The egress patch/flag system and the 213-Go-dep dependency network audit are in
   content are decoupled, and the LSP-broke-when-nested post-mortem.
 - `tasks/reference/nested-podman-design.md` — nested-podman design/flags for the client (inner runs
   use the PODMAN_RUN_FLAGS convention + `--network=host`).
+- `tasks/reference/image-build-and-storage-pipeline.md` — the two podman levels (host `make image`
+  building `crushcontainer` vs nested podman inside the sandbox), where every image layer is written,
+  and how to reclaim disk.
 - `tasks/reference/container-file-layout.md` — the baked-vs-mounted map of the client container (every
   `COPY`, every `SHELL_RUN_FLAGS` mount, final runtime paths, the repo↔baked reference-doc mapping and
   **the cite-by-baked-path rule**). Printable via `make -C client manifest`. Consult before citing a

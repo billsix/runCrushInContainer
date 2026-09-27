@@ -106,8 +106,9 @@ in *nested* containers: see
 ## Containers inside the sandbox
 
 Opt-in `NESTED_PODMAN=1` (podman, buildah, skopeo are in the image). The
-design, flags, constraints (the PODMAN_RUN_FLAGS convention for inner runs, RAM-backed
-store) and operating lore live in **`nested-podman-design.md`** — read that
+design, flags, constraints (the PODMAN_RUN_FLAGS convention for inner runs, the
+disk-backed inner store — RAM tmpfs is opt-in) and operating lore live in
+**`nested-podman-design.md`** — read that
 before nested work. Which project images fit the nested store, and the lean-image-when-nested
 standard (2026-09-10): **`minimal-nested-images.md`**.
 
