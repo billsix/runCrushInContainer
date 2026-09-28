@@ -92,11 +92,14 @@ mutable/callable defaults *(ruff)*; `pathlib` over `os.path`; keyword args at ca
 meaning; flat over nested; no bare `except` *(ruff)*; no stray `print` *(ruff)*; consistent
 returns (if any branch returns a value, all do).
 
-### Type annotations — annotate generously
+### Type annotations — annotate every binding
 
-Signatures (params + returns) are the contract → always. **Locals: as much as reasonable —
-prefer a declared type over none, including in library code** (`r: Rotor = a * b`); skip
-only where it would be pure noise (`n = 3`), and **when in doubt, annotate.**
+Annotate the type of **every** variable — every module-level/global AND every local — not
+just function signatures. Signatures (params + returns) are the contract → always; **and
+every assignment binding carries its own explicit type too**, including obvious ones once
+waved through as noise (`n: int = 3`, `total: float = 0.0`) — do NOT skip a binding
+(William Emerison Six <billsix@gmail.com>, 2026-09-28). Holds in library code
+(`r: Versor = a * b`) AND in throwaway `tasks/adhoc/` scripts.
 **Loop/unpack targets** can't be annotated inline — declare the type on the line *above*
 (`blade: tuple[int, ...]` / `coef: Coef` above `for blade, coef in
 mv.to_blade_dict().items():`; a bare `x: sympy.Symbol` per name above a `symbols(...)`
