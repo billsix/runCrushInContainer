@@ -49,6 +49,17 @@ magnitude-squared leaf and route the self-dot through it, rather than two lemmas
 Prefer phrasing nondegeneracy hypotheses in the primitive that is actually the concept (`|a|² ≠ 0`),
 not an equivalent-but-different expression (`a·a ≠ 0`).
 
+**Carry the meaningful quantity through a lemma's *interface*, not a raw coordinate sum.** This is the
+same rule applied to an intermediate lemma's hypotheses/statement, and it pays off at the call site. If
+a helper needs "this plane bivector is nonzero," state its hypothesis as `normSq B ≠ 0`, **not** the
+expanded `p² + q² + r² ≠ 0` — even though a leaf (`normSq_biv`) proves them equal. Recover the coordinate
+form *inside* the proof (`rw [normSq_biv] at h`) only where `field_simp`/`ring` actually needs it. The
+win compounds upward: a caller that already has `normSq (a∧b) ≠ 0` then feeds it straight in (after
+rewriting the wedge to its bivector literal) with **no coordinate detour at all** — the raw sum never
+appears in the source. A raw coordinate polynomial sitting in a hypothesis or a `have` is the same smell
+as an inline re-derivation; it just moved into the interface. (gacalc 2026-09-29: the three
+literal-bivector projection lemmas + `proj_plane_eq_project_onto`.)
+
 ## Correct-by-construction from an oracle
 
 If the project already has a trusted reference implementation (a test oracle, a slow-but-obvious
