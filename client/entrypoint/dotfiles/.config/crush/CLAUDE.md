@@ -354,6 +354,15 @@ properly finished units — it exists for conversation-only decisions, cross-rep
 mid-session redesigns. Finding a finished unit's updates here means the staging-time rule was
 missed.
 
+**Then run each touched project's format + type-check gate, and fix what it reports (2026-10-01)** —
+the gate CI runs (`.github/workflows/*` wraps `make <target>`, typically `make format` /
+`make type-check` / `make lint`), **before I commit**: I commit and push at session end, so a green
+local gate is what keeps CI green. **A project's `make test` is usually NOT the type-check/lint gate**
+(e.g. a pytest-only `make test` while `ruff`/`ty` run under `make format`) and type/lint errors slip
+past tests silently — so run the actual format/type-check gate, the same `make` targets the workflows
+invoke, not just the tests. Auto-fixes (`ruff --fix`/format) mutate files; stage them. Say so
+explicitly if a gate can't run here rather than skipping it silently.
+
 **Consult the diversion stack as part of the sweep.** The stack is in-session only (it dies with the `--rm`
 container), so the sweep is where its content is preserved: read `~/.config/crush/stack.md`, and for **any
 still-open diversion**, fold what work remains and why into the relevant task doc (or a reference doc, for
