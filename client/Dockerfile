@@ -120,7 +120,9 @@ COPY entrypoint/03-build-crush.sh /usr/local/bin/
 # Build Crush from source (vendored or clone+vendor, then flag-guarded patches);
 # see entrypoint/03-build-crush.sh. ARGs aren't inherited by a child process, so
 # every flag is passed to the script explicitly.
-RUN CRUSH_TAG="$CRUSH_TAG" CRUSH_VENDORED="$CRUSH_VENDORED" CRUSH_AT_IMPORT="$CRUSH_AT_IMPORT" \
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/root/go/pkg/mod \
+    CRUSH_TAG="$CRUSH_TAG" CRUSH_VENDORED="$CRUSH_VENDORED" CRUSH_AT_IMPORT="$CRUSH_AT_IMPORT" \
     CRUSH_SHELL_HISTORY="$CRUSH_SHELL_HISTORY" \
     CRUSH_CONTEXT_DEBUG="$CRUSH_CONTEXT_DEBUG" \
     PATCH_OUT_UPDATE_CHECK="$PATCH_OUT_UPDATE_CHECK" \
