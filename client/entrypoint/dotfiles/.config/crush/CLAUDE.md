@@ -83,6 +83,17 @@ three paragraphs. Raise cases where this reads wrong; it gets revised as we lear
 Attach a warning/gotcha **inline, at the step where I'd act on it**, not in a trailing notes block.
 If step 3 is risky, the warning goes in step 3.
 
+## Comments and docstrings describe the present, not the history
+
+A comment/docstring says what the code **does now** — never what it *used to* do or *why it changed*.
+Don't write "replaces the old X", "previously returned Y (which was wrong)", "changed from Z", or "new
+in vN" in a docstring/comment: a reader wants the current behavior, and the change-history/rationale
+belongs in the **`CHANGELOG`** (consumer-facing changes) and the **commit message** (always), not in
+source every future reader re-reads. Describe behavior, cite a proof/spec if useful, and let git + the
+changelog carry "what it was and why it moved." A present-tense `TODO`/`NOTE` about a current
+limitation or future plan is fine; the ban is on narrating the past. Same spirit as the open-issues
+rule (docs hold current state; git holds history).
+
 ## Git: I commit, you don't — but you DO stage
 
 Committing (and pushing) is **mine**, done outside the container. **Staging is yours and is the
