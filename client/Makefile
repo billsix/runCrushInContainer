@@ -346,17 +346,23 @@ REPO_MOUNT = /work
 SHELL_EXEC_ARGS = -c 'cd $(REPO_MOUNT) && $(if $(CMD),$(CMD),exec bash $(SCRIPT))'
 
 # Nested `dir` store: make a fresh EPHEMERAL host dir, bind it at the inner
-# /var/lib/containers, and `rm` it when the run exits (trap). tmpfs mode / non-nested runs
-# leave STORE empty, so the ${STORE:+…} adds nothing (the tmpfs flag, if any, is already
-# in SHELL_RUN_FLAGS). Duplicated verbatim in shell + shell-exec on purpose (a define/call
-# recipe is fragile); keep the two blocks identical.
+# /var/lib/containers, and `rm` it when the run exits (trap). The cleanup runs via
+# `$(CONTAINER_CMD) unshare` so it executes inside the rootless user namespace: the inner
+# rootful podman writes image layers owned by MAPPED SUBUIDS and with the image's read-only
+# dir perms (dr-xr-x---), so a plain host `rm -rf` is neither the owner nor root over them and
+# dies with "Permission denied", leaking the dir on EVERY exit; `podman unshare` makes the host
+# user root over its whole subuid range (CAP_DAC_OVERRIDE) so rm can delete it all. tmpfs mode /
+# non-nested runs leave STORE empty, so the ${STORE:+…} adds nothing (the tmpfs flag, if any, is
+# already in SHELL_RUN_FLAGS). Duplicated verbatim in shell + shell-exec on purpose (a
+# define/call recipe is fragile); keep the two blocks identical. See the runClaudeInContainer
+# task nested-store-cleanup-permission-denied.md.
 .PHONY: shell
 shell: ## run Crush in an ephemeral container; mounts PROJECT at /work (NESTED_PODMAN=1 for podman-in-podman; NESTED_PODMAN_STORE=tmpfs for the RAM store vs the default ephemeral disk dir). Run 'make image' first.
 	@STORE=""; \
 	if [ "$(NESTED_PODMAN)" = "1" ] && [ "$(NESTED_PODMAN_STORE)" = "dir" ]; then \
 	  mkdir -p "$(NESTED_PODMAN_STORE_BASE)"; \
 	  STORE="$$(mktemp -d "$(NESTED_PODMAN_STORE_BASE)/crush-nested.XXXXXX")"; \
-	  trap 'rm -rf "$$STORE"' EXIT INT TERM HUP; \
+	  trap '$(CONTAINER_CMD) unshare rm -rf "$$STORE"' EXIT INT TERM HUP; \
 	fi; \
 	$(CONTAINER_CMD) run -it --rm $${STORE:+-v "$$STORE":/var/lib/containers:Z} $(SHELL_RUN_FLAGS) $(CONTAINER_NAME) /shell.sh
 
@@ -367,7 +373,7 @@ shell-exec: ## run a script/command in the container env (no TTY): make shell-ex
 	if [ "$(NESTED_PODMAN)" = "1" ] && [ "$(NESTED_PODMAN_STORE)" = "dir" ]; then \
 	  mkdir -p "$(NESTED_PODMAN_STORE_BASE)"; \
 	  STORE="$$(mktemp -d "$(NESTED_PODMAN_STORE_BASE)/crush-nested.XXXXXX")"; \
-	  trap 'rm -rf "$$STORE"' EXIT INT TERM HUP; \
+	  trap '$(CONTAINER_CMD) unshare rm -rf "$$STORE"' EXIT INT TERM HUP; \
 	fi; \
 	$(CONTAINER_CMD) run --rm $${STORE:+-v "$$STORE":/var/lib/containers:Z} $(SHELL_RUN_FLAGS) $(CONTAINER_NAME) /shell.sh $(SHELL_EXEC_ARGS)
 
