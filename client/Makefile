@@ -351,7 +351,10 @@ SHELL_EXEC_ARGS = -c 'cd $(REPO_MOUNT) && $(if $(CMD),$(CMD),exec bash $(SCRIPT)
 # rootful podman writes image layers owned by MAPPED SUBUIDS and with the image's read-only
 # dir perms (dr-xr-x---), so a plain host `rm -rf` is neither the owner nor root over them and
 # dies with "Permission denied", leaking the dir on EVERY exit; `podman unshare` makes the host
-# user root over its whole subuid range (CAP_DAC_OVERRIDE) so rm can delete it all. tmpfs mode /
+# user root over its whole subuid range (CAP_DAC_OVERRIDE) so rm can delete it all. Every exit
+# also appends a block (timestamp, store, rm output + exit code, clean/LEFTOVER) to
+# $(NESTED_PODMAN_STORE_BASE)/crush-nested-cleanup.log -- outside the store dir so it survives
+# the rm and a later session can read what the trap did. tmpfs mode /
 # non-nested runs leave STORE empty, so the ${STORE:+…} adds nothing (the tmpfs flag, if any, is
 # already in SHELL_RUN_FLAGS). Duplicated verbatim in shell + shell-exec on purpose (a
 # define/call recipe is fragile); keep the two blocks identical. See the runClaudeInContainer
@@ -362,7 +365,11 @@ shell: ## run Crush in an ephemeral container; mounts PROJECT at /work (NESTED_P
 	if [ "$(NESTED_PODMAN)" = "1" ] && [ "$(NESTED_PODMAN_STORE)" = "dir" ]; then \
 	  mkdir -p "$(NESTED_PODMAN_STORE_BASE)"; \
 	  STORE="$$(mktemp -d "$(NESTED_PODMAN_STORE_BASE)/crush-nested.XXXXXX")"; \
-	  trap '$(CONTAINER_CMD) unshare rm -rf "$$STORE"' EXIT INT TERM HUP; \
+	  trap 'LOG="$(NESTED_PODMAN_STORE_BASE)/crush-nested-cleanup.log"; \
+	    { echo "== $$(date -Is) store=$$STORE"; \
+	      $(CONTAINER_CMD) unshare rm -rf "$$STORE" 2>&1; echo "== rm exit=$$?"; \
+	      [ -e "$$STORE" ] && echo "== LEFTOVER: $$STORE" || echo "== clean"; \
+	    } 2>&1 | tee -a "$$LOG"' EXIT INT TERM HUP; \
 	fi; \
 	$(CONTAINER_CMD) run -it --rm $${STORE:+-v "$$STORE":/var/lib/containers:Z} $(SHELL_RUN_FLAGS) $(CONTAINER_NAME) /shell.sh
 
@@ -373,7 +380,11 @@ shell-exec: ## run a script/command in the container env (no TTY): make shell-ex
 	if [ "$(NESTED_PODMAN)" = "1" ] && [ "$(NESTED_PODMAN_STORE)" = "dir" ]; then \
 	  mkdir -p "$(NESTED_PODMAN_STORE_BASE)"; \
 	  STORE="$$(mktemp -d "$(NESTED_PODMAN_STORE_BASE)/crush-nested.XXXXXX")"; \
-	  trap '$(CONTAINER_CMD) unshare rm -rf "$$STORE"' EXIT INT TERM HUP; \
+	  trap 'LOG="$(NESTED_PODMAN_STORE_BASE)/crush-nested-cleanup.log"; \
+	    { echo "== $$(date -Is) store=$$STORE"; \
+	      $(CONTAINER_CMD) unshare rm -rf "$$STORE" 2>&1; echo "== rm exit=$$?"; \
+	      [ -e "$$STORE" ] && echo "== LEFTOVER: $$STORE" || echo "== clean"; \
+	    } 2>&1 | tee -a "$$LOG"' EXIT INT TERM HUP; \
 	fi; \
 	$(CONTAINER_CMD) run --rm $${STORE:+-v "$$STORE":/var/lib/containers:Z} $(SHELL_RUN_FLAGS) $(CONTAINER_NAME) /shell.sh $(SHELL_EXEC_ARGS)
 

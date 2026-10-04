@@ -218,7 +218,9 @@ make image     # full toolchain + Crush compiled from source (pinned CRUSH_TAG);
 > that is what grows over time. Reclaim it with `podman rmi crushcontainer`, `podman system
 > prune -a`, or by deleting that directory (podman recreates it). The **nested** inner store —
 > where `podman` *inside* the sandbox writes its layers — is a throwaway dir under `~/.cache/`
-> removed on exit (leaked ones: `rm -rf ~/.cache/crush-nested.*`), disk-backed by default and
+> removed on exit (leaked ones: `podman unshare rm -rf ~/.cache/crush-nested.*` — the `unshare`
+> matters, a bare `rm` cannot delete the image layers' read-only dirs; each exit appends what the
+> cleanup did to `~/.cache/crush-nested-cleanup.log`), disk-backed by default and
 > reusing the host images read-only. Full build-and-storage pipeline (the two podman levels,
 > where every layer lands): `tasks/reference/image-build-and-storage-pipeline.md`.
 >
@@ -231,7 +233,8 @@ make image     # full toolchain + Crush compiled from source (pinned CRUSH_TAG);
 >
 > The base is created if missing, and the per-session store under it (`crush-nested.XXXXXX`) is
 > still deleted on exit — a hard kill would leak it there instead
-> (`rm -rf /mnt/sda1/tmpContainerStorage/crush-nested.*`). The base must be a **real filesystem
+> (`podman unshare rm -rf /mnt/sda1/tmpContainerStorage/crush-nested.*`; the cleanup log moves with
+> it, to `<base>/crush-nested-cleanup.log`). The base must be a **real filesystem
 > that supports overlay xattrs** — ext4/xfs are ideal; btrfs works but has had overlay quirks —
 > and an HDD trades build speed for fewer SSD writes. `export NESTED_PODMAN_STORE_BASE=…` in your
 > shell to make it the default. (Only used in the default `dir` mode; ignored under

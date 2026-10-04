@@ -62,9 +62,11 @@ flag (see runClaude's doc).
   `/var/lib/containers` is now an ephemeral host directory (`NESTED_PODMAN_STORE=dir`; a `mktemp -d`
   under `NESTED_PODMAN_STORE_BASE`, default `~/.cache`, relocatable per launch — e.g. to an HDD to
   spare an SSD — and `rm`'d by an `EXIT INT TERM HUP` trap, via `podman unshare rm -rf` so it runs in
-  the rootless userns and can delete the subuid-owned, read-only image-layer dirs a bare host `rm`
-  cannot — fixed 2026-10-02, see the runClaudeInContainer task
-  nested-store-cleanup-permission-denied.md) with the host image store reused read-only
+  the rootless userns as root: the image layers' `diff/` dirs mirror the image's `/` (mode 555) and
+  `/root` (550), and GNU `rm` never `chmod`s, so a bare host `rm` cannot unlink their children and
+  leaked the store on every exit — fixed 2026-10-02; the fix applies only to sessions launched after
+  it, and its first real host-exit test is still pending, see `tasks/nested-store-cleanup-permission-denied.md`
+  and the runClaudeInContainer twin) with the host image store reused read-only
   (`additionalimagestores`) — no RAM ceiling. The RAM tmpfs is opt-in via `NESTED_PODMAN_STORE=tmpfs`
   (then bump `NESTED_PODMAN_TMPFS_SIZE`). **The nested podman is rootful, so `storage.conf` must live
   at `/etc/containers/storage.conf`** (the client Dockerfile now `COPY`s it there) — delivering it only
