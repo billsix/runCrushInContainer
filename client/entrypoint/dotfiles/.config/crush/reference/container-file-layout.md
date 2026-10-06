@@ -54,7 +54,7 @@ the session log alongside it).
 | `entrypoint/dotfiles/.config/containers/storage.conf` | `/root/.config/containers/storage.conf` | no (nested-podman fuse-overlayfs) |
 | `entrypoint/dotfiles/.config/crush/CLAUDE.md` | `/root/.config/crush/CLAUDE.md` | no (always-loaded conventions) |
 | `entrypoint/dotfiles/.config/crush/commands/` (8 files) | `/root/.config/crush/commands/` | no (slash commands) |
-| `entrypoint/dotfiles/.config/crush/reference/` (9 files) | `/root/.config/crush/reference/` | no (see doc mapping below) |
+| `entrypoint/dotfiles/.config/crush/reference/` (13 files) | `/root/.config/crush/reference/` | no (see doc mapping below) |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.md` (blank default) | `/root/.config/crush/ai-coding-conventions.personal.md` | **YES — host overlay mounted over it** |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md` | `/root/.config/crush/ai-coding-conventions.personal.example.md` | no |
 | `entrypoint/crushrc` | `/root/.config/crush/crushrc` | no (model pin, catalog off, file-tool auto-allow) |
@@ -109,7 +109,11 @@ the baked `~/.config/crush/reference/…` path**; in repo docs cite
 | `sphinx-book-conventions.md` | yes | yes — **keep the two copies in sync** |
 | `bluf-bottom-line-up-front.md` | no | yes (copied from runClaudeInContainer) |
 | `llm-overused-phrases.md` | no | yes (copied from runClaudeInContainer) |
-| `print-debugging.md` | no | yes (copied from runClaudeInContainer) |
+| `print-debugging.md` | yes | yes (copied from runClaudeInContainer) — **keep the two copies in sync** |
+| `cpp-ownership-migration.md` | yes | yes (copied from runClaudeInContainer; baked 2026-10-06) — **keep in sync** |
+| `porting-with-an-output-oracle.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-06) — **keep in sync** |
+| `cpp-python-bindings.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-06) — **keep in sync** |
+| `cpp-build-modernization.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-06) — **keep in sync** |
 | `sandbox-capability-map.md` | no | yes (copied from runClaudeInContainer) |
 | `bulk-edit-shell-first.md` | no | yes (delivered convention, added 2026-09-18) |
 

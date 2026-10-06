@@ -292,6 +292,12 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
 - **Never orphan a word on its own comment line** — reflow the whole paragraph, not the offending
   line. Don't reflow lists, tables, aligned literals, commented-out code, or line-structure that is
   load-bearing (macro `\`, Make TABs, embedded other-language source).
+- **C++ and porting playbooks, read on demand** (`~/.config/crush/reference/`):
+  `porting-with-an-output-oracle.md` before verifying any port by comparing outputs (byte identity
+  vs equivalence, one process per case); `cpp-python-bindings.md` before binding a C++ library to
+  Python (nanobind); `cpp-build-modernization.md` before a Meson port, a `-std` bump, an
+  `enum class` migration, or a tree-wide reformat commit; `cpp-ownership-migration.md` for raw
+  pointers → `unique_ptr`. Never hand-edit a generated file — change its template/generator.
 
 ## Versioning & changelogs (for anything others pin/consume)
 
