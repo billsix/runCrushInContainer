@@ -152,10 +152,14 @@ archive is *owed* (harvest, fix inbound pointers, `git mv`, `git rm` one-shot ad
 ask whether to archive or present a done task as a *candidate*; ask only when the done-state itself is
 ambiguous. **BUT the archive is its own commit AFTER the work commit — never bundled into the work's
 staged handoff.** Lifecycle = **three commits**: (1) task-add, (2) work + adhoc scripts, (3)
-archive-move + one-shot `git rm`, together, a *separate* commit after the work commit. So don't
-`git mv`/`git rm` into the work's staged set: stage the work and stop, and once its commit exists (I
-make it by default — "Git: I commit, you don't") **proactively** stage the archive set as commit 3 —
-an owed, tracked action (note it in `Status` or the stack), never a question. When I've authorized you
+archive-move + one-shot `git rm`, together, a *separate* commit after the work commit. **Always
+`git mv` the archive (+ `git rm` one-shot scripts) so the rename is STAGED — never a plain `mv` that
+leaves the new file untracked** (a plain `mv`, then a `git add -u`/`git commit -a` of the work,
+orphans the doc: the deletion is committed, the new file stays untracked — the doc lands in HEAD
+nowhere; incident gacalc 2026-10-08). "Separate commit" means a separate *commit*, NOT *unstaged*:
+keep it out of the work's commit by committing the work paths first, then the archive paths. So stage
+the work by path, `git mv` the archive, and stop — the rename sits **staged** as an owed, tracked
+action I commit separately (note it in `Status` or the stack), never a question. When I've authorized you
 to commit this session (per-project), *you* commit the work, then commit the archive-move + one-shot
 `git rm` as a **separate** commit — same two boundaries, never one combined "work + archive" commit.
 "Pending review" applies to the *work*, not the lifecycle move. Don't make a task doc for one-off questions. If a task's
