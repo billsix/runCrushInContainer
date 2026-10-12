@@ -1,9 +1,11 @@
 # Python coding standard (shared, cross-project)
 
-**Reference document** — shared cross-project Python coding standard; harvested from
-geometricalgebra/modelviewprojection CLAUDE.md, 2026-09-13. Read on demand (NOT
-auto-loaded). Update in place. A project's `CLAUDE.md`/`README.md` points here and keeps
-only its own repo-specific invariants inline.
+**Reference document** — shared cross-project Python coding standard. Read on demand (NOT
+auto-loaded). Update in place. A project's `CLAUDE.md`/`README.md` points here and keeps its
+own repo-specific invariants, worked examples, and file paths in its own additions doc
+(see Cross-links). Portable rules only: this doc names no one project's files. (Originally
+harvested from two projects' CLAUDE.md 2026-09-13; project specifics split back out
+2026-10-12 — William Emerison Six <billsix@gmail.com>.)
 
 > **Shared across both sandboxes — three byte-identical copies (this banner included); keep
 > them in sync.** Canonical: runClaudeInContainer `tasks/reference/python-coding-standard.md`
@@ -17,9 +19,12 @@ only its own repo-specific invariants inline.
 > implementations of the same idea — Claude Code (proprietary) and Crush (open source). Edit
 > the canonical, then re-copy it over the other two.
 
-Written for both humans and AI agents: each rule is a statement + a one-line reason. The
-worked examples are drawn from geometricalgebra (gacalc) where noted; treat them as
-illustrations of the rule, not as gacalc-only policy. **The standard is split in two** —
+Written for both humans and AI agents: each rule is a statement + a one-line reason.
+**Worked examples and any repo-specific detail live in each project's own additions doc**
+— e.g. modelviewprojection's `tasks/reference/python-coding-standard-mvp.md` and
+geometricalgebra's `tasks/reference/python-coding-standard-gacalc.md` — so this shared doc
+stays portable and names no one project's files. A rule here points to "your project's
+additions doc" for the worked example. **The standard is split in two** —
 (a) what **ruff already enforces mechanically** (don't hand-review or re-prose these; if
 `make format` is green they're done), and (b) the **judgment calls ruff can't check**
 (spend attention here).
@@ -72,11 +77,8 @@ When a loop's only job is to fold an iterable under `+` or `*`, use the builtin:
 the operation and can't get the accumulator wiring wrong, and it reads as one expression.
 Pass the **correct identity** as `start`: `sum(xs)` (implicit `start=0`), `math.prod(xs,
 start=1)`; for a non-numeric accumuland pass the type's identity explicitly
-(`math.prod(blades, start=cls.one())`, `sum(mvs, start=cls.zero())`). An `int` identity
-keeps a float/sympy pipeline intact (`1 * 2.0 == 2.0`). Worked example (gacalc) —
-`measure.content_by_rejection` went from `result = 1; for pv in
-make_orthogonal_frame(vectors): result = result * pv.magnitude()` to
-`math.prod((pv.magnitude() for pv in make_orthogonal_frame(vectors)), start=1)`. **Only
+(`math.prod(xs, start=cls.one())`, `sum(xs, start=cls.zero())`). A non-float identity
+element keeps a float/sympy pipeline intact (`1 * 2.0 == 2.0`). **Only
 when the loop is a pure fold:** keep the explicit loop if the body also has side effects, an
 early exit, or more than one accumulator, or if there is no clean identity element. (Same
 spirit: `any` / `all` / `min` / `max`, and `functools.reduce` for other associative folds.)
@@ -101,39 +103,32 @@ waved through as noise (`n: int = 3`, `total: float = 0.0`) — do NOT skip a bi
 (William Emerison Six <billsix@gmail.com>, 2026-09-28). Holds in library code
 (`r: Versor = a * b`) AND in throwaway `tasks/adhoc/` scripts.
 **Loop/unpack targets** can't be annotated inline — declare the type on the line *above*
-(`blade: tuple[int, ...]` / `coef: Coef` above `for blade, coef in
-mv.to_blade_dict().items():`; a bare `x: sympy.Symbol` per name above a `symbols(...)`
-unpack). Two limits: it does **not** reach a *comprehension*/genexpr loop var (separate
+(`key: str` / `count: int` above `for key, count in counts.items():`; a bare
+`x: sympy.Symbol` per name above a `symbols(...)` unpack). Two limits: it does **not** reach a *comprehension*/genexpr loop var (separate
 scope — stays inferred), and if a name would be reused across loops of different (sub)types,
 **give each loop its own distinctly-named, typed variable** (don't reuse one name for two
-types — e.g. `composable_fn: ComposableFunction` in one loop, `invertible_fn:
-InvertibleFunction` in the next). **Don't fight the checker:** a locally-correct annotation
+types — give the second loop its own distinctly-named, typed variable). **Don't fight the
+checker:** a locally-correct annotation
 that forces edits to unrelated logic or breaks flow-narrowing isn't worth it — leave it
 inferred and say why. Read-only container params take the covariant supertype
 (`Mapping`/`Sequence`), not invariant `dict`/`list`. Polymorphic values take the abstract
 base, never a runtime-picked concrete. (Teaching notebooks especially: name + type the
-values.) *(gacalc specifics: the repo-wide sweep landed 2026-09-09, so every remaining
-unannotated site is a deliberate exemption catalogued in
-`tasks/reference/type-annotation-exemptions.md`; re-run `python tools/check_annotations.py`
-after reshaping hand-written Python — a row it reports that is not in that doc is a genuine
-gap.)*
+values.) A project that has run a repo-wide annotation sweep may catalogue its remaining
+deliberate exemptions and provide a checker — see your project's additions doc.
 
 ### Parameterize generic types — never a bare generic in an annotation
 
-Write `ComposableFunction[MultiVectorBase]` / `InvertibleFunction[g3.Vector]`, not a bare
-`ComposableFunction` / `InvertibleFunction` (a bare generic silently degrades its parameter
-to implicit `Any`). Where a generic is **invariant** with an **unbounded** parameter, the
+Write `Stack[int]` / `Mapping[str, Node]`, not a bare `Stack` / `Mapping` (a bare generic
+silently degrades its parameter to implicit `Any`). Where a generic is **invariant** with an **unbounded** parameter, the
 parameter must match the value's *exact* type — verify each with the type checker rather
 than blanket-annotating a common base. **A *polymorphic* param that accepts *any* instance
 of the generic and applies it to the base internally** is `[Any]` — invariance makes a fixed
 base-parameter reject concrete-typed arguments, and a bound TypeVar reject the internal
 base-application; `Any` is the only thing compatible both ways. Exceptions that stay bare: a
 runtime `isinstance(f, SomeGeneric)` (can't take a subscripted generic), and a concrete
-`Callable` alias (not a generic). *(gacalc: `ComposableFunction`/`InvertibleFunction` are
-invariant with an unbounded `V` because `functions.py` must not import `base`; notebooks
-aren't in the `ty` gate — verify their generics with `pyright` in the container, where host
-`ty` can't reach. Detail in `tasks/reference/transform-and-composable-function-layer.md` /
-`generated-product-typing.md`.)*
+`Callable` alias (not a generic). A project whose generics are invariant with an unbounded
+parameter, or whose notebooks fall outside the type gate, documents the specifics and the
+`[Any]`-vs-exact-type calls in its own additions doc.
 
 ### Inline a value used exactly once — unless the name documents an otherwise-opaque expression
 
@@ -146,46 +141,26 @@ name directly, never `E1 = Vector.basis_vector(1)`.)
 
 ### What earns an extraction: duplication, or naming a phase — not reshaping control flow
 
-Settled 2026-07-18 (gacalc) from what the maintainer accepted and declined:
+Settled 2026-07-18 from what the maintainer accepted and declined:
 
-- **Module-level** when more than one caller needs it. `nbplotutils._to_xy` replaced the
-  same 79-char lambda written out **9 times across 5 functions**; `_draw_labelled_triangle`
-  replaced three 58-line, 91-93%-identical `draw_*_triangle` helpers with one function plus
-  three ~10-line callers (**net -75 lines**, all rendered figures verified pixel-identical).
-  A private nested helper in each of the five would have been five copies — worse than the
-  duplication it "fixed".
+- **Module-level** when more than one caller needs it: replacing one expression written out
+  many times across several functions, or collapsing near-identical sibling helpers into one
+  parametrized function plus thin callers. A private nested helper copied into each caller
+  would be worse than the duplication it "fixed".
 - **Nested** when the extracted part **closes over the enclosing parameters** and names a
-  distinct phase of the algorithm. `base.reject`'s `r`/`rejection` close over `away_from`;
-  a `_route` splits into `breadth_first_parents` / `walk_back`, both over `a` and `b`.
+  distinct phase of the algorithm.
 - **Neither** — leave it alone — when the helper would be used exactly once and exists only
   to reshape control flow or avoid mutating a local. That is the "inline a value used
   exactly once" rule applied to functions.
 
 **"Inner-fn first, guards below" is a consequence of the above, not the goal.** When an
-extraction is earned, the guards naturally end up at the bottom calling into it — as in
-`base.reject`:
-
-```python
-def reject(cls, away_from):
-    def r(value):  # the core operation, up top
-        return value.wedge(away_from) * away_from.inverse()
-
-    def rejection(blade):  # wraps it with its LaTeX label
-        return ComposableFunction(r, latex_repr=..., linearity=Linearity.LINEAR)
-
-    match away_from:  # preconditions / dispatch below, calling in
-        case [*sequence]:
-            return cls.reject(cls.outer_product_of_vectors(*sequence))
-        case MultiVectorBase() as vector if vector.is_vector():
-            return rejection(vector)
-        case _:
-            raise ...
-```
-
-Don't chase the shape for its own sake, and **don't churn existing early-return code**; a
-cheap top-of-function `raise` on a nonsensical arg is always fine. A related lesson: an
-error is best raised by the code that *discovers* it — `_route`'s "no path" moved into the
-search itself, which is what let its tail collapse to one line.
+extraction is earned, the inner function(s) carrying the core operation go up top (closing
+over the enclosing parameters) and the preconditions / dispatch — typically a `match` — land
+at the bottom, calling in. Don't chase the shape for its own sake, and **don't churn existing
+early-return code**; a cheap top-of-function `raise` on a nonsensical arg is always fine. A
+related lesson: an error is best raised by the code that *discovers* it — pushing a "not
+found" into the search itself is often what lets a function's tail collapse to one line.
+Worked examples live in each project's additions doc.
 
 ### Comments explain *why*, inline at the point they apply
 
@@ -196,21 +171,20 @@ fragment** — when a line runs long, reflow the whole paragraph, not the offend
 
 Where a name is dictated from outside — a protocol/dunder the interpreter or a library looks
 up, a superclass method being overridden — match it **exactly**; renaming unbinds it.
-(gacalc examples: `_repr_latex_` — Jupyter looks up that exact name; `__post_init__` /
-`__eq__` / `__iter__` / `__matmul__`; and the interchange primitives a concrete
-representation must supply — `from_blade_dict` / `to_blade_dict` / `_geometric_product` —
-fixed by `MultiVectorBase`, not by taste.) A linter flagging one is the linter being wrong:
+(Examples: `_repr_latex_` — Jupyter looks up that exact name; `__post_init__` / `__eq__` /
+`__iter__` / `__matmul__`; and any interchange primitive a base class or protocol fixes by
+contract, not by taste.) A linter flagging one is the linter being wrong:
 suppress it as narrowly as possible with the reason written at the site. The exemption
 covers only the fixed name — parameters and locals inside still follow house style.
 
 ### Protected terse names — a deliberate exception to "descriptive over terse"
 
-Where a terse name carries a teaching link to a known equation, protect it. gacalc example:
-`m` and `b` — `translate(b=...)` and `uniform_scale(m=...)` are named for `f(x) = m*x + b`
-(`b` the intercept/shift, `m` the slope/stretch) — so a student meets the transforms through
-an equation they already know. **Do not "improve" them to `offset` / `factor`**, and call
-them by keyword in teaching code (notebooks, docstrings) so the link is visible at the point
-of use. (ruff is fine with both: `N803` only requires lowercase.)
+Where a terse name carries a teaching link to a known equation, protect it: a single-letter
+or very short name a reader already knows from the math it encodes, matched to the equation,
+is clearer than a "descriptive" rename. **Do not "improve" such a name** to a generic word,
+and call it by keyword in teaching code (notebooks, docstrings) so the link is visible at the
+point of use. (ruff is fine: `N803` only requires lowercase.) The concrete protected names
+live in each project's additions doc.
 
 ### Prefer `match` + `case _` over an open-ended `if`/`elif` chain, for exhaustiveness
 
@@ -244,8 +218,7 @@ Before touching one, ask in order:
   **return** their nodes (read the enclosing scope freely, never mutate it) so the dispatch
   is a *table of contents* not interleaved chapters — the memorable framing.
 
-Worked before/after examples + the leave-alones (gacalc):
-`tasks/reference/conditional-refactoring-rules.md`.
+Worked before/after examples + the leave-alones live in the project additions docs.
 
 ### Use modern Python, and flag it proactively
 
@@ -256,9 +229,9 @@ Y` unions and builtin generics over `typing.Optional`/`Union`/`Dict`; PEP 695 `t
 and `class C[T]:` / `def f[T]()` in place of explicit `TypeVar`s (note: an *unbounded* type
 parameter must stay unbounded whatever syntax expresses it); `Self`; `@override`;
 `typing.TypeIs`; `enum.StrEnum`; `dataclass(slots=True, kw_only=True)`. Don't force one in
-where it reads worse; the point is to stop *defaulting* to the old spelling. (gacalc:
-`requires-python = ">=3.13"`, and compatibility with older Pythons is explicitly not a
-concern.)
+where it reads worse; the point is to stop *defaulting* to the old spelling. (Each project
+states its own `requires-python` floor; where it is recent and backward-compat is not a
+concern, reach for the modern spelling freely.)
 
 ### Docstrings — Google / napoleon style
 
@@ -272,12 +245,12 @@ def zero(cls) -> Self:
     """The additive identity 0.
 
     Returns:
-        Self: the multivector with every coefficient zero.
+        Self: the value that leaves any other unchanged under ``+``.
     """
 ```
 
 - The **summary line + extended description** carry the real prose (and any citations, e.g.
-  "from Hestenes & Sobczyk p. 13"); the field lists come after. Keep the project's math /
+  a source text and page); the field lists come after. Keep the project's math /
   domain voice — Google structure is a *frame*, not a flattening.
 - `self` / `cls` are **not** listed in `Args:` (napoleon convention). Document the rest with
   types + meaning.
@@ -292,82 +265,13 @@ def zero(cls) -> Self:
 The non-Python analog (C/C++, …): the same "structured doc-comment with parameter/return
 sections" discipline via doxygen/javadoc; the language changes the marker, not the habit.
 
-## modelviewprojection-specific additions
-
-These are modelviewprojection's own rules and worked examples that specialize or extend the
-general standard above. They were collected here from mvp's `CLAUDE.md` (2026-09-13 trim) so
-that repo's `CLAUDE.md` can point at this one doc; the file paths and framework names are
-mvp's. Other projects can ignore this section.
-
-### Line length is 80, because the book is a PDF
-
-Unlike the 88-column default above, mvp sets **`line-length = 80`** in `pyproject.toml`, which
-governs both the formatter and E501 — 80 because the book is built as a PDF, where wider lines
-wrap badly or run off the page. Everything else in "Line length is the formatter's job" still
-applies: write the clearer form and let `ruff format` wrap it.
-
-### Every `per-file-ignores` entry carries its reason in `pyproject.toml`
-
-Read them before "fixing" a flagged name — most are deliberate.
-
-### An externally-defined name overrides the naming rules — mvp's wx boundary
-
-Applying the general "An externally-defined name overrides the naming rules" rule: here that is
-`wxapp.py` / `wxapp2.py` (`OnPaint`, `OnTimer`, `InitGL`, `OnDraw`, `OnInit` — wx looks
-up those exact names; exempted from `N802` only) and wx's `attribList=` keyword. The
-exemption covers only the fixed name: locals inside those methods follow house style
-(hence `VBO` -> `vbo`, `attribList` -> `attrib_list` at the local).
-
-### Python naming wins over the book's mathematical shorthand — everywhere, including the demos
-
-The chapters' Cayley-graph edges are labelled in vector notation
-(`\vec{R}_<θ>`, `\vec{T}_<x,y>`, `\vec{S}_<s>`) and the demos used to alias
-`translate as T` / `rotate as R` / `uniform_scale as S` to match, with frustum bounds
-as `L,R,B,T,N,F` and a light position as `Lx,Ly,Lz,Lw`. **All of that is spelled out
-now**: `translate()`, `rotate()`, `uniform_scale()`, `left/right/bottom/top/near/far`,
-`light_x…light_w`.
-**The graph-to-code mapping is what makes this safe, so keep it.** Each affected demo
-carries a short comment above its imports reading the graph labels off against the
-function names. When you add a demo whose chapter has a diagram, add the same note —
-a student must be able to line the picture up with the source without guessing.
-The single remaining naming exemption is `N813` for `import … matrix_stack as ms`,
-and it is temporary: the fix is renaming the camelCase *module*
-(`tasks/archive/2026/07/19/rename-pymatrixstack-module.md`), which deletes the exemption at the source
-rather than suppressing it.
-
-### Composition style: `f @ g` inline, `compose([...])` when it wraps
-
-`f @ g` only when the chain fits on one line; `compose([f, g, ...])` the moment it would
-wrap — same order (`f` after `g`, last listed applied first), one function per line, instead
-of the formatter's dangling `@` with exploded arguments (maintainer, 2026-09-06). numpy's
-matrix `@` (the `mvpvisualization` demos, `test_cayley_scene`) is not composition and keeps `@`.
-
-### Worked example — the `match` + `case _` that was actually bitten
-
-`matrix_stack.get_current_matrix` was five `if`s with no `else`, annotated `-> np.ndarray`,
-and fell off the end returning `None` for any unhandled `MatrixStack` member — while every
-caller indexed the result. It is now a `match` with `case _: raise`. See also `_route` in
-`cayley/cayleygraph.py`, whose tail is a three-case `match`, and `cayleygraph._DfsColor` (an
-`enum.IntEnum` that replaced a bare `WHITE, GRAY, BLACK = 0, 1, 2`).
-
-### New code vs existing code
-
-These shapes apply to *new* code; working code is not rewritten to chase them. (The
-2026-07-18 sweep that brought the tree into compliance was a deliberate one-time exception,
-not the ongoing rule.)
-
-### Duplication across `demos/` is deliberate — "teach once, then share"
-
-A demo may re-inline a helper when its chapter teaches it; `util/clipping.py`,
-`util/windowing.py` and `util/cameracontrols.py` document their own cases. Do not DRY the
-~20 near-identical `Paddle`/`Camera` dataclasses without reading those notes.
-
 ## Cross-links
 
-- `tasks/reference/conditional-refactoring-rules.md` (gacalc) — the Rules A–E worked
-  examples.
-- `tasks/reference/type-annotation-exemptions.md` (gacalc) — the catalogued
-  no-annotation sites and their reasons.
+- **Each project's own additions doc** — worked examples, repo-specific invariants, and
+  project-local cross-links (e.g. a conditional-refactoring Rules A–E example, a
+  no-annotation-exemptions catalogue): modelviewprojection
+  `tasks/reference/python-coding-standard-mvp.md`, geometricalgebra
+  `tasks/reference/python-coding-standard-gacalc.md`.
 - The maintainer's `~/.claude/CLAUDE.md` — the language-agnostic conventions
   ("Use your discretion", "Never orphan a word on its own comment line", "What earns
   pulling code into its own function", "Prefer total dispatch over an open-ended conditional
