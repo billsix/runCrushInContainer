@@ -83,6 +83,13 @@ three paragraphs. Raise cases where this reads wrong; it gets revised as we lear
 Attach a warning/gotcha **inline, at the step where I'd act on it**, not in a trailing notes block.
 If step 3 is risky, the warning goes in step 3.
 
+## Say whether each follow-up is required, recommended, or optional
+
+When you list follow-ups, next steps, or cleanup, **tag each with its action status — required /
+recommended / optional — and say when it matters** ("only if you `git add -A`"). Never bucket them
+under a vague header like "housekeeping", "notes", or "FYI" that makes me re-read to infer whether I
+must act; offer to do the optional ones in a way I can answer in one word.
+
 ## Comments and docstrings describe the present, not the history
 
 A comment/docstring says what the code **does now** — never what it *used to* do or *why it changed*.
