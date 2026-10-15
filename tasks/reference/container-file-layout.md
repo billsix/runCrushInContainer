@@ -107,6 +107,7 @@ the baked `~/.config/crush/reference/…` path**; in repo docs cite
 | `container-file-layout.md` (this doc) | yes | yes — **keep the two copies in sync** |
 | `python-coding-standard.md` | yes | yes — **keep the two copies in sync** |
 | `cpp-coding-standard.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-15) — **keep in sync** |
+| `c-coding-standard.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-15) — **keep in sync** |
 | `sphinx-book-conventions.md` | yes | yes — **keep the two copies in sync** |
 | `bluf-bottom-line-up-front.md` | no | yes (copied from runClaudeInContainer) |
 | `llm-overused-phrases.md` | no | yes (copied from runClaudeInContainer) |

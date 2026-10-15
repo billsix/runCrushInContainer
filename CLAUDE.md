@@ -138,11 +138,12 @@ The egress patch/flag system and the 213-Go-dep dependency network audit are in
   `PATCH_OUT_<X>` egress decisions.
 
 A subset of docs is also **baked into the image** at `~/.config/crush/reference/` (agent-readable
-on-demand): `llm-overused-phrases.md`, `print-debugging.md`, `sandbox-capability-map.md`,
-`nested-podman-design.md`, `container-file-layout.md`, and `bluf-bottom-line-up-front.md`. **Cite a
-baked doc by its `~/.config/crush/reference/…` path, never `tasks/reference/…`** (the latter is a repo
-path absent inside the container); a baked doc copied from `tasks/reference/` must keep both copies in
-sync. The baked-vs-repo mapping is in `tasks/reference/container-file-layout.md`.
+on-demand) — the delivered conventions, the shared coding standards (`python-`, `cpp-`, and
+`c-coding-standard.md`) and the C/C++ method docs among them. **The authoritative baked-vs-repo
+list is the mapping table in `tasks/reference/container-file-layout.md`** (don't re-enumerate it
+here — it drifts). **Cite a baked doc by its `~/.config/crush/reference/…` path, never
+`tasks/reference/…`** (the latter is a repo path absent inside the container); a baked doc copied
+from `tasks/reference/` must keep both copies in sync.
 
 ## Tasks
 

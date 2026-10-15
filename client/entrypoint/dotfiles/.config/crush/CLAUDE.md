@@ -299,6 +299,12 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   class`/casts/signed integers, one error strategy per project, modern-C++ spellings). Read on
   demand: `~/.config/crush/reference/cpp-coding-standard.md`. Same split as Python: repo-specific
   invariants stay inline in the project's `CLAUDE.md`.
+- **C: follow the shared coding standard** — what clang-format / clang-tidy / the warning level and
+  sanitizers enforce, plus the judgment calls they can't check (fixed-width types and `size_t`,
+  manual one-owner memory and the free-once discipline, `snprintf`-over-`strncpy` buffers with Annex
+  K `_s` and stack VLAs ruled out, undefined behavior and strict aliasing, prefer the language to the
+  macro, the C23 `nullptr`/`[[...]]`/`_Generic` niceties). Read on demand:
+  `~/.config/crush/reference/c-coding-standard.md`. Same split: repo-specific invariants stay inline.
 - **An externally-defined name wins over house style** — a framework override, protocol member,
   callback signature, wire-format field, env var, or CLI flag someone else specifies must match
   exactly. A linter flagging it is wrong; suppress narrowly with a reason at the site.
