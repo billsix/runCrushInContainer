@@ -293,6 +293,12 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   can't check (naming, expression/mutation rules, annotate-every-binding, idioms). Read on demand:
   `~/.config/crush/reference/python-coding-standard.md`. A project keeps only its own repo-specific
   Python invariants inline in its `CLAUDE.md`; everything general lives in that shared doc.
+- **C++: follow the shared coding standard** — what clang-format / clang-tidy / the warning level
+  enforce, plus the judgment calls they can't check (`auto` with intent and qualifiers, initialize-
+  and-`const`, RAII/`unique_ptr` with non-owning raw pointers, the four parameter shapes, `enum
+  class`/casts/signed integers, one error strategy per project, modern-C++ spellings). Read on
+  demand: `~/.config/crush/reference/cpp-coding-standard.md`. Same split as Python: repo-specific
+  invariants stay inline in the project's `CLAUDE.md`.
 - **An externally-defined name wins over house style** — a framework override, protocol member,
   callback signature, wire-format field, env var, or CLI flag someone else specifies must match
   exactly. A linter flagging it is wrong; suppress narrowly with a reason at the site.
