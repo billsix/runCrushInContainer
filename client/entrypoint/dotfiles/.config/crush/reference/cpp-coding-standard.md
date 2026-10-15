@@ -5,9 +5,11 @@
 `CLAUDE.md`/`README.md` points here and keeps its own repo-specific invariants, worked examples,
 and file paths in its own additions doc (see Cross-links). Portable rules only: this doc names no
 one project's files. (Written 2026-10-15 — William Emerison Six <billsix@gmail.com> — from the
-maintainer's own `auto` guidelines plus the C++ Core Guidelines, Herb Sutter's GotW #94, the
-Abseil Tips of the Week, the Google C++ Style Guide, and the clang-tidy check catalog; sources at
-the end.)
+maintainer's own `auto` guidelines plus the C++ Core Guidelines, Herb Sutter's GotW #91/#94, the
+Abseil Tips of the Week, the Google C++ Style Guide, Scott Meyers' *Effective C++* (3rd ed.) and
+*Effective Modern C++*, and the clang-tidy check catalog; sources at the end. Same day, revised
+to add the smart-pointer selection table, the move/forward and lambda rules, the per-standard
+feature ladder, and the Meyers items — the maintainer asked for them explicitly.)
 
 > **Shared across both sandboxes — three byte-identical copies (this banner included); keep
 > them in sync.** Canonical: runClaudeInContainer `tasks/reference/cpp-coding-standard.md`
@@ -142,6 +144,46 @@ phrase for anything a reader must remember across the function.
 - Migrating an old codebase from raw owning pointers is its own method with its own traps
   (double-free that compiles clean): `cpp-ownership-migration.md`.
 
+### Smart pointers — which type, and how to pass one
+
+**First ask whether you need a pointer at all** (`R.5`, Meyers EC++ Item 13 / EMC++ Item 18). A
+subobject that is constructed unconditionally with its owner, is not polymorphic, and is never
+replaced or handed off is a **plain value member** (`cSprite_Manager m_sprites;`), not a
+`unique_ptr` — the pointer buys nothing and costs an allocation, an indirection, and a null state.
+Reach for a smart pointer only when one of these is true: the type is polymorphic (a base-class
+member holding a derived object), the object is optional or created later than its owner
+(consider `std::optional<T>` first — it is a value with an empty state), the object is large and
+rarely present, it must be moved between owners (a factory result, a container of polymorphic
+things), or it outlives a scope (a return value). Then pick by ownership shape:
+
+| Shape | Type | Create with | Notes |
+|---|---|---|---|
+| exactly one owner, transferable | `std::unique_ptr<T>` | `std::make_unique<T>(…)` | the default; zero overhead over a raw pointer; move-only, so a transfer is visible at the call site (EMC++ 18, 21) |
+| one owner, array | `std::unique_ptr<T[]>` | `std::make_unique<T[]>(n)` | only for a C-API buffer; otherwise `std::vector`/`std::array` |
+| one owner, non-`delete` cleanup | `std::unique_ptr<T, Deleter>` | the deleter as a stateless functor or lambda | the RAII wrapper for C handles (`FILE*`, `SDL_Surface*`, `Mix_Chunk*`): the deleter is part of the type, so misuse won't compile |
+| genuinely shared lifetime (the last user frees) | `std::shared_ptr<T>` | `std::make_shared<T>(…)` | one allocation for object + control block, exception-safe; copies cost an atomic increment, so pass `const shared_ptr&` or `T*` to users that don't take a share (EMC++ 19, 21) |
+| observe a shared object without keeping it alive | `std::weak_ptr<T>` | from a `shared_ptr` | caches, observer lists, breaking `shared_ptr` cycles; `lock()` before use (EMC++ 20) |
+| a class that must hand out `shared_ptr`s to itself | `std::enable_shared_from_this<T>` | `shared_from_this()` | only valid once the object is already owned by a `shared_ptr` |
+| C API that writes a pointer out-parameter | `std::out_ptr`/`std::inout_ptr` (C++23) | `c_api(std::out_ptr(uptr))` | replaces the `T* raw; api(&raw); uptr.reset(raw);` dance |
+| non-owning handle | `T*` or `T&` | — | never `std::observer_ptr` (it is not in the standard); a raw pointer *is* the non-owning handle (`R.3`) |
+| `std::auto_ptr` | — | — | **removed in C++17** (deprecated since C++11): it "copied" by stealing, which silently emptied the source in a `std::vector` or a by-value call. Every `auto_ptr` is a `unique_ptr` that must be `std::move`d explicitly |
+
+**Passing and returning** (GotW #91, `F.7`, `F.26`, `F.27`): don't put a smart pointer in a
+signature unless the function manipulates the *pointer* (takes, gives, or shares ownership).
+`unique_ptr<T>` **by value** is "I take it" (a sink); `unique_ptr<T>&` only to reseat the caller's
+pointer; `const unique_ptr<T>&` never — write `T*`/`T&`. `shared_ptr<T>` by value is "I will
+keep a share"; `const shared_ptr<T>&` only when you *might* keep one; otherwise `T*`/`T&`. A
+factory returns `unique_ptr<T>` by value (upgradeable to `shared_ptr` at the caller, never the
+reverse). Inside a class, **ownership transfer must go through the API** — an `Add(T*)` that
+adopts a raw pointer forces every caller to `.release()` the `unique_ptr` it already holds and
+invites a double-adopt; `Add(std::unique_ptr<T>)` makes the hand-off a `std::move` the reader can
+see. `.get()` is for *borrowing* a `T*` to store or compare; `.release()` appears only at a
+documented hand-off to a raw-owning legacy API, with a comment. `unique_ptr` has the same size and
+cost as a raw pointer, so the choice is never a performance question; `shared_ptr` is twice the
+size plus the control block and atomic refcounting, which is why it is not the default.
+**Pimpl** (EMC++ 22): a `unique_ptr<Impl>` member needs the destructor (and moves) *defined in
+the `.cpp`* after `Impl` is complete, or the header's implicit destructor won't compile.
+
 ### Function parameters and returns — the conventional four shapes (`F.15`–`F.21`)
 
 | Intent | Spelling | Why |
@@ -228,6 +270,66 @@ The language offers three; a project `CLAUDE.md` says which it uses and why:
 `assert`/`[[assume]]`/`gsl::Expects` document preconditions that are *programming* errors, not
 input validation; an invariant violation is a bug, a bad input is an error.
 
+### Move, forward, and rvalue references (Meyers EMC++ 23–30, 41–42)
+
+- `std::move` moves nothing: it is a cast to an rvalue; `std::forward` is a *conditional* cast
+  that moves only if the caller passed an rvalue. Use `std::move` on an **rvalue reference
+  parameter** (`T&&` where `T` is a concrete type) and `std::forward<T>` on a **forwarding
+  reference** (`T&&` where `T` is deduced, or `auto&&`); never swap them, and never `std::move`
+  a forwarding reference (it steals from an lvalue caller).
+- Don't overload on a forwarding reference: it out-matches every other overload, including the
+  copy constructor for a non-`const` lvalue. Tag dispatch, a constrained template (concepts),
+  or pass-by-value are the alternatives.
+- **Assume moves are absent, not cheap, or not used** until you've checked: a type with a
+  user-declared destructor or copy operation gets no implicit move; a move that can throw is not
+  used by `std::vector` reallocation unless it is `noexcept`; `std::array` and SSO strings move
+  by copying. So: `= default` the five special members when you declare any one, and mark move
+  constructors/assignments `noexcept`.
+- **Pass by value when the parameter is always copied and the type is cheap to move** (a
+  constructor storing a `std::string`): one spelling, one move for rvalue callers, one copy for
+  lvalue callers. Otherwise the `const T&` / `T&&` overload pair (EMC++ 41).
+- Prefer `emplace_back(args…)` to `push_back(T(args…))` when the argument is constructor
+  arguments, not an existing object; keep `push_back` for an existing object (EMC++ 42).
+  Return a local **by name** (`return result;`) — never `return std::move(local);` (`F.48`): it
+  blocks copy elision.
+- A moved-from object is valid but unspecified: assign to it or let it die; never read it. Never
+  move a `const` object (it copies, silently).
+
+### Lambdas (Meyers EMC++ 31–34, `F.50`–`F.54`)
+
+- **Spell the capture list; avoid `[=]` and `[&]` defaults.** `[&]` dangles the moment the
+  lambda outlives the scope (a callback, a thread, a stored `std::function`); `[=]` silently
+  captures `this` by pointer (not the members by value) and copies nothing you didn't list, so
+  it dangles just as readily. Write `[this]`, `[&x, y]`, or `[self = shared_from_this()]`.
+- **Init-capture to move something in** (`[buf = std::move(buf)]`, C++14) — the way to put a
+  `unique_ptr` or a large object into a closure.
+- Generic lambdas (`auto` parameters, C++14) forward with `std::forward<decltype(x)>(x)`.
+- Prefer a lambda to `std::bind` — always; `std::bind` is harder to read, type-erases, and
+  inlines worse (EMC++ 34).
+- Store a callable as `auto` or a template parameter where you can; `std::function` is the
+  type-erased fallback (an allocation and an indirect call) for a heterogeneous container of
+  callbacks or an ABI boundary. A lambda used once and locally stays unnamed (`F.11`); one reused
+  gets a name. Capture by reference only when the lambda is used before the scope ends
+  (`F.52`/`F.53`).
+
+### `const`, `constexpr`, `noexcept` (Meyers EC++ 3, EMC++ 13–16)
+
+- `const` wherever a value is not modified after initialization: locals, members, parameters by
+  reference, member functions that don't mutate (EC++ Item 3). A `const` member function on an
+  object shared across threads must actually be thread-safe — a mutable cache needs a mutex or
+  an atomic (EMC++ 16). Prefer `cbegin`/`cend` and `const_iterator` when you don't mutate
+  (EMC++ 13).
+- **`constexpr` whenever a value or function *can* be computed at compile time** (EMC++ 15):
+  constants (`inline constexpr int kMax = …;` at namespace scope, C++17 inline variables), table
+  builders, small math; `consteval` (C++20) when it *must* be. A `constexpr` function is still
+  callable at run time, so there is no cost to adding it. Replaces `#define` for every numeric
+  or string constant (EC++ Item 2) — the one `#define` that stays is a token used in preprocessor
+  string concatenation.
+- **`noexcept` when a function will never throw** (EMC++ 14, `F.6`): move operations, swap,
+  destructors (implicitly), leaf functions over trivially-copyable data. It is part of the
+  interface — callers and `std::vector` optimise on it — so don't add it to a function that
+  calls arbitrary user code or allocates. A `noexcept` function that throws terminates.
+
 ### Modern C++ — reach for the current spelling, and flag it proactively
 
 Prefer the current-language solution over the historical one, and **when a newer feature would
@@ -256,6 +358,78 @@ a concern, use freely:
   namespace std;` in a header, macros for constants or functions (`ES.30`, `ES.31`), `goto`,
   `va_arg` (`F.55`), `std::list` as a default container (`SL.con.2`: `std::vector` unless measured),
   `shared_ptr` as a default pointer, `volatile` for synchronisation (`CP.8`: `std::atomic`).
+
+### The feature ladder — what each standard added that this doc leans on
+
+A project's pinned `-std` is its floor; this is what becomes available at each rung, so a reader
+knows which spellings a C++17 codebase may use and which need the bump. Don't buy a higher
+standard than the work uses (`cpp-build-modernization.md`), but when it is already pinned high,
+use what it bought.
+
+- **C++11** — the modern baseline: `auto`, range-`for`, lambdas, `nullptr`, `enum class`,
+  `override`/`final`, `= default`/`= delete`, `constexpr`, `static_assert`, rvalue references
+  and move semantics, `std::unique_ptr`/`shared_ptr`/`weak_ptr`, `std::array`, `std::thread`/
+  `std::mutex`/`std::atomic`, `<chrono>`, `<random>`, `using` aliases, variadic templates,
+  `noexcept`, brace initialization (and its narrowing check).
+- **C++14** — the polish: `std::make_unique` (the one C++11 forgot), generic lambdas (`auto`
+  parameters), lambda init-capture, return-type deduction for functions, relaxed `constexpr`
+  (loops and locals), variable templates, binary literals and digit separators, `[[deprecated]]`,
+  `std::exchange`, heterogeneous lookup in ordered containers.
+- **C++17** — the one that changes everyday code: structured bindings, `if`/`switch` with
+  initializer, `if constexpr`, inline variables, `std::optional`/`variant`/`any`,
+  `std::string_view`, class template argument deduction, fold expressions, guaranteed copy
+  elision (so "always auto" becomes safe for non-movable types), `[[nodiscard]]`/`[[maybe_unused]]`/
+  `[[fallthrough]]`, `<filesystem>`, parallel algorithms, `std::byte`, `std::size`/`std::data`,
+  nested namespaces `a::b::c`; `std::auto_ptr`, `std::bind1st/2nd`, `std::random_shuffle` **removed**.
+- **C++20** — the structural one: concepts and `requires`, ranges (`std::ranges::sort`, views),
+  `<=>` three-way comparison with `= default`, designated initializers, `std::span`,
+  `std::format`, coroutines, modules, `consteval`/`constinit`, `std::jthread` and
+  `std::stop_token`, `using enum`, `[[likely]]`/`[[unlikely]]`, `std::erase`/`erase_if`,
+  `std::ssize`, `std::cmp_less` and friends, abbreviated function templates (`auto` parameters
+  in ordinary functions), `char8_t`, `<bit>`, `<numbers>`.
+- **C++23** — the finishing one: `std::expected`, `std::print`/`println`, `std::mdspan`,
+  `std::generator`, deducing `this`, `if consteval`, `std::out_ptr`/`inout_ptr`,
+  `std::to_underlying`, `std::unreachable`, `[[assume]]`, multidimensional `operator[]`,
+  `std::flat_map`/`flat_set`, `std::string::contains`, ranges `to`/`zip`/`enumerate`/`chunk`,
+  `std::move_only_function`, `std::stacktrace`, `#warning`, `std::size_t` literals (`uz`).
+
+### Meyers' items that still earn a line (Effective C++, 3rd ed., 2005)
+
+Most of the 55 are now in the Core Guidelines above; these are the ones a reader of a legacy
+codebase keeps tripping over, kept with their item numbers so a review can cite them:
+
+- **2** `const`/`enum`/`inline` over `#define`; **3** `const` everywhere it is true; **4**
+  initialize before use — members in the initializer list, in declaration order.
+- **5–12** know what the compiler writes for you (the special members) and disable what you don't
+  want (`= delete`); **7** a polymorphic base has a virtual destructor; **8** destructors never
+  throw; **9** never call a virtual function from a constructor or destructor — it dispatches to
+  the base; **10** `operator=` returns `*this`; **11** handle self-assignment; **12** copy *all*
+  parts (base subobject included) in a hand-written copy.
+- **13–17** resources are owned by objects (RAII); **14** think about copying behaviour of a
+  resource handle; **16** `new[]` pairs with `delete[]`; **17** store a `new`ed object in a smart
+  pointer in a *standalone statement* (the C++11 fix is `make_unique`/`make_shared`).
+- **18** make interfaces easy to use correctly and hard to use incorrectly (strong types over
+  `int`s, the right default, consistency with the standard library); **20** `const T&` over
+  by-value for class types; **21** don't return a reference when you must return an object; **22**
+  data members private; **23** prefer non-member non-friend functions; **25** a non-throwing
+  `swap`.
+- **26** declare variables as late as possible; **27** minimize casting, and never C-style; **28**
+  don't return handles (pointers, references, iterators) to internals; **29** strive for
+  exception-safe code (the strong guarantee via copy-and-swap); **30** `inline` is a request and
+  a cost; **31** minimize compilation dependencies (forward declarations, pimpl).
+- **32** public inheritance is "is-a"; **33** don't hide inherited names; **34** separate
+  interface inheritance from implementation inheritance; **35** consider alternatives to virtual
+  functions (NVI, strategy, `std::function`); **36** never redefine a non-virtual inherited
+  function; **37** never redefine a default parameter of a virtual (defaults bind statically);
+  **38** has-a is composition; **39** private inheritance is rare; **40** multiple inheritance
+  is rarer.
+- **41–48** templates: implicit interfaces, `typename` for dependent names, parameterize only
+  what varies, traits for compile-time decisions (now `if constexpr`/concepts).
+- **49–52** customizing `new`/`delete`: almost never; a custom allocator or an arena is the
+  modern spelling.
+- **53** heed compiler warnings (this doc's tier (a)); **54** know the standard library; **55**
+  know Boost — today: know what the standard *took* from Boost (`filesystem`, `optional`,
+  `variant`, `string_view`, `span`, `format`, `ranges`) and use the standard one.
 
 ### Headers, includes, and translation units
 
@@ -316,8 +490,14 @@ not "a timing issue"; run the project's gate under ThreadSanitizer when threads 
 
 - C++ Core Guidelines (Stroustrup, Sutter, eds.) — github.com/isocpp/CppCoreGuidelines; rule
   numbers cited inline.
-- Herb Sutter, *GotW #94: AAA Style (Almost Always Auto)*,
+- Herb Sutter, *GotW #91: Smart Pointer Parameters*,
+  herbsutter.com/2013/06/05/gotw-91-solution-smart-pointer-parameters/, and *GotW #94: AAA
+  Style (Almost Always Auto)*,
   herbsutter.com/2013/08/12/gotw-94-solution-aaa-style-almost-always-auto/.
+- Scott Meyers, *Effective C++*, 3rd ed. (Addison-Wesley, 2005; 55 items) and *Effective Modern
+  C++* (O'Reilly, 2014; 42 items on C++11/14) — cited inline as "EC++ Item N" / "EMC++ N".
+- cppreference, *Dynamic memory management* — en.cppreference.com/w/cpp/memory (the smart-pointer
+  inventory, `auto_ptr`'s deprecation in C++11 and removal in C++17, `out_ptr` in C++23).
 - Abseil *Tips of the Week* — abseil.io/tips: #77 (temporaries, moves, copies), #126
   (`make_unique` is the new `new`), #161 (good locals and bad locals), #165 (`if`/`switch` with
   initializers), #171 (avoid sentinel values), #176 (prefer return values to output parameters),
