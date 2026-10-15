@@ -4,6 +4,10 @@ Durable, cross-project notes on turning a 2000s-era C++ codebase that owns every
 pointers and hand `delete` into one that owns through `std::unique_ptr` — the method, the idioms,
 and the traps. Distilled from the Secret Maryo Chronicles (SMC) modernization (2026-09-24), but
 the shape is general to any pre-C++11 game/engine/tool with manager classes over `vector<T*>`.
+A second pass (2026-10-15) applied the shared `cpp-coding-standard.md` to the same codebase; it is
+the source of "The second pass" section below — chiefly the correction for where the first pass
+**over-applied** `unique_ptr`, plus three patterns the standard forced out (conditional-ownership
+flags, a borrowed-alias manager, and a global-singleton teardown).
 Companion to `print-debugging.md` ("flip the definition and let the compiler enumerate the work").
 
 ## The method (recon → codemod → compiler → runtime)
@@ -72,6 +76,59 @@ doesn't free" must become an explicit `release()`/`std::move` once the source is
   `unique_ptr<T>`, so they land before the flip and shrink it.
 - **Then the flip** (one commit): base type + subclass semantics + the compiler-driven `.get()`
   residue.
+
+## The second pass — applying the coding standard (don't over-apply `unique_ptr`) (SMC, 2026-10-15)
+
+A first migration (above) flips raw owners to `unique_ptr` and gets the lifetimes correct. A
+**second pass** against `cpp-coding-standard.md` then finds the over-correction the first pass
+almost always makes: **`unique_ptr` used where a plain value member belongs.** The tell is a
+`unique_ptr` member that is constructed unconditionally with its owner, is not polymorphic, is
+never reseated or `std::move`d out, and is **`.get()`-ed on nearly every use** — the smell the
+maintainer noticed first ("lots of unique pointers, then lots of `.get()`"). That object wants to
+be a value (`cFoo m_foo;`, rule of zero; `R.5`, EC++ 13 / EMC++ 18). Walk those back: the member
+becomes a value, its `make_unique` becomes an initializer, its `.get()` sites become `&m_foo` or
+`m_foo.`, and the owner's destructor goes implicit. Keep `unique_ptr` only for the genuine cases —
+polymorphic, optional/late (prefer `std::optional`), moved between owners, or outliving a scope.
+
+Three patterns this pass forced out of the SMC code, each a hand-rolled smart pointer the standard
+replaces:
+
+- **Conditional ownership (`T* x; bool del_x;`) → owning member + raw view + two overloads.** The
+  pre-11 idiom "hold a `T*` plus a bool saying whether to `delete` it" (SMC `Set_Image(cGL_Surface*,
+  bool del_img)`) is a bug-prone `unique_ptr`. Split it: a `std::unique_ptr<T>` member for the owned
+  case, a raw `T*` view for the borrowed case, and **two overloads** — `Set_X(T*)` borrows,
+  `Set_X(std::unique_ptr<T>)` takes — so overload resolution, not a runtime flag, records who owns.
+  Gotcha: an overriding function **hides** the base's other overloads, so every subclass that
+  overrides the borrowing one needs `using Base::Set_X;` to keep the owning overload visible (EC++
+  Item 33). A factory that returns `unique_ptr` then makes every `Set_X(make_it(), …, true)` collapse
+  to `Set_X(make_it(), …)` and the owning overload wins.
+- **A manager that keeps a borrowed reference to what it hands out.** When a factory returns a
+  `unique_ptr` but a manager also wants a pointer to the object, return the `unique_ptr` and let the
+  manager store `.get()` — one owner, one borrower, never both owning.
+- **N global singletons with a hand-ordered teardown → one owning aggregate, reverse-declaration
+  order.** Replace the `extern cX* pX; … pX = new cX; … delete pX;` fleet with a single owner object
+  whose members own the singletons. Keep the legacy `pX` aliases working with a tiny RAII wrapper
+  that binds the `unique_ptr` to its `pX&`, sets the alias on `Create()` and nulls it in its
+  destructor, so no alias ever dangles. **Declare the members in the *reverse* of the required death
+  order**; the implicit destructor then reproduces a hand-written teardown with zero ordering code
+  (members die bottom-to-top). A resource an old teardown freed out of order (SMC's CEGUI system,
+  destroyed mid-sequence) moves into the destructor of the subsystem it belongs to (`~cVideo`). The
+  payoff: `Init` becomes a list of `Create()` calls and the hand-written `Exit`'s `reset()` /
+  `= nullptr` pairs vanish. **Verify order-sensitive teardown with a real quit, not the smoke** — a
+  headless smoke that hard-kills the process at a timeout never runs the destructors, so ASan under
+  it proves the running session is clean but says nothing about the quit path (play-test it).
+
+Style mechanics in the same pass (all compiler- or formatter-driven): default every observation
+loop to `for (const auto& x : …)`, then let the build's `discards qualifiers` / `read-only` /
+`binding reference` errors name the few loops that genuinely mutate and revert only those (the
+compiler is the oracle for which handles are written); drop the `T* x = x_ptr.get();` prelude so the
+loop variable is the owning handle and `.get()` is spelled at each raw use; `NULL` → `nullptr`;
+iterator declarations → `auto`. **Codemod gotcha (Python):** `re.sub`'s *replacement* string
+interprets backslash escapes, so a C `"%s\n"` written into a replacement silently becomes a real
+newline and splits the string literal — pass a callable replacement (or double-escape) whenever the
+replacement text contains a backslash. And recognize when a pre-11 idiom is **out of scope**: a
+`-1` sentinel return wants `std::optional`, but when dozens of call sites encode the sentinel
+protocol, that is its own task, not a drive-by in the ownership pass.
 
 ## clang-tidy on old code — useful but warty (verify each check)
 
