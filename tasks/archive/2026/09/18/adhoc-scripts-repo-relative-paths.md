@@ -1,6 +1,6 @@
 # Ad-hoc scripts must use repo-relative paths, never container-absolute
 
-**Status:** near-complete — audit done, scripts comply; doc-propagation decided against
+**Status:** done 2026-09-18 — audit done, scripts comply, doc-propagation decided against (c, runtime CLAUDE.md only). Final re-grep of `tasks/adhoc/` + `tools/` confirmed no host-mount paths (2026-10-16); nothing remained. Archived.
 **Priority:** 7
 **Difficulty:** 2
 Created 2026-09-18 (William Emerison Six <billsix@gmail.com>).
