@@ -83,6 +83,38 @@ destructors, no references, and no templates to lean on.
   pointer-to-input parameter as `const T *` — it documents intent and lets the compiler reject an
   accidental write. A pointer has two consts: `const char *p` (can't write `*p`) vs
   `char *const p` (can't repoint `p`); use whichever the contract needs, often both.
+- **Give a phase its own scope with a bare `{ }` block, and label it with a comment.** When a
+  function runs in distinct phases that each need their own locals, wrap each phase in a bare block
+  and put a one-line comment before the opening brace saying what the block does. The block scopes
+  its locals to the phase that uses them (`fd` can't leak into the "does it exist?" phase, `sbuf`
+  can't leak into the "create it" phase) and the comment documents the function's structure where
+  each phase starts:
+
+  ```c
+  void make_temp(char* template) {
+    // create the temp file
+    {
+      const int fd = mkstemp(template);
+      if (fd < 0) die("can't create temp file");
+      printf("temp name = %s\n", template);
+      close(fd);
+    }
+    // check whether it now exists, and remove it
+    {
+      struct stat sbuf;
+      if (stat(template, &sbuf) < 0) {
+        if (errno == ENOENT) printf("file doesn't exist\n");
+        else die("stat failed");
+      } else {
+        printf("file exists\n");
+        unlink(template);
+      }
+    }
+  }
+  ```
+
+  It is the lighter move when the phases are not worth separate functions; when a phase is
+  substantial, reused, or has a name worth stating, pull it into its own named function instead.
 
 ### Types — fixed width, the right size type, real booleans
 
