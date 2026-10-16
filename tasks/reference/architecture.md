@@ -181,7 +181,7 @@ for its own `client/` image, but that's incidental to its purpose.
   (Dockerfile ARG default `0`, Makefile default `1`): when `1`, the build also `git apply`s
   `client/patches/crush-at-import.patch`. **Live-verified end-to-end 2026-08-21** (a real `@secret.md`
   spliced into a `CLAUDE.md`, model returned the import-only secret). The one-shot verification harness
-  (a `CLAUDE.md` with `@secret.md` + a `crush run`) lives in git history (commit `5d2515f` and earlier),
+  (a `CLAUDE.md` with `@secret.md` + a `crush run`) lives in git history (commit `0f9548f`, which squashed the earlier `5d2515f`),
   recoverable if needed. Record: `tasks/archive/2026/08/21/patch-crush-for-at-imports.md`; mechanism:
   `crush-capabilities.md`.
 - **No telemetry / no phone-home (2026-08-27):** Crush v0.89.0 makes two unsolicited outbound calls;
