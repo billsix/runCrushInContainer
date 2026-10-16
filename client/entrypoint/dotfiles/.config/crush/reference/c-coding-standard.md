@@ -295,6 +295,10 @@ destructors, no references, and no templates to lean on.
 - `cpp-build-modernization.md` — pinning `-std`, raising the warning level, the tree-wide reformat
   commit; the build mechanics are the same for a C project.
 - `porting-with-an-output-oracle.md` — proving a modernization changed no output.
+- `c-modernization-sweep.md` — the companion for the *other* direction: modernizing an existing/legacy
+  C tree. Where these idioms must **not** be applied (setjmp locals, loop-carried accumulators,
+  deliberate teaching bugs, wire-serialized `strncpy` zero-fill), plus the sweep's verification and
+  mechanics. Read it before sweeping this standard through an old codebase.
 - `print-debugging.md` — the instrumentation-driven method (compiler, sanitizer, analyzer as the
   oracle) this standard's tier (a) relies on.
 
