@@ -305,6 +305,9 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   K `_s` and stack VLAs ruled out, undefined behavior and strict aliasing, prefer the language to the
   macro, the C23 `nullptr`/`[[...]]`/`_Generic` niceties). Read on demand:
   `~/.config/crush/reference/c-coding-standard.md`. Same split: repo-specific invariants stay inline.
+  When modernizing an *existing* C tree (not writing new), also read
+  `~/.config/crush/reference/c-modernization-sweep.md` — the preservation hazards (where those idioms
+  must NOT be applied) plus the sweep's verification + mechanics.
 - **An externally-defined name wins over house style** — a framework override, protocol member,
   callback signature, wire-format field, env var, or CLI flag someone else specifies must match
   exactly. A linter flagging it is wrong; suppress narrowly with a reason at the site.
