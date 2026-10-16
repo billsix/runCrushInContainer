@@ -139,6 +139,17 @@ and `git diff` (unstaged) and fold all three in. **Decide whether the task is ac
 (the diff, the passing gate output, the sibling-task boundaries), not from a recollection that you finished it — a
 sibling task can look done from memory while its real scope is untouched.
 
+## Reference projects by canonical URL in committed content — commit messages included
+
+Repos are bind-mounted at container paths (`/foo/opt/<name>`) and the shared layer lives under
+`~/.config/crush/` — both exist **only in the sandbox**. In chat the local path is fine; in
+**anything committed** (code, comments, docs, **and commit/PR messages**) cite a project by its
+**canonical remote URL**, never the container path. This includes the `~/.config/crush/` layer
+itself (this `CLAUDE.md`, the overlay, the `reference/*` docs) — name the sandbox repo that ships
+them. A `~/.config/crush/...` or `/foo/opt/...` path in a commit body means nothing to anyone
+reading the history from the remote; use the URL, or a path relative to the repo the commit
+belongs to. Can't confirm a URL? Ask. The project→URL mapping is personal (overlay).
+
 ## Task documents (`tasks/<slug>.md`)
 
 For non-trivial, multi-step, or resumable work, keep a doc at `tasks/<slug>.md` in the repo root.
