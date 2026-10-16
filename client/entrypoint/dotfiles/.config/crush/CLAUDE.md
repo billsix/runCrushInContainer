@@ -362,6 +362,8 @@ changed nothing, **derive the "before" mechanically** (revert the one thing, dif
 hand-transcribe it. Hand-instrumentation (print/trace) recipes per language, on demand:
 `~/.config/crush/reference/print-debugging.md`.
 
+**Integer types / conversions:** don't eyeball them — build under `-Wconversion -Wsign-conversion` for a per-site worklist (from→to types), and use `clang -Xclang -ast-dump` / `clang-query` (`implicitCastExpr`, `CastKind`) to see every subexpression's type and the invisible implicit casts. Hits usually collapse into a few type-pair boundaries — decide a policy per boundary, not per site.
+
 ## A multi-step check script must propagate every step's failure
 
 A `format`/`lint`/`check` script that chains tools should run **every** step (report all the red) yet
