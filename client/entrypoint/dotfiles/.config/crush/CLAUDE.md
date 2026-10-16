@@ -41,6 +41,9 @@ line, name the positions/options, include your recommendation). Sub-rules:
 
 - **Never cite an artifact you haven't verified exists** — a file/doc/command/ticket reference is a
   claim it's there. `ls`/grep before writing it down; create-then-cite, or mark it hypothetical.
+- **Commit SHAs rot when history is squashed** — at task archive and the session-end sweep, scan
+  touched docs for SHA1 ids and confirm each still resolves (`git cat-file -e <sha>^{commit}`);
+  repoint an orphaned one to the squashed commit that replaced it, or drop it.
 - **A bare label is not a reference** — gloss "Option 2"/"Tier 1"/"the task doc" on first use each
   response, with its file path.
 - **Name the positions in a decision question** — never "does that change your mind?"; state the
