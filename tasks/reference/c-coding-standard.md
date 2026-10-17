@@ -83,6 +83,17 @@ destructors, no references, and no templates to lean on.
   pointer-to-input parameter as `const T *` — it documents intent and lets the compiler reject an
   accidental write. A pointer has two consts: `const char *p` (can't write `*p`) vs
   `char *const p` (can't repoint `p`); use whichever the contract needs, often both.
+  - **For a pointer *local* that is never repointed (the common case), write *both*:
+    `const char *const p`.** The trailing (top-level) `const` says the binding is stable, exactly as
+    `const` does on a non-pointer local (`const int n = …`) — it is the same "I don't reassign this"
+    discipline, and the compiler rejects an accidental repoint. Reach for it whenever you would
+    `const` a scalar local. `clang-tidy misc-const-correctness` finds these mechanically (it adds the
+    top-level `const` to never-modified locals), and the change is behavior-identical.
+  - **On a function *parameter*, the pointee-`const` (`const T *`) is the caller-visible contract;
+    a top-level `const` on the parameter (`const T *const`) is only a definition-side detail** (it
+    does not affect the caller or the ABI and is not part of the type). Omit it from prototypes/headers;
+    add it in the definition only if a function genuinely benefits from "this parameter is never
+    repointed," and never let a header and its definition disagree on it.
 - **Give a phase its own scope with a bare `{ }` block, and label it with a comment.** When a
   function runs in distinct phases that each need their own locals, wrap each phase in a bare block
   and put a one-line comment before the opening brace saying what the block does. The block scopes
