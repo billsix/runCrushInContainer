@@ -189,6 +189,15 @@ destructors, no references, and no templates to lean on.
   check it: a return `>= size` means it truncated. `snprintf(dst, sizeof dst, "%s/%s", a, b)`
   replaces `strcpy`+`strcat`. When you copy a known length, `memcpy(dst, src, n)` then set the
   terminator yourself; `sizeof dst` only works when `dst` is a real array, never a decayed pointer.
+- **Name a buffer's size once and use that name for both the array and the bound.** A magic number
+  duplicated in the declaration and in the `snprintf`/`fgets`/`memcpy` bound drifts when one side
+  changes — `char buf[32]; … snprintf(buf, 16, …)` silently truncates, and the opposite (a bound
+  larger than the buffer) overflows. Define the length as a single named constant (an `enum` or
+  `#define` in C, a `constexpr`/`const size_t` in C++) and use it in both places:
+  `enum { NAME_LEN = 32 }; char name[NAME_LEN]; snprintf(name, NAME_LEN, …);`. When the array is in
+  scope, `sizeof name` as the bound is better still — there is no second number to drift. For a heap
+  buffer (`malloc`/`new`), where `sizeof` gives the pointer size, the named constant *is* the single
+  source of truth shared by the allocation and the bound.
 - **Do not reach for Annex K `_s` functions** (`strcpy_s`, `sprintf_s`, …). They are an *optional*
   annex, not widely implemented (glibc never shipped them, even Microsoft's implementation doesn't
   conform to the spec), and WG14's own field-experience report (N1967) proposed removing them.
