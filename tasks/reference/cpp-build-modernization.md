@@ -133,6 +133,14 @@ template:
   for a header in ~40 TUs. Apply fixes **serially, one `.cpp` at a time** (fix-then-next, so the header
   is already fixed when the next TU is analysed), or `-export-fixes` + `clang-apply-replacements`.
   (smc `misc-const-correctness` sweep, 2026-10-18.)
+- **Suppressing `-Woverloaded-virtual` needs the pragma in TWO places — gcc and clang attribute it
+  differently.** gcc reports it at the hidden **base** method; clang at the hiding **derived**
+  declaration. A `#pragma GCC diagnostic ignored "-Woverloaded-virtual"` only silences the diagnostic
+  where it is attributed, so to be green under both compilers wrap **both** the base method decl (one
+  wrap covers every hider — gcc) **and** each derived declaration (clang). First decide whether to
+  suppress at all: the mechanical `using Base::f;` un-hide breaks the build when the base overload has
+  a default argument overlapping the derived (the call turns ambiguous) — see `cpp-coding-standard.md`.
+  (smc: ~17 reasoned suppression sites for deliberate sprite-hierarchy narrowing, 2026-10-18.)
 
 ## Isolate the tree-wide reformat, and tell `git blame` to skip it
 
