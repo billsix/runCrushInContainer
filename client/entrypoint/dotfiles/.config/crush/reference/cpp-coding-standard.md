@@ -114,6 +114,22 @@ declaration** (`ES.10`) and declare at the point of first use in the smallest sc
 branch that needs it. A name's length matches its scope: `i` for a three-line loop, a full noun
 phrase for anything a reader must remember across the function.
 
+A raw pointer (or iterator) has **two *independent* `const` opportunities — judge each on its own;
+you may want neither, either, or both (they do not imply each other):** **pointee-`const`**
+(`const T* p`, when nothing writes `*p` through this pointer) is the high-value one — the classic
+const-correctness that documents "input, not modified" and lets the compiler reject an accidental
+write, so apply it to every pointer-to-input, *especially* parameters; and **top-level `const`**
+(`T* const p`, when the pointer itself is never repointed) is the binding-stability one, exactly
+like `const` on a scalar local, so reach for it on a *local* whenever you would `const` a scalar.
+Together they read `const T* const p`. **On a function *parameter*, add the pointee-`const` (the
+caller-visible contract) but NOT the top-level `const`** — `T* const` on a parameter is a
+definition-only detail (not part of the type, no ABI effect) that clutters prototypes; add it in a
+definition only if it genuinely helps, and never let a header and its definition disagree. `clang-tidy
+misc-const-correctness` finds never-modified locals mechanically; the change is behavior-identical.
+(Prefer a borrowing reference or owning container to a raw pointer in the first place per the next
+section — but where a raw `T*`/iterator is the right tool, qualify it this way. The same idiom lives
+in the C standard, `c-coding-standard.md`.)
+
 ### Ownership and lifetime — RAII, `unique_ptr`, raw pointers never own
 
 - **Resources are owned by objects** (`R.1`): memory, files, locks, handles are acquired in a
@@ -222,6 +238,12 @@ reshaping control flow).
 - **`override` on every overrider, never a redundant `virtual`** (`C.128`); `final` only when
   further overriding is a design error, not as a habit. Prefer composition; public inheritance
   only, and only for "is-a" (`C.120`, `C.129`); don't make data members `protected` (`C.133`).
+- **`-Woverloaded-virtual` flags a derived function that hides a base `virtual` of the same name —
+  but do NOT blanket-`using Base::f;` to un-hide it.** When the base overload has a default argument
+  (or an arity) overlapping the derived signature, un-hiding makes the call *ambiguous* and the build
+  fails; the hide is often intentional and load-bearing. Decide per method — make the derived a true
+  `override` of the base signature, or accept the hide and suppress narrowly with a reason. It is a
+  judgment call, not a codemod. (smc's cSprite/cMovingSprite hierarchy, 2026-10-18.)
 - Identity by type, not by tag: a runtime `kind`/`m_type` field switched over everywhere is the
   legacy shape of virtual dispatch — when a switch on a type tag appears in new code, ask whether
   a virtual function or `std::variant` + `std::visit` is the design. (Converting an existing
@@ -249,6 +271,12 @@ reshaping control flow).
   compare to a signed count). Fixed-width (`std::int64_t`) when the range is a requirement;
   `int` otherwise. Integer division and `x * y` widening-after-overflow are the two
   `bugprone-` checks worth internalising.
+- **Adding `-Wsign-conversion` to a legacy tree is behaviour-preserving by construction:** wrap the
+  flagged operand in an explicit `static_cast<DEST>` *at the site* — the cast does exactly what the
+  implicit conversion already did, so the runtime result is identical and the warning goes away. Cast
+  at the boundary (`vec[static_cast<size_t>(i)]`, `api_taking_int(static_cast<int>(n))`); do NOT retype
+  the variable, which is a different and riskier change. (smc, 273 first-party sites made explicit,
+  2026-10-18.)
 - `nullptr`, never `0`/`NULL` (`ES.47`); `sizeof(x)` over `sizeof(T)`; `++i` over `i++` where the
   result is unused.
 

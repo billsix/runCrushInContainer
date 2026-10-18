@@ -115,6 +115,24 @@ template:
   and after and `diff -r` ignoring only the timestamp header (`porting-with-an-output-oracle.md`).
 - **Tag the inventory files** (`before`/`after`) before a second run — a re-run of the collector
   overwrote ePiX's before-log, and the before summary had to be reconstructed from the recorded counts.
+- **Bring vendored/third-party headers in as `-isystem`, not `-I`, BEFORE you count** — otherwise the
+  library's own warnings swamp the first-party signal and you wildly over-scope. smc
+  (`github.com/billsix/smc`, SDL2+CEGUI, 2026-10-18) measured 4368; flipping SDL/CEGUI to `-isystem`
+  dropped it to **594 genuinely first-party**, and showed ~1000 of the "deprecated-copy" were CEGUI's
+  own (not fixable in our code). Rule-of-five `= default` is only for the handful that are *your* types.
+- **Add `-Werror` AFTER the configure feature-probes, never before** (autotools especially). `-Werror`
+  in `CXXFLAGS` turns the warnings in autoconf's own probe programs (`AC_CHECK_LIB`'s old-style
+  `char main();`) into errors, so every library check fails with a misleading "Unable to find libX11".
+  Append it near `AC_OUTPUT`, after all `AC_CHECK_LIB`/`PKG_CHECK_MODULES`.
+- **Drive the gate green under BOTH gcc and clang — they disagree.** clang's `-Wsign-conversion` flags
+  `int`→narrower-unsigned (e.g. `Uint8`) even for in-range *constants* that gcc accepts silently, so a
+  gcc-only worklist undercounts; re-run the other compiler before declaring done. (A `-Wsign-conversion`
+  sweep is behaviour-preserving by construction — see `cpp-coding-standard.md`.)
+- **`run-clang-tidy -fix` corrupts shared headers.** It computes every TU's fix against the original
+  source then stacks the identical header insertion once per includer — `float const const const … s`
+  for a header in ~40 TUs. Apply fixes **serially, one `.cpp` at a time** (fix-then-next, so the header
+  is already fixed when the next TU is analysed), or `-export-fixes` + `clang-apply-replacements`.
+  (smc `misc-const-correctness` sweep, 2026-10-18.)
 
 ## Isolate the tree-wide reformat, and tell `git blame` to skip it
 
