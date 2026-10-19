@@ -102,12 +102,17 @@ every assignment binding carries its own explicit type too**, including obvious 
 waved through as noise (`n: int = 3`, `total: float = 0.0`) — do NOT skip a binding
 (William Emerison Six <billsix@gmail.com>, 2026-09-28). Holds in library code
 (`r: Versor = a * b`) AND in throwaway `tasks/adhoc/` scripts.
-**Loop/unpack targets** can't be annotated inline — declare the type on the line *above*
+**Loop/unpack / `with as` / `except as` targets** can't carry an inline annotation, and a
+project's completeness checker deliberately **exempts** them — so by default **leave them
+inferred**, matching what the project's existing code does. Add a type on the line *above*
 (`key: str` / `count: int` above `for key, count in counts.items():`; a bare
-`x: sympy.Symbol` per name above a `symbols(...)` unpack). Two limits: it does **not** reach a *comprehension*/genexpr loop var (separate
+`x: sympy.Symbol` per name above a `symbols(...)` unpack) **only where it genuinely aids
+clarity** — an opaque unpack, or a `ty` error the annotation resolves. When you *do*
+annotate above, it still does **not** reach a *comprehension*/genexpr loop var (separate
 scope — stays inferred), and if a name would be reused across loops of different (sub)types,
-**give each loop its own distinctly-named, typed variable** (don't reuse one name for two
-types — give the second loop its own distinctly-named, typed variable). **Don't fight the
+**give each loop its own distinctly-named, typed variable**. (Leave-inferred-by-default
+reflects the checker's exemption and established practice — William Emerison Six
+<billsix@gmail.com>, 2026-10-19.) **Don't fight the
 checker:** a locally-correct annotation
 that forces edits to unrelated logic or breaks flow-narrowing isn't worth it — leave it
 inferred and say why. Read-only container params take the covariant supertype
