@@ -73,7 +73,23 @@ destructors, no references, and no templates to lean on.
 - **Declare each variable at its first use, not at the top of the function** (C99 lets you; so do
   it). The narrowest scope that works is the right one: it shrinks the reader's live-variable set
   and makes "is this initialized yet?" un-askable. Loop counters go in the `for` initializer:
-  `for (size_t i = 0; i < n; i++)`.
+  `for (size_t i = 0; i < n; i++)`. **A block of declarations at the very top of a function — the
+  C89 `int a, b; struct X y;` opener — is the anti-pattern this rule removes; treat any such opening
+  block as a finding, including on code a modernization pass already touched** (a pass tends to fix
+  the loop counters and the obvious new locals and leave the struct-typed openers behind — e.g. a
+  function whose body already uses `nullptr` and `for (rlim_t i = …)` can still open with
+  `int fd0, fd1, fd2; struct rlimit rl; struct sigaction sa;`). **No clang-tidy check moves a
+  declaration to its first use** — `readability-isolate-declaration` only splits a comma declaration,
+  `cppcoreguidelines-init-variables` only forces initialization — so **a green lint does not prove
+  this is done; a sweep must grep for top-of-function declarations and judge each by eye.** When a
+  variable genuinely can't move down because it is read across several phases, that is the signal to
+  introduce the bare `{ }` phase blocks below (initialize it at the first phase that needs it), not
+  to leave it at the top.
+- **Write an infinite loop `while (true)`, not `for (;;)`** — the intent (loop until an inner
+  `break`/`return`) is on its face, where `for (;;)` hides it in three empty clauses the reader must
+  decode. (In C23 `true` is a keyword, so this is a pure swap; a pre-C23 file needs `<stdbool.h>`, so
+  a mechanical `for (;;)` → `while (true)` sweep must add that include wherever a C99/C11 file it
+  edits lacks it.)
 - **Initialize at the point of declaration** (SEI EXP33-C — never read an uninitialized value; it
   is indeterminate and reading it is undefined behavior). There is no default-construction in C, so
   an uninitialized automatic variable holds garbage. `int n = 0;`, not `int n;` then assign later.
@@ -172,6 +188,23 @@ destructors, no references, and no templates to lean on.
 - **Prefer a flexible array member to a separate allocation** for a header-plus-payload struct
   (`struct msg { size_t len; char data[]; };`, C99) — one allocation, one free, and the payload is
   contiguous with its header.
+- **For scope-bound automatic cleanup, the `cleanup` attribute is C's closest thing to a
+  destructor** (a gcc/clang extension, spelled `[[gnu::cleanup(fn)]]` in C23 attribute syntax,
+  `__attribute__((cleanup(fn)))` before it): the named `fn` is called with the variable's address
+  when the variable leaves scope, so an owned resource frees itself on *every* exit path — the
+  `defer`/RAII analog, and the per-variable counterpart to the `goto cleanup` idiom (Error handling).
+
+  ```c
+  static void free_ptr(int **p) { free(*p); }   /* runs with &buf at end of scope */
+  [[gnu::cleanup(free_ptr)]] int *buf = malloc(n * sizeof *buf);
+  if (!buf) return -1;                           /* free_ptr(&buf) runs here … */
+  /* … and here, on the normal exit — no hand-written unwinding */
+  ```
+
+  Caveat: it is **not ISO C** (gcc/clang only), so a project that must also build on MSVC cannot use
+  it — state the dependence where a project adopts it. The cleanup `fn` must tolerate being called on
+  a partially/zero-initialized object (initialize the variable at its declaration so it always has a
+  defined value to clean up).
 
 ### Arrays, bounds, and VLAs — document the size, don't allocate on the stack
 

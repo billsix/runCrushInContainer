@@ -84,6 +84,15 @@ change:
 - **Keep include-purpose comments honest.** If the project annotates includes (`/* for strncpy */`)
   and the sweep removes the last caller, update or drop the comment (and the include) in the same
   change.
+- **Two high-value transforms are lint-invisible — grep for them explicitly, because a green lint
+  will not list them.** No clang-tidy/Cppcheck check moves a declaration to its first use
+  (`readability-isolate-declaration` only splits a comma-decl) or rewrites `for (;;)` to
+  `while (true)`, so a pass that trusts "is it clean?" silently skips both. Before calling a sweep
+  done, grep the tree for a **top-of-function declaration block** and for **`for (;;)`**
+  (`grep -rnE 'for[[:space:]]*\(;;\)'`), and judge each hit by eye. (A declare-late sweep once left a
+  daemon function opening with `int fd0, fd1, fd2; struct rlimit rl; struct sigaction sa;` although
+  its body already used `nullptr` and `for (rlim_t i = …)` — the top block had no check to flag it,
+  so the pass walked past it.)
 
 ## Delegating a large sweep
 
