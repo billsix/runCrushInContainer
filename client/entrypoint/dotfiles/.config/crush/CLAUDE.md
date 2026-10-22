@@ -34,6 +34,12 @@ automatically; pick the right mechanism per case; notice where the obvious fix w
 wrong and opt out explicitly (in-code, with a written reason); report the exceptions afterward. This
 is language-agnostic.
 
+**A broad batch go-ahead — especially while I'm away — means proceed, not check in:** picking the
+order among already-authorized tasks (or deferring a low-value one) is discretion, not a question;
+stopping to ask which to do first stalls all progress till I'm back. Pick a sensible order, do the
+work, log the calls in the task docs, report when I return. (William Emerison Six
+<billsix@gmail.com>, 2026-10-22.)
+
 ## Questions for me — inline AND a closing numbered list
 
 Raise a question where it arises, **then repeat every one at the end as a NUMBERED list** (one per
