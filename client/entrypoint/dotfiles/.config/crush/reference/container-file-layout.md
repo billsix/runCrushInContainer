@@ -54,7 +54,7 @@ the session log alongside it).
 | `entrypoint/dotfiles/.config/containers/storage.conf` | `/root/.config/containers/storage.conf` | no (nested-podman fuse-overlayfs) |
 | `entrypoint/dotfiles/.config/crush/CLAUDE.md` | `/root/.config/crush/CLAUDE.md` | no (always-loaded conventions) |
 | `entrypoint/dotfiles/.config/crush/commands/` (8 files) | `/root/.config/crush/commands/` | no (slash commands) |
-| `entrypoint/dotfiles/.config/crush/reference/` (17 files) | `/root/.config/crush/reference/` | no (see doc mapping below) |
+| `entrypoint/dotfiles/.config/crush/reference/` (19 files) | `/root/.config/crush/reference/` | no (see doc mapping below) |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.md` (blank default) | `/root/.config/crush/ai-coding-conventions.personal.md` | **YES — host overlay mounted over it** |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md` | `/root/.config/crush/ai-coding-conventions.personal.example.md` | no |
 | `entrypoint/crushrc` | `/root/.config/crush/crushrc` | no (model pin, catalog off, file-tool auto-allow) |
@@ -111,6 +111,7 @@ the baked `~/.config/crush/reference/…` path**; in repo docs cite
 | `c-modernization-sweep.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-16) — **keep in sync** |
 | `rust-coding-standard.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-23) — **keep in sync** |
 | `rust-gui-tui-and-ecosystem.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-23) — **keep in sync** |
+| `tauri-desktop-apps.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-23) — **keep in sync** |
 | `sphinx-book-conventions.md` | yes | yes — **keep the two copies in sync** |
 | `bluf-bottom-line-up-front.md` | no | yes (copied from runClaudeInContainer) |
 | `llm-overused-phrases.md` | no | yes (copied from runClaudeInContainer) |

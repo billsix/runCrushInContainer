@@ -341,6 +341,12 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   TUIs, rustyline, the `Rc<RefCell>` event-state pattern, the sandbox toolchain + headless-Xvfb
   verify. Read on demand before a Rust GUI/TUI/bindings task:
   `~/.config/crush/reference/rust-gui-tui-and-ecosystem.md`.
+- **Rust Tauri v2 desktop apps** — a webview UI over a Rust backend: the project shape, the
+  `#[tauri::command]`/managed-`Mutex` state + one-serde-view-model IPC boundary, the no-bundler
+  `withGlobalTauri` frontend, the Fedora WebKitGTK build deps (`webkit2gtk4.1-devel` +
+  `libsoup3-devel`), the icon/`gen`/`WEBKIT_DISABLE_DMABUF_RENDERER` gotchas, and keeping the Tauri
+  crate out of the core workspace. Read on demand before a Tauri task:
+  `~/.config/crush/reference/tauri-desktop-apps.md`.
 - **An externally-defined name wins over house style** — a framework override, protocol member,
   callback signature, wire-format field, env var, or CLI flag someone else specifies must match
   exactly. A linter flagging it is wrong; suppress narrowly with a reason at the site.
