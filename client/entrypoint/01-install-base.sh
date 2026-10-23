@@ -462,6 +462,7 @@ dnf install -y \
     whois \
     wireguard-tools \
     wl-clipboard \
+    wxGTK-devel \
     xclip \
     xdg-desktop-portal-gtk \
     xdotool \
