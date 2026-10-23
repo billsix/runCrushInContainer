@@ -336,6 +336,11 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   split, `unsafe` isolation with `// SAFETY:`, the `thiserror`(lib)/`anyhow`(app) error strategy.
   Read on demand: `~/.config/crush/reference/rust-coding-standard.md`. Sourced from Google's Rust
   style guide.
+- **Rust GUI/TUI/ecosystem notes** — practical facts beyond the standard: wxDragon/wxWidgets (the
+  `wxGTK-devel` + `libSM/libICE-devel` build deps, DC-not-GraphicsContext drawing), ratatui/crossterm
+  TUIs, rustyline, the `Rc<RefCell>` event-state pattern, the sandbox toolchain + headless-Xvfb
+  verify. Read on demand before a Rust GUI/TUI/bindings task:
+  `~/.config/crush/reference/rust-gui-tui-and-ecosystem.md`.
 - **An externally-defined name wins over house style** — a framework override, protocol member,
   callback signature, wire-format field, env var, or CLI flag someone else specifies must match
   exactly. A linter flagging it is wrong; suppress narrowly with a reason at the site.

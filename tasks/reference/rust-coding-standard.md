@@ -207,6 +207,11 @@ is mostly about *API shape* and *which tool to reach for* rather than safety.
   `cargo clippy -D warnings` gate.
 - `print-debugging.md` — the instrumentation-driven method (compiler, clippy, `cargo test`,
   `RUST_BACKTRACE`, `dbg!`, Miri for `unsafe`) that tier (a) relies on.
+- `rust-gui-tui-and-ecosystem.md` — the practical companion: writing Rust **GUIs** (wxDragon /
+  wxWidgets, incl. the `wxGTK-devel` + `libSM/libICE-devel` build deps and the DC-not-GraphicsContext
+  limitation), **TUIs** (ratatui / crossterm), CLI line-editing (rustyline), the `Rc<RefCell>`
+  event-state pattern, and how the Rust toolchain behaves in the sandbox. Read before a Rust
+  GUI/TUI/bindings task.
 
 ## Sources
 
