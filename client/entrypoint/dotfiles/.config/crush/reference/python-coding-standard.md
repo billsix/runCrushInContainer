@@ -82,13 +82,22 @@ element keeps a float/sympy pipeline intact (`1 * 2.0 == 2.0`). **Only
 when the loop is a pure fold:** keep the explicit loop if the body also has side effects, an
 early exit, or more than one accumulator, or if there is no clean identity element. (Same
 spirit: `any` / `all` / `min` / `max`, and `functools.reduce` for other associative folds.)
+More broadly, prefer the **most specific** scheme: **map/filter → a comprehension**, fold → the
+named builtin above, and **`functools.reduce` only for a genuine associative fold the builtins
+can't cover** — and then **name its accumulator `acc`/`accumulator`** (not a bare `w`/`x`) in the
+conventional accumulator-first position. For how to *shape* a recursion itself — nil/cons
+structural recursion, mapping over the tail instead of threading an accumulator, when an
+accumulator is actually warranted, and the Python no-TCO caveat — see
+`~/.claude/reference/recursive-design.md`.
 
 ### Idioms (the full checklist; the ones ruff already enforces are marked)
 
 EAFP over LBYL; truthiness for emptiness `if not seq:` (but compare ints to `0`
 explicitly); `is`/`is not` for `None`/singletons *(ruff)*; `isinstance` over `type(x) == T`
 *(ruff)*; `enumerate`/`zip` over `range(len(...))`; comprehensions over trivial
-map/filter+loop (keep them simple); f-strings over `%`/`.format`; `with` for resources;
+map/filter+loop (keep them simple; `recursive-design.md` for the why and for shaping a
+recursion); `itertools.pairwise` over a hand-carried "previous element"; f-strings over
+`%`/`.format`; `with` for resources;
 `dict.get`/`defaultdict`/`setdefault`; iterable unpacking (`first, *rest = xs`); no
 mutable/callable defaults *(ruff)*; `pathlib` over `os.path`; keyword args at call sites for
 meaning; flat over nested; no bare `except` *(ruff)*; no stray `print` *(ruff)*; consistent
@@ -272,6 +281,10 @@ sections" discipline via doxygen/javadoc; the language changes the marker, not t
 
 ## Cross-links
 
+- **`~/.claude/reference/recursive-design.md`** — the language-agnostic companion: map/filter/fold
+  as named recursion schemes, structural (nil/cons) recursion, the accumulator-passing discipline,
+  and the Python no-TCO caveat. This doc holds the Python *spelling* (comprehension / `sum` /
+  `functools.reduce`); that one holds the *design*.
 - **Each project's own additions doc** — worked examples, repo-specific invariants, and
   project-local cross-links (e.g. a conditional-refactoring Rules A–E example, a
   no-annotation-exemptions catalogue): modelviewprojection

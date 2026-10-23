@@ -106,6 +106,7 @@ the baked `~/.config/crush/reference/…` path**; in repo docs cite
 | `nested-podman-design.md` | yes | yes — **keep the two copies in sync** |
 | `container-file-layout.md` (this doc) | yes | yes — **keep the two copies in sync** |
 | `python-coding-standard.md` | yes | yes — **keep the two copies in sync** |
+| `recursive-design.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-23) — **keep in sync** |
 | `cpp-coding-standard.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-15) — **keep in sync** |
 | `c-coding-standard.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-15) — **keep in sync** |
 | `c-modernization-sweep.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-16) — **keep in sync** |

@@ -313,6 +313,15 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   can't check (naming, expression/mutation rules, annotate-every-binding, idioms). Read on demand:
   `~/.config/crush/reference/python-coding-standard.md`. A project keeps only its own repo-specific
   Python invariants inline in its `CLAUDE.md`; everything general lives in that shared doc.
+- **Recursive / functional design** (language-agnostic) — map, filter, and fold are the names of
+  the three recursions you keep hand-writing; reach for the most specific scheme that fits (map
+  for a 1:1 transform, filter for selection, fold/`reduce` last), and hand-write recursion only
+  when none fits. When you recurse, shape it to the data (nil/cons: base case + recursive case)
+  and do per-element work by mapping over the tail, not by threading a hand-rolled accumulator;
+  keep an accumulator only when genuinely needed and name it `acc`. Per-language spelling differs
+  (in Python map/filter is a comprehension; no TCO, so recurse only over bounded structures, else
+  iterate). Read on demand before writing or reviewing a non-trivial recursion:
+  `~/.config/crush/reference/recursive-design.md`.
 - **C++: follow the shared coding standard** — what clang-format / clang-tidy / the warning level
   enforce, plus the judgment calls they can't check (`auto` with intent and qualifiers, initialize-
   and-`const`, RAII/`unique_ptr` with non-owning raw pointers, the four parameter shapes, `enum
