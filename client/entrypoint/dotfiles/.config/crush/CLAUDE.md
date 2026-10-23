@@ -328,6 +328,14 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   When modernizing an *existing* C tree (not writing new), also read
   `~/.config/crush/reference/c-modernization-sweep.md` — the preservation hazards (where those idioms
   must NOT be applied) plus the sweep's verification + mechanics.
+- **Rust: follow the shared coding standard** — rustfmt/clippy/the compiler's borrow checker, type
+  system and default lints enforce an unusually wide mechanical tier (casing, exhaustiveness and
+  memory safety are compile-time facts), leaving the judgment calls: the std method/getter
+  vocabulary, derive-and-implement-the-standard-trait, `#[non_exhaustive]`/`#[must_use]`,
+  generics-over-`dyn` and borrowed-parameter forms, borrow-over-clone, the `Option`/`Result`/`panic!`
+  split, `unsafe` isolation with `// SAFETY:`, the `thiserror`(lib)/`anyhow`(app) error strategy.
+  Read on demand: `~/.config/crush/reference/rust-coding-standard.md`. Sourced from Google's Rust
+  style guide.
 - **An externally-defined name wins over house style** — a framework override, protocol member,
   callback signature, wire-format field, env var, or CLI flag someone else specifies must match
   exactly. A linter flagging it is wrong; suppress narrowly with a reason at the site.
