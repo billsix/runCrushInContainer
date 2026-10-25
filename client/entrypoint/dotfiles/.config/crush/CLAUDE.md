@@ -449,6 +449,13 @@ properly finished units — it exists for conversation-only decisions, cross-rep
 mid-session redesigns. Finding a finished unit's updates here means the staging-time rule was
 missed.
 
+**Also review the session for generalizable token waste.** If the session burned tokens in a way that
+would recur — an unneeded fork or parallel fan-out (each re-ingests the whole conversation + this
+instruction set), reading files that only get compiled or vendored/generated trees, a bloated
+always-loaded doc — capture the lesson where it belongs: a project-specific pattern in that repo's own
+`CLAUDE.md`, a general one in this file (kept terse — it's paid every turn) or
+`~/.config/crush/reference/token-and-context-economy.md`. Say "nothing to add" if the session was lean.
+
 **Then run each touched project's format + type-check gate, and fix what it reports (2026-10-01)** —
 the gate CI runs (`.github/workflows/*` wraps `make <target>`, typically `make format` /
 `make type-check` / `make lint`), **before I commit**: I commit and push at session end, so a green
