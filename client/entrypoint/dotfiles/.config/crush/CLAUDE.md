@@ -350,6 +350,12 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   vanilla JavaScript: JSDoc type annotations on **every binding** (the Python-style rule via JSDoc), the
   `@ts-check` / `jsconfig.json` `checkJs` type-gate, `eslint-plugin-jsdoc`, and the safe `make type-check`
   (`npm ci --ignore-scripts` → `tsc --noEmit` + `eslint`).
+- **`~/.config/crush/reference/reimplementing-third-party-libraries.md`** — read **before** writing your
+  own in-tree version of a third-party library (tailored, trimmed, under the upstream licence with upstream
+  links) instead of depending on it — the deliberate exception to "just use the library." Covers when it's
+  worth it, the clean-room-vs-derivative licence distinction (an obligation, not a choice, if you touched
+  upstream source), the `pgzero_gl` header/licence mechanics, and that fetching source to learn from is
+  transient, not a dependency. (Sibling of the import-as-is `vendoring-third-party-source-deps.md`.)
 - **Rust GUI/TUI/ecosystem notes** — practical facts beyond the standard: wxDragon/wxWidgets (the
   `wxGTK-devel` + `libSM/libICE-devel` build deps, DC-not-GraphicsContext drawing), ratatui/crossterm
   TUIs, rustyline, the `Rc<RefCell>` event-state pattern, the sandbox toolchain + headless-Xvfb
