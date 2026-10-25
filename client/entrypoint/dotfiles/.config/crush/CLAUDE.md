@@ -346,6 +346,10 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   Read on demand: `~/.config/crush/reference/rust-coding-standard.md`. Primarily from Google's Rust style
   guide — and it records where the **house style deliberately OVERRIDES** that guide (e.g. "annotate every
   binding", stronger than Google's inference default), so a reviewer sees the deviations, not just the baseline.
+- **`~/.config/crush/reference/javascript-coding-standard.md`** — read **before** writing/reviewing
+  vanilla JavaScript: JSDoc type annotations on **every binding** (the Python-style rule via JSDoc), the
+  `@ts-check` / `jsconfig.json` `checkJs` type-gate, `eslint-plugin-jsdoc`, and the safe `make type-check`
+  (`npm ci --ignore-scripts` → `tsc --noEmit` + `eslint`).
 - **Rust GUI/TUI/ecosystem notes** — practical facts beyond the standard: wxDragon/wxWidgets (the
   `wxGTK-devel` + `libSM/libICE-devel` build deps, DC-not-GraphicsContext drawing), ratatui/crossterm
   TUIs, rustyline, the `Rc<RefCell>` event-state pattern, the sandbox toolchain + headless-Xvfb
