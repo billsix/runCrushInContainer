@@ -92,7 +92,7 @@ the only knob needed to reuse the same helper across both layouts.
 
 ## Worked examples
 
-- **Craft** (`github.com/billsix/Craft`, `tasks/add-dep-update-targets.md`) — 9 deps under
+- **Craft** (`github.com/billsix/Craft`, `tasks/archive/2026/10/25/add-dep-update-targets.md`) — 9 deps under
   `deps/` (default `VENDOR_ROOT`), one `update-<dep>` each: imgui/glfw/curl via `vendor_archive`,
   sqlite via amalgamation download, gl3w via generator + `replace_tree`, lodepng/noise/
   tinycthread via `copy_files`. sqlite + lodepng verified byte-idempotent.
