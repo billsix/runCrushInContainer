@@ -99,6 +99,13 @@ inventory with per-item detail, and what was deliberately NOT ported, is in
 The egress patch/flag system and the 213-Go-dep dependency network audit are in
 `tasks/reference/architecture.md` and `tasks/reference/dependency-network-audit.md`.
 
+`tasks/reference/` also carries **mirrored copies of runClaude's SHARED, VENDORED tool scripts** (not
+just docs) — `check_local_annotations.py` (the Python annotate-every-binding gate) and
+`update_dep_common.sh` (the source-dep re-vendor helper; pattern in
+`tasks/reference/vendoring-third-party-source-deps.md`) — each with a `SHARED, VENDORED TOOL` banner,
+copied into downstream projects' `tools/`. The **canonical** lives in `runClaudeInContainer
+tasks/reference/`; these are kept byte-identical (edit the canonical there, re-copy here).
+
 ## Reference docs
 
 - `tasks/reference/architecture.md` — how the two halves fit, the pins, the quant ladder, serve
