@@ -343,8 +343,9 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   vocabulary, derive-and-implement-the-standard-trait, `#[non_exhaustive]`/`#[must_use]`,
   generics-over-`dyn` and borrowed-parameter forms, borrow-over-clone, the `Option`/`Result`/`panic!`
   split, `unsafe` isolation with `// SAFETY:`, the `thiserror`(lib)/`anyhow`(app) error strategy.
-  Read on demand: `~/.config/crush/reference/rust-coding-standard.md`. Sourced from Google's Rust
-  style guide.
+  Read on demand: `~/.config/crush/reference/rust-coding-standard.md`. Primarily from Google's Rust style
+  guide — and it records where the **house style deliberately OVERRIDES** that guide (e.g. "annotate every
+  binding", stronger than Google's inference default), so a reviewer sees the deviations, not just the baseline.
 - **Rust GUI/TUI/ecosystem notes** — practical facts beyond the standard: wxDragon/wxWidgets (the
   `wxGTK-devel` + `libSM/libICE-devel` build deps, DC-not-GraphicsContext drawing), ratatui/crossterm
   TUIs, rustyline, the `Rc<RefCell>` event-state pattern, the sandbox toolchain + headless-Xvfb
