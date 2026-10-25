@@ -61,6 +61,47 @@ is mostly about *API shape* and *which tool to reach for* rather than safety.
 
 ## (b) Judgment calls — prose, because no tool can check them
 
+### Type annotations — annotate every binding (house style, over Rust's inference)
+
+**House rule, deliberately stronger than idiomatic Rust** (the sibling of
+`python-coding-standard.md` "annotate every binding"). Rust infers local types and the Google guide
+leaves `let` bindings inferred; the maintainer overrides that — because LLM-generated code is reviewed
+heavily, **every binding carries an explicit type so the reviewer reads it at the binding, not by
+inferring it** (William Emerison Six <billsix@gmail.com>, 2026-10-25). Concretely:
+
+- **`let` bindings get an explicit type**, even the obvious ones: `let total: u32 = 0;`,
+  `let moves: Vec<Move> = recorder.default_moves();`, `let name: String = dlg.value();` — not
+  `let total = 0;`. This is the main deviation from idiomatic/Google Rust (which prefers inference).
+- **`fn` signatures are already mandatory** (params + returns; the compiler enforces them) — nothing to
+  add. The one place Rust *would* infer is a **closure**: annotate its params/return where a reader
+  can't see the type at a glance (`|m: &Move| -> bool { … }`); leave trivial ones (`|x| x + 1`) bare.
+- **`const`/`static` already require types** — nothing to add.
+- **Prefer the annotation over turbofish** so the type reads at the binding: `let v: Vec<u8> =
+  xs.collect();`, not `let v = xs.collect::<Vec<u8>>();` — same information, placed where a reviewer
+  scans. Turbofish stays only where there's no binding (`xs.sum::<u32>()` used inline).
+- **Pattern bindings that can't carry an inline type — leave inferred by default** (the Rust analogue of
+  Python's loop/unpack/`except as` targets): a `for x in …` loop variable, an `if let Some(x) = …` /
+  `while let` / `match`-arm binding. Stable Rust can't annotate these in place; **don't contort** them
+  (no extra `let` just to add a type). Annotate the scrutinee, or add a typed `let` in the body, only
+  where it genuinely aids clarity (an opaque iterator item). A destructuring `let` CAN be annotated and
+  should be: `let (fp, tp): (usize, usize) = pair;`.
+- **Don't fight the compiler/clippy.** An annotation that breaks needed inference, or that clippy's
+  `redundant_type_annotations` flags (a restriction lint, off by default — a project that turns it on
+  opts out of this rule and says so), isn't worth a contortion: leave it inferred and say why. Fully
+  parameterize generics (`Vec<Move>`, never a stray `_` a reader must resolve).
+- **No automated checker** (unlike Python's `check_local_annotations.py`): the compiler enforces
+  signatures, nothing enforces local annotations — so this is a **review-discipline** rule, not a gate.
+
+**Scope — how far to apply it (general: same for Python / C / C++ / any house standard), keyed on whose
+repo it is:**
+
+- **A repo I maintain, or a file I mainly control:** sweeping the whole file or project to annotate every
+  binding is welcome — do it.
+- **Someone else's repo:** apply this (my) style to **the code I add** — a new function I write gets
+  types on everything in it — but **do NOT sweep the rest of the file/project**: a whole-file type sweep
+  buries what I actually changed and isn't my call. Use my style for my additions, or the project's own
+  documented style where it has a conflicting one.
+
 ### Imports and `use` — unqualified types, module-qualified functions, no globs
 
 - **Import types and traits and use them unqualified** — `use regex::Regex;` then `Regex`, not
