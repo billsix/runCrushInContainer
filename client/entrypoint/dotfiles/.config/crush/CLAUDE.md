@@ -348,8 +348,9 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   binding", stronger than Google's inference default), so a reviewer sees the deviations, not just the baseline.
 - **`~/.config/crush/reference/javascript-coding-standard.md`** — read **before** writing/reviewing
   vanilla JavaScript: JSDoc type annotations on **every binding** (the Python-style rule via JSDoc), the
-  `@ts-check` / `jsconfig.json` `checkJs` type-gate, `eslint-plugin-jsdoc`, and the safe `make type-check`
-  (`npm ci --ignore-scripts` → `tsc --noEmit` + `eslint`).
+  `checkJs` strict type-gate, and the `make type-check` target. **Deno is the default gate** (`deno check
+  --check-js` + `deno lint`/`deno fmt` — one binary, no `node_modules`, npm lifecycle scripts off); npm +
+  `tsc` + `eslint-plugin-jsdoc` (`npm ci --ignore-scripts`) is the documented fallback for already-npm repos.
 - **`~/.config/crush/reference/reimplementing-third-party-libraries.md`** — read **before** writing your
   own in-tree version of a third-party library (tailored, trimmed, under the upstream licence with upstream
   links) instead of depending on it — the deliberate exception to "just use the library." Covers when it's
