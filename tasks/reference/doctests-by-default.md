@@ -110,6 +110,32 @@ has a single home, and leave the regression.
   a `cargo check --all-targets` gate compiles but does **not run** tests, so it is not enough.
 - Show the `use` lines an example needs, or hide pure setup with a leading `#` on the line.
 
+## C++
+
+C++ has no built-in doctest, but the **`doctest` framework** (github.com/doctest/doctest — single
+header, modeled on Catch2, fastest-compiling) is purpose-built for **tests beside the code**, the
+C++ analogue of this whole rule. Use it this way:
+
+- **Vendor the one header** (`doctest/doctest.h`) by source, like any other C/C++ dep (a
+  `make update-doctest DOCTEST_REF=<tag>` target + `tools/` script — see
+  `vendoring-third-party-source-deps.md`; the version is in `DOCTEST_VERSION_MAJOR/MINOR/PATCH`,
+  not a usable `DOCTEST_VERSION_STR` literal).
+- **Collocate the cases:** `#include <doctest/doctest.h>` once near the top of each header, then put
+  each `TEST_CASE` **right after** the function it tests (for a free function) or right after the
+  class (a `TEST_CASE` can't live inside a class body — it's a namespace-scope function). Put them
+  inside the code's namespace so the types are unqualified.
+- **Compile them out of production/GUI binaries** with `-DDOCTEST_CONFIG_DISABLE` set per-target in
+  the build system — every `TEST_CASE` becomes an uninstantiated no-op. This is doctest's headline
+  feature and is why no `#ifndef` guards are needed; the cost is that the production headers
+  `#include` the (disabled, lightweight) header, so **every target that includes them needs the
+  vendored header on its include path**, not just the test target.
+- **One runner TU** defines `DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN` (before its first include of the
+  header) and includes the engine headers so the inline cases register; the test executable builds
+  it *without* `DISABLE`. Wire it with CMake `enable_testing()` + `add_test()` and run under `ctest`
+  from `make test`.
+- **Exclude the vendored header from the formatter** (clang-format) exactly like other vendored
+  trees.
+
 ## Contributing projects
 
 Each project that does a doctest migration appends what it newly learned here (the project's task
@@ -124,4 +150,10 @@ the consolidation, doc-region, generator, namespace, and lint lessons above.
   doctest on the function covers it", keeping the loop/property (`move_count_is_2n_minus_1`,
   `render_dimensions`), exhaustive (`labelling_for_round_trip`), and multi-step
   (`render_after_one_move`, the `apply`/`replay` sequences) tests as plain `#[test]`s — the same
-  exception list as Python, spelled in Rust.
+  exception list as Python, spelled in Rust. **Later the same day the C++ subproject joined** with
+  the `doctest` framework (v2.5.3, vendored): `TEST_CASE`s collocated inline in the header-only
+  engine (`src/*.hpp`), gated out of the ImGui/wxWidgets binaries by `-DDOCTEST_CONFIG_DISABLE`, a
+  one-line `tests/run_tests.cpp` runner, and `make test` → `ctest` (16 cases / 73 assertions) — the
+  source of the `## C++` section above. The `Game` class's cases sit after the class (a `TEST_CASE`
+  can't go inside a class body); the free functions in `presenter.hpp`/`recipe.hpp` carry theirs
+  immediately after each function.

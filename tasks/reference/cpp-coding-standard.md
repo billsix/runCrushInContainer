@@ -491,6 +491,20 @@ X, changed to Y" belongs in the commit). Public headers get structured doc-comme
 a one-line `///` on anything a reader will hover. Never leave a comment line holding a single word
 or a fragment — reflow the paragraph. Commented-out code is deleted, not kept.
 
+### Tests — doctests by default, beside the code
+
+A unit test documenting an API is a **doctest beside the code**, same as the Python/Rust rule
+(`doctests-by-default.md`). C++ has no built-in doctest, so use the **`doctest` framework**
+(github.com/doctest/doctest — single header, vendored by source): `#include <doctest/doctest.h>`
+once per header, then a `TEST_CASE` **right after** the function it tests (or after the class — a
+`TEST_CASE` can't sit inside a class body), inside the code's namespace. Compile the cases out of
+production/GUI binaries with **`-DDOCTEST_CONFIG_DISABLE`** set per-target (each becomes an
+uninstantiated no-op, so no `#ifndef` guards), build one runner TU with
+`DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN`, and run it under `ctest` from `make test`. Keep as a plain
+(non-doc) test the same cases the other languages do — fixtures/parametrization, property/loop
+checks, multi-step stateful sequences, and anything needing a debugger. Full mechanics (include-path
+and formatter-exclusion gotchas): `doctests-by-default.md` `## C++`.
+
 ### Concurrency — the one-paragraph floor
 
 Prefer no shared mutable state (pass values, return values). Where state is shared, a `std::mutex`
