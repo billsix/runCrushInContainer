@@ -124,15 +124,28 @@ stack.
 
 **A note on the default case and type-checkers.** `case []` + `case [v, *rest]` is already the
 exhaustive nil/cons split, so the trailing `case _` above is *unreachable*. Keep it anyway: some
-type-checkers (e.g. gacalc's `ty`) do **not** prove a list-pattern match exhaustive and warn that
-the function can implicitly return `None`, so the match needs an explicit catch-all. Prefer spelling
-the real data shapes as their own cases (`case []`, `case [v]`, `case [v, *rest]`) and letting
-`case _` be the **total default**, commented as unreachable — rather than overloading the wildcard to
-*mean* the base case. This keeps the "total dispatch" convention (a complete match, no silent
-fall-through) *and* satisfies the checker; it is the same reason the sibling "Prefer total dispatch"
-rule says to always write the default branch. (Earlier revisions of this doc used `case _` as the
-base case itself; the refinement is to make each data shape explicit and keep `_` as the default —
-William Emerison Six <billsix@gmail.com>, 2026-10-27.)
+type-checkers (as of 2026-10, gacalc's `ty`) do **not** prove a structural `match` exhaustive, so
+without a catch-all they treat the function as able to fall through — the exact diagnostic is
+`error[invalid-return-type]: Function can implicitly return None, which is not assignable to return
+type <T>`. The `case _` is **load-bearing for the checker even when it is logically unreachable.**
+
+Two kinds of exhaustiveness `ty` does not currently reason about, and both need the `case _`:
+
+- **list / tuple patterns** — it does not infer that `case []` + `case [v, *rest]` (or
+  `case ()` + `case (_,)` + `case (a, c, *rest)`) covers every value;
+- **guarded cases** — it cannot see that a guard set like `if a == c` / `if a > c` / `if a < c`
+  is a total trichotomy, so a `match` made exhaustive only by guards still looks partial to it.
+
+So prefer spelling the real data shapes as their own cases (`case []`, `case [v]`, `case [v, *rest]`)
+and letting `case _` be the **total default** — a `raise` or a commented no-op — rather than
+overloading the wildcard to *mean* the base case. This keeps the "total dispatch" convention (a
+complete match, no silent fall-through) *and* satisfies the checker; it is the same reason the
+sibling "Prefer total dispatch" rule says to always write the default branch. If a future `ty`
+version proves these exhaustive, the `case _`s can be revisited together. (Verified in gacalc,
+2026-10-27: deleting the `case _` from `frame.orthogonalize` (list patterns) and from the geometric
+product's `decrease_grade` (tuple + guard trichotomy) each produced the implicit-`None` error. Earlier
+revisions of this doc used `case _` as the base case itself; the refinement is to make each data
+shape explicit and keep `_` as the default — William Emerison Six <billsix@gmail.com>.)
 
 ## Accumulator-passing style: only when warranted, and name it
 
