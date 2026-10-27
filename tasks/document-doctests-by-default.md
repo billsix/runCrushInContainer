@@ -69,6 +69,46 @@ Split across homes, so the always-read layer stays lean:
   line under the coding-standards section saying doctests are the default and pointing at the two
   reference docs + the overlay's Makefile contract.
 
+## Lessons from the gacalc migration (William Emerison Six <billsix@gmail.com>, 2026-10-27)
+
+The first migration (github.com/billsix/geometricalgebra — ~34 pytest tests consolidated into
+doctests across `vectorcalc`/`measure`/`frame`/`base.py` + the g2 generator, suite 711 → 695,
+green after each batch) taught these, which the eventual reference-doc write-up should state:
+
+- **Inventory existing doctests first — the job is often consolidation, not creation.** A
+  book/pedagogical repo may already carry doctests *alongside* the pytest tests (gacalc's
+  `measure`/`vectorcalc` were fully doctested already). So "push into doctests" is frequently just
+  *delete the redundant pytest test* after confirming a doctest covers it — not writing new ones.
+- **The wiring is often already present** — verify before assuming you must add it. gacalc and mvp
+  already had `--doctest-modules`; only hanoi/methodfinder need wiring.
+- **Consolidating deletes tests, so protect two things a doctest cannot replace:**
+  - **`pinned by tests/…` doc references become dangling** when you delete the cited test. Fix the
+    reference in the same change (point it at the doctest, or drop it) — cf. the "never cite an
+    artifact you have not verified" rule.
+  - **A test that is a book literalinclude source (doc-region markers) must NOT be deleted** — it
+    breaks the book + the region gate. Grep for `doc-region` in the test files first. (gacalc's
+    `test_multivector_add`/`subtract` carry a `# doc-region-end` marker — left untouched.)
+- **Generated code: doctests live in the GENERATOR, never the generated file.** For a codegen
+  project, author the doctest in the generator's doc table and regenerate; the gitignored output is
+  never hand-edited (gacalc: `tools/gen_specialized.py`'s `CUSTOM_METHOD_DOCS`). The generated file
+  IS still collected by `--doctest-modules`, so its doctests run — and are linted.
+- **A doctest runs in its MODULE's globals**, so: a hand-written module's method doctest needs an
+  explicit `import` of a concrete type to build a value; and a type exposes only its own attributes
+  (a grade-1 `Vector` has `e_1` but not `e_12` → use `Bivector.e_12`). Keep outputs **repr-stable**:
+  prefer `>>> expr == expected` → `True`, or wrap in `int(...)`, over printing a value whose repr
+  may be a sympy/float form (and avoid long version-sensitive outputs — the methodfinder caveat).
+- **Lint applies to doctest lines.** ruff **E501**/line-length counts docstring doctest lines — keep
+  them within the limit by wrapping the statement with `...` continuation or trimming the inline
+  comment. Run the format/lint gate on the doctests, not just pytest.
+- **Keep-as-pytest, confirmed in practice** (the exception reasons): tolerance (`isclose`/numpy
+  `allclose`), parametrized/fixtures, `pytest.raises`/`should_panic`, `typing.assert_type` or
+  operation-driven **type** assertions (`type(x) is …`), symbolic/noisy repr, int-vs-float type
+  regressions, and internal invariants not meant for user-facing docs.
+- **Verify per batch, and capture the real exit code.** Run the suite after each small batch (stay
+  green). A `pytest … | tail` pipe masks pytest's failure as the pipe's exit 0 — read the summary
+  line or capture `${PIPESTATUS[0]}`. For a codegen project, also run the determinism gate
+  (`make check-generated`) after a generator change.
+
 ## Notes
 
 - **Mirror to runCrush.** The shared CLAUDE.md / reference-doc layer is kept byte-identical between

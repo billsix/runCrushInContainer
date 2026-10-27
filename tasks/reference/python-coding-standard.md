@@ -270,6 +270,12 @@ def zero(cls) -> Self:
   types + meaning.
 - An existing doctest moves under an `Example:` header (napoleon renders it; it still runs
   under `pytest --doctest-modules`).
+- **Prefer a doctest over a plain `pytest` test by default** — an `example → output` belongs in the
+  docstring next to the code, collected by `--doctest-modules`. The rule, the keep-as-pytest
+  exceptions, the migration/consolidation hazards (dangling `pinned by tests/…` references, book
+  doc-region sources, generator-authored doctests for codegen), and the doctest-authoring/lint traps
+  are in **`doctests-by-default.md`** (its `## Python` section) — read it before migrating tests to
+  doctests or wiring `--doctest-modules` into `make test`.
 - When the book sets `autodoc_typehints = "none"` (recommended — see the sphinx-book doc),
   the types you write in `Args:`/`Returns:` ARE the rendered type info, so get them right.
 - The book must enable `sphinx.ext.napoleon`. The **rendering/config** side of a Sphinx book
