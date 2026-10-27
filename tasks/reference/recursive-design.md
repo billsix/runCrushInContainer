@@ -93,31 +93,46 @@ before it), **maps** its rejection over the tail, and recurses on the mapped tai
 
 ```python
 # AFTER — nil/cons structural recursion; the per-element work is a map (comprehension)
-# over the tail; no accumulator, no reduce, no reversed arguments; a real base case.
+# over the tail; no accumulator, no reduce, no reversed arguments; every data shape is
+# its own case, and each comment names the OPERATION, not a mid-recursion invariant.
 def orthogonalize(remaining):
     match list(remaining):
-        case [v, *rest]:
+        case []:                 # base case: no vectors, nothing to orthogonalize
+            return []
+        case [v]:                # one vector is already an orthogonal frame on its own
+            return [v]
+        case [v, *rest]:         # two or more: remove from each later vector its
+            # component parallel to the first (reject the first out of the rest),
+            # keep the first, and recurse on the rest
             rest_orthogonal_to_v = [w.rejected_away_from(v) for w in rest]
             return [v, *orthogonalize(rest_orthogonal_to_v)]
-        case _:                       # the empty list -- base case
+        case _:                  # unreachable total default (see the note below)
             return []
 return orthogonalize(vectors)
 ```
 
 The `after` is Modified Gram–Schmidt and the `before` is Classical; in exact arithmetic they
 produce identical results, so the behavior is unchanged. What improved is the *design*: the
-recursion follows the list's nil/cons shape, the per-element work is a named map, there is no
-accumulator to place or reverse, and the base case is a real, reachable branch (the empty list)
-instead of a `case _` labelled "unreachable."
+recursion follows the list's nil/cons shape, the per-element work is a named map, and there is no
+accumulator to place or reverse. **Spell each data shape its own case** — the empty list, the single
+element, and two-or-more — rather than folding several into one wildcard; a reader sees the
+exhaustiveness at a glance. And **write each per-case comment to describe the operation it performs,
+standalone** — "remove each later vector's component parallel to the first" — not an invariant that
+only parses once you are already inside the recursion ("by the time a vector becomes the head, every
+earlier one has been rejected out of it"). A branch should be readable without simulating the call
+stack.
 
-**A note on the base case and type-checkers.** In principle `case []` + `case [v, *rest]` is the
-exhaustive nil/cons split, so you might expect to spell the base case `case []` and omit any
-wildcard. But some type-checkers (e.g. gacalc's `ty`) do **not** prove a list-pattern match
-exhaustive, and warn that the function can implicitly return `None`. Spell the base case as the
-wildcard **`case _`** (as above) — it is still reachable and meaningful (the empty list), not a
-dead "unreachable" branch — or add an explicit fallback. This keeps the "total dispatch"
-convention (a complete match, no silent fall-through) *and* satisfies the checker; it is the same
-reason the sibling "Prefer total dispatch" rule says to always write the default branch.
+**A note on the default case and type-checkers.** `case []` + `case [v, *rest]` is already the
+exhaustive nil/cons split, so the trailing `case _` above is *unreachable*. Keep it anyway: some
+type-checkers (e.g. gacalc's `ty`) do **not** prove a list-pattern match exhaustive and warn that
+the function can implicitly return `None`, so the match needs an explicit catch-all. Prefer spelling
+the real data shapes as their own cases (`case []`, `case [v]`, `case [v, *rest]`) and letting
+`case _` be the **total default**, commented as unreachable — rather than overloading the wildcard to
+*mean* the base case. This keeps the "total dispatch" convention (a complete match, no silent
+fall-through) *and* satisfies the checker; it is the same reason the sibling "Prefer total dispatch"
+rule says to always write the default branch. (Earlier revisions of this doc used `case _` as the
+base case itself; the refinement is to make each data shape explicit and keep `_` as the default —
+William Emerison Six <billsix@gmail.com>, 2026-10-27.)
 
 ## Accumulator-passing style: only when warranted, and name it
 
