@@ -1,8 +1,13 @@
 # Document "doctests by default" for Python and Rust, wired into `make test`
 
-**Status:** proposed — needs go-ahead. **Do this AFTER the per-project doctest migrations land**
-(see "Depends on" below) — the maintainer's explicit ordering: document the convention once the
-per-project work has shown what the convention should actually say.
+**Status:** DONE 2026-10-27 (William Emerison Six <billsix@gmail.com>) — finalized after the gacalc
+migration (the first project) rather than waiting for all of them; future per-project migrations now
+**append** what they learn directly to the reference doc (each project's task carries that step).
+Outcome: the convention + lessons live in **`tasks/reference/doctests-by-default.md`**
+(language-agnostic core + `## Python` / `## Rust` sections), with pointer bullets added to
+`python-coding-standard.md`, `rust-coding-standard.md`, the shared `CLAUDE.md` read-on-demand list,
+and the personal overlay's Makefile contract; mirrored byte-identical to runCrushInContainer. This
+task doc is the historical record and is being archived.
 **Priority:** 7
 **Difficulty:** 2
 **Created:** 2026-10-27 (William Emerison Six <billsix@gmail.com>)
