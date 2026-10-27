@@ -44,7 +44,17 @@ exists before adding it — see the per-language sections.)
 - **Generated code: the doctest lives in the GENERATOR, never the generated file.** For a codegen
   project, author the doctest in the generator's doc table and regenerate; the (usually gitignored)
   output is never hand-edited. The generated file is still collected by the doctest runner, so its
-  doctests run — and are linted.
+  doctests run — and are linted. **But a docstring SHARED across generated classes or dimensions can
+  host a doctest only if it is valid for every one of them.** A doc reused by two roles (a `.i()` on
+  both a bivector and a versor), or a per-grade class/property doc emitted for every dimension (where
+  the type's constructor arity or which blades exist differ), cannot carry one doctest that fits all
+  — that test stays a plain test unless the generator is refactored to emit a per-role / per-dimension
+  doc. (And editing a doc built directly as an AST constant means getting its indentation and
+  regen-determinism exactly right.)
+
+Not every test has a clean doctest home — a **broad multi-case regression** (one test asserting many
+distinct behaviors across several dimensions) also keeps its plain test; migrate only the subset that
+has a single home, and leave the regression.
 
 ## Writing doctests that actually pass
 
@@ -53,9 +63,14 @@ exists before adding it — see the per-language sections.)
   exposes only its **own** attributes (e.g. a grade-1 `Vector` has `e_1` but not the bivector
   `e_12` — reach the right type). 
 - **Keep outputs `repr`-stable:** prefer `>>> expr == expected` → `True`, or coerce
-  (`int(...)`), over printing a value whose `repr` is a library-specific form. Avoid long
-  version-sensitive outputs (new library/runtime versions add entries and break the expected block —
-  the failure then means "regenerate the expected text", not a real bug).
+  (`int(...)`), over printing a value whose `repr` is a library-specific form. Two concrete traps: a
+  value whose type **eagerly normalizes** numbers (gacalc's `Gn` turns `1.5` into a `sympy` `Float`
+  that prints `1.50000…`, so print from the lazy type or compare with `==`); and long
+  version-sensitive outputs (a new library/runtime version adds entries and breaks the expected
+  block — the failure then means "regenerate the expected text", not a real bug).
+- **A doctest whose output contains backslashes needs a RAW docstring** (`r"""`), or an escape like
+  the `\v` in `\vec` becomes a vertical tab in the docstring *value* before the doctest runner ever
+  sees it. (gacalc's `blade_dict_latex` was converted to `r"""` to host a LaTeX-string doctest.)
 - **Lint applies to doctest lines.** A line-length limit (ruff `E501`, rustfmt) counts doctest lines
   inside docstrings/doc comments — keep them within the limit by wrapping the statement (Python
   `...` continuation) or trimming the inline comment. Run the format/lint gate over the doctests,
