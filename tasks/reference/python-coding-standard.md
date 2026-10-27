@@ -176,6 +176,28 @@ related lesson: an error is best raised by the code that *discovers* it — push
 found" into the search itself is often what lets a function's tail collapse to one line.
 Worked examples live in each project's additions doc.
 
+### Guard application code with `if __name__ == "__main__":` — separate functional from script
+
+**A module should be safe to import without *doing* anything** — defining functions, classes and
+constants, not running them. Any code that *acts* when the file is run as a script (a demo, a CLI
+entry point, opening a window, `sys.exit()`, printing, wiring up `argparse`) goes under an
+`if __name__ == "__main__":` guard at the bottom, calling a `main()` that is itself just another
+defined function. Treat this as **standard practice**, not an afterthought: a bare module that runs
+work at import is the thing to fix.
+
+- **Restructure to make it true when it isn't.** If a module mixes a reusable function with
+  work it does at import, split them — lift the reusable part to a plain function/class, and move
+  the "run it" part under the guard. The separation of *functional* (importable, testable) from
+  *application* (the script's entry) is the point; the guard is how Python spells it.
+- **It is what makes a module doctest-safe.** `pytest --doctest-modules` *imports* every module it
+  collects, so an unguarded script crashes collection; guarding it project-wide lets the doctest
+  gate collect everything with no per-module exclusion list (see
+  `~/.claude/reference/doctests-by-default.md`). (hanoi, 2026-10-27: all 11 modules were already
+  guarded, so the gate's `testpaths = tests src` needed no allowlist.)
+- **The reach has a limit:** don't contort a module whose *only* purpose is to be run (a thin
+  `__main__.py`, a genuine one-shot script) — but even there, a `main()` under the guard beats
+  top-level statements, because it stays importable for a test.
+
 ### Comments explain *why*, inline at the point they apply
 
 Not a trailing notes block. **Never leave a comment line holding a single word or a sentence

@@ -58,6 +58,11 @@ has a single home, and leave the regression.
 
 ## Writing doctests that actually pass
 
+- **Annotate every binding IN the doctest too.** The house "annotate every binding" rule does not
+  stop at the doctest fence: a Python doctest writes `name: T = ...` and a Rust doctest writes
+  `let x: T = ...`, exactly as the surrounding code would. A doctest is example code the reader
+  copies, so it models the house style. (hanoi, 2026-10-27 — the bindings were retrofitted when the
+  first batch shipped them bare.)
 - **A doctest runs in its MODULE's namespace** (Python) / crate scope (Rust): a hand-written
   module's method example must **import the concrete type** it builds a value from, and a type
   exposes only its **own** attributes (e.g. a grade-1 `Vector` has `e_1` but not the bivector
@@ -82,10 +87,19 @@ has a single home, and leave the regression.
 
 - **Wiring:** pytest with `addopts = --doctest-modules` and `testpaths` covering `src` (and the
   package). The `make test` target runs it. Check whether this is already configured before adding.
-- **Import-time-execution trap:** `--doctest-modules` *imports* every module it collects, so a
-  module that runs code at import — a demo, a script that opens a window or calls `sys.exit()` —
-  must be guarded with `if __name__ == "__main__":` or excluded from `testpaths`, else collection
-  crashes.
+- **Import-mode for a src-layout package with relative imports:** add `--import-mode=importlib`
+  alongside `--doctest-modules`. Without it `--doctest-modules` imports each module as a top-level
+  module, and a `from . import x` then fails with "attempted relative import with no known parent
+  package" — collection crashes before any doctest runs. (hanoi, 2026-10-27.)
+- **Import-time-execution trap, and the `__main__` guard as the fix:** `--doctest-modules` *imports*
+  every module it collects, so a module that runs code at import — a demo, a script that opens a
+  window or calls `sys.exit()` — crashes collection. The fix is to guard that code with
+  `if __name__ == "__main__":` (see the standard-practice rule in `python-coding-standard.md`); only
+  exclude a module from `testpaths` when it genuinely cannot be made import-safe. When every module
+  is already `__main__`-guarded (hanoi's were), `testpaths = tests src` needs no allowlist — a good
+  reason to apply the guard project-wide *before* wiring the doctest gate, so the gate's config stays
+  a plain "collect everything". (hanoi, 2026-10-27: confirmed all 11 modules import cleanly headless,
+  so no per-module exclusion was needed.)
 - **Discoverability:** a test file named with a hyphen or `-test` (e.g. `foo-test.py`) is collected
   by neither `pytest` nor `-m unittest`; migrating its cases into module doctests sidesteps that.
 
@@ -101,3 +115,13 @@ has a single home, and leave the regression.
 Each project that does a doctest migration appends what it newly learned here (the project's task
 says to). First contributor: gacalc (github.com/billsix/geometricalgebra, 2026-10-27) — source of
 the consolidation, doc-region, generator, namespace, and lint lessons above.
+
+- **hanoi** (github.com/billsix/towersofhanoi, 2026-10-27) — a two-language migration (Python
+  package + Rust workspace) done together. Lessons: `--import-mode=importlib` for the src-layout
+  package; the `__main__`-guard as the import-safety fix (and applying it project-wide first, so the
+  gate config is a plain "collect everything"); typed doctest bindings in both languages; and the
+  cross-language shape of the consolidation — in Rust it is "delete the `#[test]` once a ` ```rust `
+  doctest on the function covers it", keeping the loop/property (`move_count_is_2n_minus_1`,
+  `render_dimensions`), exhaustive (`labelling_for_round_trip`), and multi-step
+  (`render_after_one_move`, the `apply`/`replay` sequences) tests as plain `#[test]`s — the same
+  exception list as Python, spelled in Rust.
