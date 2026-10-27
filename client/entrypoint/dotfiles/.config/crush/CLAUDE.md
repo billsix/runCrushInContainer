@@ -420,6 +420,19 @@ fail if **any** failed — a plain sequence exits with only the last command's s
 `status=0; cmd || status=1; … exit $status` (per-iteration in loops). `set -e` is the wrong fix (it's
 fail-fast, losing the report-everything property).
 
+## A tool is an oracle — install what you need, and persist it in the image
+
+The tool closest to a question is ground truth, not a guess (see `porting-with-an-output-oracle.md`):
+the compiler, the **reference implementation you are porting from or against**, an interpreter, a
+linter/formatter, a disassembler, a profiler. **If a tool could plausibly serve as an oracle or
+otherwise help the task, you are pre-authorized to `dnf install` it in the sandbox without asking**
+(the sandbox has network). **Then persist it** so future sessions have it offline instead of
+re-installing ad hoc: add the package to BOTH sandbox base lists —
+`runClaudeInContainer/entrypoint/01-install-base.sh` and
+`runCrushInContainer/client/entrypoint/01-install-base.sh` (each a plain alphabetical `dnf install`
+list). This is the **permanent-provisioning** complement to the "temporary build-file additions"
+arrangement (which stays for one-off dev/debug aids you remove when done).
+
 ## Running projects in a nested container
 
 When working on a container-per-project repo, you can build/run its containers **inside** this client.
