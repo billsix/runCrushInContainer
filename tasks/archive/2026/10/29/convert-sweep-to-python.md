@@ -1,6 +1,6 @@
 # Convert sweep_egress_patch_combos.sh to Python
 
-**Status:** in progress
+**Status:** done (2026-10-29; converted, proven combo-sequence-identical + full apply/reverse + a real build, committed `f8feda0`)
 **Priority:** 6
 **Difficulty:** 3
 
