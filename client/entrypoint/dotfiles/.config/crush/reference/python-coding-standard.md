@@ -133,7 +133,7 @@ deliberate exemptions and provide a checker — see your project's additions doc
 ### Parameterize generic types — never a bare generic in an annotation
 
 Write `Stack[int]` / `Mapping[str, Node]`, not a bare `Stack` / `Mapping` (a bare generic
-silently degrades its parameter to implicit `Any`). Where a generic is **invariant** with an **unbounded** parameter, the
+silently degrades its parameter to implicit `Any`). **When the exact parameters are not readily knowable, parameterize with `Any` rather than leaving the generic bare** — `list[Any]` / `dict[str, Any]` beats bare `list` / `dict`: a bare generic *already* means implicit `Any`, but silently — invisible to a reader, and it slips past the checker — whereas an explicit `Any` documents that the element type is intentionally unconstrained. Prefer the exact type where it is clear, fall back to `Any` where it is not, and **never leave it bare** (William Emerison Six <billsix@gmail.com>, 2026-10-29). Where a generic is **invariant** with an **unbounded** parameter, the
 parameter must match the value's *exact* type — verify each with the type checker rather
 than blanket-annotating a common base. **A *polymorphic* param that accepts *any* instance
 of the generic and applies it to the base internally** is `[Any]` — invariance makes a fixed
@@ -152,6 +152,15 @@ local just to give it a type — inline it (e.g. pass the f-string straight to
 of a closure so it's computed once, or named to clarify an opaque expression. (Same spirit
 as: no local aliases for a value that already has a canonical name — reference the canonical
 name directly, never `E1 = Vector.basis_vector(1)`.)
+
+**The default is inline.** A local **defined and then used immediately** — assigned on one line and
+consumed on the very next (the argument to the next call, the return value, the one operand of the
+next expression) — should by default be **inlined and used as a value**, not bound to a name at all.
+Keep the name only when it **earns its keep**: it documents an otherwise-opaque expression, is reused,
+or is hoisted so it is computed once. Use discretion — a genuinely clarifying name is a real exception
+— but when in doubt, inline. (Worked examples, gacalc 2026-10-29: `rest_orthogonal_to_v` in
+`frame.make_orthogonal_frame` and the `prepended` blade in `Gn._geometric_product`, each inlined into
+the recursive call it fed.)
 
 ### What earns an extraction: duplication, or naming a phase — not reshaping control flow
 
@@ -175,6 +184,28 @@ early-return code**; a cheap top-of-function `raise` on a nonsensical arg is alw
 related lesson: an error is best raised by the code that *discovers* it — pushing a "not
 found" into the search itself is often what lets a function's tail collapse to one line.
 Worked examples live in each project's additions doc.
+
+### Guard application code with `if __name__ == "__main__":` — separate functional from script
+
+**A module should be safe to import without *doing* anything** — defining functions, classes and
+constants, not running them. Any code that *acts* when the file is run as a script (a demo, a CLI
+entry point, opening a window, `sys.exit()`, printing, wiring up `argparse`) goes under an
+`if __name__ == "__main__":` guard at the bottom, calling a `main()` that is itself just another
+defined function. Treat this as **standard practice**, not an afterthought: a bare module that runs
+work at import is the thing to fix.
+
+- **Restructure to make it true when it isn't.** If a module mixes a reusable function with
+  work it does at import, split them — lift the reusable part to a plain function/class, and move
+  the "run it" part under the guard. The separation of *functional* (importable, testable) from
+  *application* (the script's entry) is the point; the guard is how Python spells it.
+- **It is what makes a module doctest-safe.** `pytest --doctest-modules` *imports* every module it
+  collects, so an unguarded script crashes collection; guarding it project-wide lets the doctest
+  gate collect everything with no per-module exclusion list (see
+  `~/.claude/reference/doctests-by-default.md`). (hanoi, 2026-10-27: all 11 modules were already
+  guarded, so the gate's `testpaths = tests src` needed no allowlist.)
+- **The reach has a limit:** don't contort a module whose *only* purpose is to be run (a thin
+  `__main__.py`, a genuine one-shot script) — but even there, a `main()` under the guard beats
+  top-level statements, because it stays importable for a test.
 
 ### Comments explain *why*, inline at the point they apply
 
@@ -270,6 +301,12 @@ def zero(cls) -> Self:
   types + meaning.
 - An existing doctest moves under an `Example:` header (napoleon renders it; it still runs
   under `pytest --doctest-modules`).
+- **Prefer a doctest over a plain `pytest` test by default** — an `example → output` belongs in the
+  docstring next to the code, collected by `--doctest-modules`. The rule, the keep-as-pytest
+  exceptions, the migration/consolidation hazards (dangling `pinned by tests/…` references, book
+  doc-region sources, generator-authored doctests for codegen), and the doctest-authoring/lint traps
+  are in **`doctests-by-default.md`** (its `## Python` section) — read it before migrating tests to
+  doctests or wiring `--doctest-modules` into `make test`.
 - When the book sets `autodoc_typehints = "none"` (recommended — see the sphinx-book doc),
   the types you write in `Args:`/`Returns:` ARE the rendered type info, so get them right.
 - The book must enable `sphinx.ext.napoleon`. The **rendering/config** side of a Sphinx book

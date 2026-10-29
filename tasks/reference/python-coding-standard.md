@@ -133,7 +133,7 @@ deliberate exemptions and provide a checker — see your project's additions doc
 ### Parameterize generic types — never a bare generic in an annotation
 
 Write `Stack[int]` / `Mapping[str, Node]`, not a bare `Stack` / `Mapping` (a bare generic
-silently degrades its parameter to implicit `Any`). Where a generic is **invariant** with an **unbounded** parameter, the
+silently degrades its parameter to implicit `Any`). **When the exact parameters are not readily knowable, parameterize with `Any` rather than leaving the generic bare** — `list[Any]` / `dict[str, Any]` beats bare `list` / `dict`: a bare generic *already* means implicit `Any`, but silently — invisible to a reader, and it slips past the checker — whereas an explicit `Any` documents that the element type is intentionally unconstrained. Prefer the exact type where it is clear, fall back to `Any` where it is not, and **never leave it bare** (William Emerison Six <billsix@gmail.com>, 2026-10-29). Where a generic is **invariant** with an **unbounded** parameter, the
 parameter must match the value's *exact* type — verify each with the type checker rather
 than blanket-annotating a common base. **A *polymorphic* param that accepts *any* instance
 of the generic and applies it to the base internally** is `[Any]` — invariance makes a fixed
