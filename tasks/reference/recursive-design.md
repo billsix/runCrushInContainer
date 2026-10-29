@@ -147,6 +147,32 @@ product's `decrease_grade` (tuple + guard trichotomy) each produced the implicit
 revisions of this doc used `case _` as the base case itself; the refinement is to make each data
 shape explicit and keep `_` as the default — William Emerison Six <billsix@gmail.com>.)
 
+## A function is a value — pick it with an expression, not a helper or a one-guard match
+
+A two-outcome dispatch between **doing nothing** (the identity) and **recursing** is a plain `if`
+expression — not an extracted procedure, and not a `match`. Because a function is itself a value, you
+can **select the function with an `if`-expression and then apply it**, the most direct spelling of
+"in one case do X, in the other do Y":
+
+```python
+# the branch picks the function; then it is applied to the value
+return (identity if already_in_place else reduce_again)(value)
+```
+
+This is the functional reading of the cross-project **"prefer total dispatch"** caveat — *a `match`
+whose every case is a boolean guard is an `if`/`elif` chain in disguise; don't convert every
+two-branch conditional*. Keep `match` for **structural** patterns on the data (the nil/cons shapes
+above); collapse a two-outcome **boolean** test to an `if`, choosing between `identity` and the
+recursive call.
+
+**The smell to catch:** a named local helper whose whole body is "if the value is already in place,
+return it unchanged; otherwise recurse" earns nothing over the inline `(identity if … else
+recurse)(…)` — it is a binary test wearing a procedure's clothes. (Worked example, gacalc 2026-10-29:
+`insert_into_canonical`, extracted from `Gn._geometric_product`'s `decrease_grade` during a recursion
+audit, was folded back to `(identity() if … else decrease_grade)(…)` inline — identity in one branch,
+recursion in the other. Here `identity` is gacalc's composable-function factory, hence `identity()`;
+with a bare `def identity(x): return x` it would be just `identity`.)
+
 ## Accumulator-passing style: only when warranted, and name it
 
 Accumulator-passing (an extra parameter carrying state built up so far) is the right tool for a

@@ -153,6 +153,15 @@ of a closure so it's computed once, or named to clarify an opaque expression. (S
 as: no local aliases for a value that already has a canonical name — reference the canonical
 name directly, never `E1 = Vector.basis_vector(1)`.)
 
+**The default is inline.** A local **defined and then used immediately** — assigned on one line and
+consumed on the very next (the argument to the next call, the return value, the one operand of the
+next expression) — should by default be **inlined and used as a value**, not bound to a name at all.
+Keep the name only when it **earns its keep**: it documents an otherwise-opaque expression, is reused,
+or is hoisted so it is computed once. Use discretion — a genuinely clarifying name is a real exception
+— but when in doubt, inline. (Worked examples, gacalc 2026-10-29: `rest_orthogonal_to_v` in
+`frame.make_orthogonal_frame` and the `prepended` blade in `Gn._geometric_product`, each inlined into
+the recursive call it fed.)
+
 ### What earns an extraction: duplication, or naming a phase — not reshaping control flow
 
 Settled 2026-07-18 from what the maintainer accepted and declined:
