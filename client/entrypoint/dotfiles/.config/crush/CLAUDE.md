@@ -148,6 +148,39 @@ and `git diff` (unstaged) and fold all three in. **Decide whether the task is ac
 (the diff, the passing gate output, the sibling-task boundaries), not from a recollection that you finished it — a
 sibling task can look done from memory while its real scope is untouched.
 
+## The authorized-batch workflow (gpg off → branch → per-task loop → gpg on → merge)
+
+When I hand you a task — or a **list of tasks** — and authorize committing (typically because I'm away
+and you must decide yourself), run this whole sequence unattended, logging the decisions as you go. It
+wraps the staging, quick-save/squash, task-lifecycle, and session-sweep rules into one choreography
+(William Emerison Six <billsix@gmail.com>, 2026-10-29):
+
+1. **gpg off for this project** — `git config commit.gpgsign false` (unattended commits can't be
+   signed; my key/passphrase isn't available). Restored at step 6; contingent on the commit say-so, not
+   standing, and doesn't carry to the next session.
+2. **One branch for the batch**, off the branch I was on, named for the work (the task slug is fine):
+   `git checkout -b <slug>`. All the batch's commits land here; I merge it when I'm back (step 7). If I
+   was already on a non-default working branch, branch off that.
+3. **Per task** (order you judge best — easy-wins-first, or the order I gave), commit at each beat:
+   **task-add** (scaffold the `proposed` doc; `tasks: add <slug>`) → **open questions** (raise them
+   inline AND as a closing numbered list, then **wait** — an open question blocks implementation; when I
+   answer, write the decisions into the task doc and commit) → **implement** (commit per meaningful step;
+   a multi-step task is several commits) → **pre-squash rewrite** (harvest the commit history into the
+   task doc and normalize it + any touched reference docs into one voice; commit) → **archive** (`git mv`
+   into `tasks/archive/<YYYY>/<MM>/<DD>/`, `git rm` one-shot scripts; its own commit, after the work).
+4. **Repeat** step 3 for every task I asked for.
+5. **Session-end sweep, once** (after all the tasks): reconcile the always-read docs (CLAUDE.md,
+   reference docs, README, `CHANGELOG` `[Unreleased]`) against everything that changed, run the
+   format/type-check gate, fix what it reports; commit what the sweep changed.
+6. **gpg back on** — `git config commit.gpgsign true` — leaving the committed config as I keep it.
+7. **Ask me to merge** the branch into whatever branch I was working on, and **stop** — I do the merge
+   and push; you never do (per "Git: I commit, you don't").
+
+A clear, specific message per commit (they are the play-by-play I read). The squash itself (collapsing
+the quick-saves to one-commit-per-task) stays a step I ask for explicitly; the pre-squash *rewrite* of
+the docs happens every batch. The stage-only default still governs — this runs only for a batch I've
+explicitly told you to commit.
+
 ## Reference projects by canonical URL in committed content — commit messages included
 
 Repos are bind-mounted at container paths (`/foo/opt/<name>`) and the shared layer lives under
