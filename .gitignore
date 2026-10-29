@@ -25,3 +25,7 @@ client/crushcontainer-*.tar
 # ad-hoc build-log capture for diagnosis (not tracked)
 lspbuild.log
 lsplog.txt
+
+# Python bytecode cache (tools/ now has Python scripts)
+__pycache__/
+*.pyc

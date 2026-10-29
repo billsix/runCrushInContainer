@@ -308,6 +308,21 @@ point is the worklog). Verify by re-grep = zero. Keep discovery commands POSIX-s
 bash tool runs an embedded POSIX shell, not zsh/bash. Command idioms + gotchas:
 `~/.config/crush/reference/bulk-edit-shell-first.md`.
 
+## Choosing a script's language — shell for glue, Python for logic
+
+Writing an ad-hoc script or a `tools/` tool: **shell when the job is to DRIVE programs**
+(spawn/pipe/redirect, sequence `git`/`make`/`podman`/compiler calls, `exec` wrappers); **Python the
+moment it does DATA/CONTROL logic shell does awkwardly** — the test is the work, not the length.
+Tells for Python (any one): `declare -A` maps/sets; recursion or a graph/closure walk;
+bit-twiddling / combinatorics / a hand-rolled PRNG; set logic faked with the `case " $x " in *" "*`
+substring idiom; parsing JSON/CSV (an embedded `python3 <<PY` heredoc or a `jq` dep **inside bash**
+is the smell). **Stays shell even when long:** real-tool pipelines, process/signal/job control
+(`trap`, `set -m`, PATH shims), and the `entrypoint/*.sh` + gate + `update-<dep>.sh` scripts (must
+stay host shell / are deliberately bash). **Converting:** leave `tools/foo.sh` a 2-line `exec
+python3 "$(dirname "$0")/foo.py" "$@"` shim (keep `+x`), move logic to `foo.py`, and prove
+byte-identical output first. A helper like a `git()` wrapper goes to a SHARED module only at the
+2–3-real-consumer bar — inline it until then.
+
 ## The diversion stack (`~/.config/crush/stack.md`) — you maintain it
 
 A global (cross-repo) markdown breadcrumb trail of **diversions**, read **bottom-up**: the bottom entry
