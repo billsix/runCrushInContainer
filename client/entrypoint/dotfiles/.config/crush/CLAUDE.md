@@ -139,7 +139,10 @@ archaeological pile of appended notes, not a document. Whenever you harvest befo
 finalize or substantially update a task or reference doc, **rewrite it so it reads in one consistent tense** —
 past/perfective for completed work ("extracted X", "rejected Y because…"; present only for what is still true of
 the code now) — a single coherent retrospective in one voice, not the accumulation of its own edit history. The
-reader wants the story, not the sediment. **Harvest from git, NOT from session memory, and include the
+reader wants the story, not the sediment. **For a task doc specifically, this is the done-record rewrite done at ARCHIVE
+time** — a completion step, not squash-only (see "## Task documents" below); it ships in the work
+commit, so the archive rename moves an already-clean doc and a scaffolded doc never reaches the archive.
+A squash is one occasion that *also* triggers it. **Harvest from git, NOT from session memory, and include the
 STAGED/UNSTAGED work, not just commits** (learned 2026-09-26): conversation context is lossy once summarized and
 non-reproducible, so read the artifacts even when you think you remember. `<upstream>..HEAD` is **commits only** —
 when part of the work is committed but the rest is still staged (e.g. I committed some mid-session and you staged
@@ -165,8 +168,8 @@ wraps the staging, quick-save/squash, task-lifecycle, and session-sweep rules in
    **task-add** (scaffold the `proposed` doc; `tasks: add <slug>`) → **open questions** (raise them
    inline AND as a closing numbered list, then **wait** — an open question blocks implementation; when I
    answer, write the decisions into the task doc and commit) → **implement** (commit per meaningful step;
-   a multi-step task is several commits) → **pre-squash rewrite** (harvest the commit history into the
-   task doc and normalize it + any touched reference docs into one voice; commit) → **archive** (`git mv`
+   a multi-step task is several commits) → **done-record rewrite** (rewrite the task doc into a lean done-record —
+   harvest the commit history and normalize it + any touched reference docs into one past-tense voice; the completion rewrite, done whether or not a squash follows; commit) → **archive** (`git mv`
    into `tasks/archive/<YYYY>/<MM>/<DD>/`, `git rm` one-shot scripts; its own commit, after the work).
 4. **Repeat** step 3 for every task I asked for.
 5. **Session-end sweep, once** (after all the tasks): reconcile the always-read docs (CLAUDE.md,
@@ -177,8 +180,8 @@ wraps the staging, quick-save/squash, task-lifecycle, and session-sweep rules in
    and push; you never do (per "Git: I commit, you don't").
 
 A clear, specific message per commit (they are the play-by-play I read). The squash itself (collapsing
-the quick-saves to one-commit-per-task) stays a step I ask for explicitly; the pre-squash *rewrite* of
-the docs happens every batch. The stage-only default still governs — this runs only for a batch I've
+the quick-saves to one-commit-per-task) stays a step I ask for explicitly; the done-record *rewrite* of
+the docs happens every batch, at archive time, regardless of whether a squash follows. The stage-only default still governs — this runs only for a batch I've
 explicitly told you to commit.
 
 ## Reference projects by canonical URL in committed content — commit messages included
@@ -208,11 +211,13 @@ Open questions. Priority & Difficulty are 1–10 (1 = highest priority / easiest
 lowest-priority-number then lowest-difficulty-number. Update as work progresses. When complete, **move**
 to `tasks/archive/<YYYY>/<MM>/<DD>/<slug>.md` — **yours to do proactively at the moment of completion,
 no go/no-go question (2026-08-31; timing corrected 2026-09-07)**: done-state met + gates green = the
-archive is *owed* (harvest, fix inbound pointers, `git mv`, `git rm` one-shot adhoc scripts) — never
+archive is *owed* (harvest durable knowledge to reference docs, **rewrite the task doc into a lean
+done-record**, fix inbound pointers, `git mv`, `git rm` one-shot adhoc scripts) — never
 ask whether to archive or present a done task as a *candidate*; ask only when the done-state itself is
 ambiguous. **BUT the archive is its own commit AFTER the work commit — never bundled into the work's
-staged handoff.** Lifecycle = **three commits**: (1) task-add, (2) work + adhoc scripts, (3)
-archive-move + one-shot `git rm`, together, a *separate* commit after the work commit. **Stage the work
+staged handoff.** Lifecycle = **three commits**: (1) task-add, (2) work + adhoc scripts + the done-record rewrite of the
+task doc (one past-tense voice, the forward-looking scaffolding dropped — **not** contingent on a
+squash), (3) archive-move + one-shot `git rm`, together, a *separate* commit after the work commit. **Stage the work
 and STOP — do NOT move to archive yet. Once the work commit exists (I make it by default), THEN
 `git mv` the archive (+ `git rm` one-shot scripts) and stop again** — the rename sits **staged** for its
 own commit (commit 3, after the work's commit 2); never move the archive before the work is committed.
@@ -250,8 +255,9 @@ phase list.
 Durable knowledge that outlives the work that produced it (comparisons, investigations' conclusions,
 design rationale, gap analyses, domain notes) — **never archived**, updated in place. The test: "still
 worth reading after the work is done, and states what is TRUE not what to DO." **When archiving a
-non-trivial task, first harvest its decisions/rationale into a reference doc**, then archive the thin
-work record. Read the relevant reference doc before touching a subsystem it covers. **When you archive a
+non-trivial task, first harvest its decisions/rationale into a reference doc**, then **rewrite it into a
+lean done-record** (the done-record rewrite — one past-tense voice, the forward-looking scaffolding
+dropped; at archive, whether or not a squash follows) and archive that. Read the relevant reference doc before touching a subsystem it covers. **When you archive a
 survey / investigation / research task whose deliverable recommends an action, also scaffold the
 follow-on task for that action** (`proposed — needs go-ahead`, or `blocked` on the one decision it
 hinges on), cross-linked to the reference doc — don't strand the recommendation in the archived doc. (A
