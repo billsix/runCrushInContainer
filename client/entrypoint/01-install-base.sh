@@ -357,6 +357,7 @@ dnf install -y \
     python3-twisted \
     python3-virtualenv \
     python3-wheel \
+    python3-wxpython4 \
     python3-yaml \
     qemu \
     qt5-qtbase-devel \
