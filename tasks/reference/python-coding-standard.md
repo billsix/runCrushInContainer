@@ -40,6 +40,16 @@ correctness tier (`F` — unused/undefined/logic bugs, incl. the `== None`→`is
 `shell=True` (S311/S602), **and naming (the `N` / pep8-naming family)**. Treat a green
 ruff as authority on all of these.
 
+## Excluding a file from the gate takes TWO settings — ruff and ty don't share excludes
+
+`ty` does **not** honor ruff's `extend-exclude`, so a file you need out of the gate (e.g. one
+whose filename is an invalid Python module name, or generated/vendored code) must be listed in
+**both** places in `pyproject.toml`: `[tool.ruff]` `extend-exclude = [...]` **and**
+`[tool.ty.src]` `exclude = [...]`. Set only the ruff entry and `make type-check` still
+type-checks the file; set only the ty entry and `ruff` / `make format` still lints it — a silent
+half-exclusion. The worked example lives in your project's additions doc. (William Emerison Six
+<billsix@gmail.com>, 2026-11-02.)
+
 ## Line length is the formatter's job, NOT a design input
 
 `ruff format` (via `make format`, which the maintainer runs) wraps long lines
