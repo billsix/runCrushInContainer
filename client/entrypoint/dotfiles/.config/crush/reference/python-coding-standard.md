@@ -288,6 +288,16 @@ where it reads worse; the point is to stop *defaulting* to the old spelling. (Ea
 states its own `requires-python` floor; where it is recent and backward-compat is not a
 concern, reach for the modern spelling freely.)
 
+**Enum member values: default to `enum.auto()`.** When a member's *value* carries no
+external meaning — it is just a distinct tag compared by identity — use `enum.auto()` rather
+than hand-numbering `0, 1, 2…`, which invites a reader to assume the number matters and
+breaks silently if a member is reordered or inserted. Hand-assign a value only for an
+**articulated reason**, stated at the enum: it mirrors a wire/DB/protocol constant, indexes a
+parallel structure, is persisted, or is otherwise observed outside the program. (`auto()`
+composes with `StrEnum`/`IntEnum` when you need a string/int backing but not a *specific*
+one.) **Corollary:** never write logic that depends on an `auto()` value — iterate or compare
+the members themselves (cycle with `list(E).index(x)`, not `x.value`).
+
 ### Docstrings — Google / napoleon style
 
 **Write docstrings in Google style (parsed by `sphinx.ext.napoleon`), and on any symbol a
