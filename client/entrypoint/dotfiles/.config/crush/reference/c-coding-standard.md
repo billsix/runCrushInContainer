@@ -106,8 +106,20 @@ destructors, no references, and no templates to lean on.
   - **Top-level `const` (`T *const p`) — when the pointer itself is never repointed.** The
     binding-stability one, exactly like `const` on a non-pointer local (`const int n = …`). Reach for
     it on a *local* whenever you would `const` a scalar local; with pointee-`const` it reads
-    `const T *const p`. This holds independently of whether `*p` is const. `clang-tidy
-    misc-const-correctness` finds never-modified locals mechanically; the change is behavior-identical.
+    `const T *const p`. This holds independently of whether `*p` is const. The change is
+    behavior-identical (a `const` local compiles to the same code). **Finding candidates:** `clang-tidy
+    misc-const-correctness` (with `WarnPointersAsValues: true` for this pointer form) runs on **C++ only**
+    — it reports nothing on a `.c` file. In C, find never-repointed locals with a libclang/AST script or by
+    review, and verify by compiling. Skip it on loop/list cursors, a local whose address is passed (`&p`,
+    an out-param), setjmp-live locals, and a declared-then-assigned local unless the declaration can simply
+    move to the assignment.
+  - **File-scope tables of pointers get both `const`s: `static const char *const names[] = {…};`.** With
+    only the pointee `const` (`const char *names[]`) the *array* is still writable, so it lands in `.data`;
+    the second `const` makes the elements immutable, so the table moves to `.rodata` (`.data.rel.ro` under
+    PIC). This is the one top-level `const` with a runtime benefit: write-protected memory, and an
+    accidental `names[i] = …` becomes a compile error. The `extern` declaration in a header must carry the
+    identical qualifiers (a cross-translation-unit mismatch is undiagnosed UB). Skip it only when the table
+    is genuinely filled or patched at run time.
   - **On a function *parameter*, add the pointee-`const` (the caller-visible contract) but NOT the
     top-level `const`.** `T *const` on a parameter is a definition-only detail — not part of the type,
     no effect on the caller/ABI — and it clutters prototypes. Add it in a definition only if a
