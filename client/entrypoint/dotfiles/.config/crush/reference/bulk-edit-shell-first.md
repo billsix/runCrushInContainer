@@ -25,6 +25,13 @@ an *exploratory* one-liner with no downstream artifact stays unsaved.
 - **Crush runs commands through an embedded POSIX-sh interpreter** (`internal/shellconfig/load.go`),
   not zsh or bash. Keep discovery/fix commands **POSIX-sh-portable**: avoid bashisms (`[[ … ]]`,
   arrays, `<(…)` process substitution). A plain `while … | …`, `$(…)`, and `for` are fine.
+- **Don't inline a multi-line script inside single quotes.** An apostrophe in the embedded code (a
+  Python string like `"Sheet 2's answer"`) ends the `'…'` early, and the shell then parses the
+  rest and fails with an unmatched quote or a parse error. This is POSIX quoting, so it bites
+  `sh -c '…'`, `python3 -c '…'`, and a heredoc wrapped in quotes alike. Write the script to a
+  file with the write tool (`tasks/adhoc/<slug>/` if it is substantive, else a temp file) and run
+  the file. (Seen in a Claude Code session on the hanoi workbook, 2026-11-06: two inline edit
+  scripts failed this way before being moved to files.)
 - **Paths repo-root- / `/work`-relative, never container-absolute.** The project is mounted at
   `/work` (`container-file-layout.md`); any `/foo/opt/…` path came from `EXTRA_MOUNTS` and is dead on
   the next launch. In a saved script derive the root: `REPO="$(cd "$(dirname "$0")/../../.." && pwd)"`
