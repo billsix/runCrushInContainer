@@ -336,6 +336,37 @@ def zero(cls) -> Self:
 The non-Python analog (C/C++, …): the same "structured doc-comment with parameter/return
 sections" discipline via doxygen/javadoc; the language changes the marker, not the habit.
 
+## Pin direct dependencies — an unpinned dep can silently backtrack to an ancient major
+
+Pin every direct third-party dependency to an exact version in `requirements.txt` /
+`pyproject.toml` (then bake it per the "Self-contained images + live source" rule). An
+**unpinned** dep is a trap: when a newer Python or a conflicting pin makes its current
+release unsatisfiable, the resolver does **not** fail — it backtracks to the newest version
+that *does* resolve, which can be years old with a different API. The build stays green; the
+code breaks later at import or type-check.
+
+- **Treat a pin that "installs" a *different* (older) version than requested as a conflict to
+  surface, not accept.** It means the exact version can't be satisfied in this environment
+  (a transitive cap, a missing wheel for this Python); find out why and resolve it — override
+  the stale cap, pin a version that resolves, or drop the dep — rather than shipping a pin
+  that lies about what runs.
+- **Run the type-checker against the project's own venv.** The gate does `source
+  /venv/bin/activate` before `ty check`, so `ty` sees the baked deps; a bare `ty check` outside
+  the venv resolves against the system interpreter and reports phantom import/attribute errors.
+- **Prefer distro `python3-*` packages for the heavy/native deps** (numpy, matplotlib, sympy, glfw,
+  pyopengl, pillow, …) via a `python -m venv --system-site-packages` venv, and `pip`-install only the
+  leaf / pure-Python deps. Pin a distro-provided dep to the version the distro **actually ships** (read
+  it from the built image, don't guess) so the pin is already-satisfied by system-site and doesn't
+  force a divergent second pip build, while still making a host install reproducible. The full
+  image/packaging mechanics are the container-template contract (the personal overlay's "Self-contained
+  images" + "Python deps" sections), not this code-style doc.
+- Worked incident (modelviewprojection, 2026-11-06): unpinned `moviepy` + `Pillow==13.0.0` (the
+  only pillow with a cp315 wheel on Python 3.15) → uv backtracked `moviepy` to the 6-year-old
+  `1.0.3` (no top-level `ImageSequenceClip`), surfacing as a `ty` `unresolved-attribute` **and**
+  a latent runtime `AttributeError`. The "unpinned" dep had passed every build until the new
+  Python + a conflicting pin met. Fix: pin `moviepy==2.1.1` and override its overly-conservative
+  `pillow<12` cap at install.
+
 ## Cross-links
 
 - **`~/.claude/reference/recursive-design.md`** — the language-agnostic companion: map/filter/fold
