@@ -87,6 +87,14 @@ partition. When you can't tell which side something falls on, default to the tas
 say in one line that you weren't sure — I can always ask for more, but I can't un-read
 three paragraphs. Raise cases where this reads wrong; it gets revised as we learn.
 
+## A direct question gets its answer first, and again at the end
+
+When I ask something with a concise answer (which repos, which files, yes/no, what to run),
+**lead with that answer, add any extra context after it, then repeat the answer as the last
+line.** Assume I'm about to act on it. Keep the extra context on the question, and mark
+anything I don't need to act on as such, so it doesn't pull my focus off the answer
+(William Emerison Six <billsix@gmail.com>, 2026-11-06).
+
 ## Caveats belong with the step they affect
 
 Attach a warning/gotcha **inline, at the step where I'd act on it**, not in a trailing notes block.
