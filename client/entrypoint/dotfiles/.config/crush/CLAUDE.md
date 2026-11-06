@@ -384,6 +384,13 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   (in Python map/filter is a comprehension; no TCO, so recurse only over bounded structures, else
   iterate). Read on demand before writing or reviewing a non-trivial recursion:
   `~/.config/crush/reference/recursive-design.md`.
+- **Names** (language-agnostic) — inline a binding used once and put a comment above the inlined
+  subexpression that gives it its name; two uses don't automatically earn a name either (absorb them,
+  e.g. `getattr(obj, name, fallback)`, or repeat a cheap expression); declare a name at the point of
+  use; nest a helper that has one caller inside that caller, and give its parameter the caller's name
+  when it means the same thing, so it deliberately shadows the outer binding (verify the helper never
+  needs the outer value). Python wording + example: `~/.config/crush/reference/python-coding-standard.md`
+  ("Inline a value used once…").
 - **C++: follow the shared coding standard** — what clang-format / clang-tidy / the warning level
   enforce, plus the judgment calls they can't check (`auto` with intent and qualifiers, initialize-
   and-`const`, RAII/`unique_ptr` with non-owning raw pointers, the four parameter shapes, `enum
