@@ -1,6 +1,6 @@
 # Copyright (c) 2026 William Emerison Six
 # SPDX-License-Identifier: Apache-2.0
-FROM registry.fedoraproject.org/fedora:44
+FROM registry.fedoraproject.org/fedora:45
 
 RUN --mount=type=cache,target=/var/cache/libdnf5 \
     --mount=type=cache,target=/var/lib/dnf \
@@ -26,6 +26,11 @@ COPY entrypoint/01-install-base.sh /usr/local/bin/
 RUN --mount=type=cache,target=/var/cache/libdnf5 \
     --mount=type=cache,target=/var/lib/dnf \
     /usr/local/bin/01-install-base.sh
+
+# shfmt and procs were dnf packages under Fedora 44 but were dropped in Fedora 45;
+# install them from upstream release binaries (own layer, own host-runnable script).
+COPY entrypoint/01b-install-binary-tools.sh /usr/local/bin/
+RUN /usr/local/bin/01b-install-binary-tools.sh
 
 # --- RHEL 9 variant (UBI 9 / CentOS Stream 9 base): the Python language server from a /venv ---
 # Kept COMMENTED OUT on purpose: this image is Fedora, where `ty` comes from dnf (01-install-base.sh)
