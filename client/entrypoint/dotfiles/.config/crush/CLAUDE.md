@@ -548,7 +548,13 @@ explicitly if a gate can't run here rather than skipping it silently.
 container), so the sweep is where its content is preserved: read `~/.config/crush/stack.md`, and for **any
 still-open diversion**, fold what work remains and why into the relevant task doc (or a reference doc, for
 durable knowledge) — the concrete next action and any unanswered questions verbatim. That is how the in-flight
-state survives the session; the stack file itself does not.
+state survives the session; the stack file itself does not. **Keep the stack lean as you go — it is a
+depth gauge + handoff, never a task log:** completed-work narration belongs in git + `tasks/archive/`,
+and open/blocked/proposed work is a task doc found by scanning each repo's `tasks/`, not a stack entry.
+(Same principle as runClaudeInContainer's sweep, adapted to the two stacks' lifetimes: there the stack
+persists on the host and the sweep trims it to pointers — harvesting durable detail into task/reference
+docs and deleting done narration — whereas here it is in-session, so the sweep harvests it before the
+`--rm` container discards it.)
 
 ## Open-issues lists
 
