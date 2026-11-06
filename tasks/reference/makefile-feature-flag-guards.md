@@ -29,7 +29,8 @@ depends on whether the target rebuilds the image:
    `: image` prereq, e.g. targets wired to a bare `$(RUN)`): there the make variable can't reflect
    what was actually baked, so you must ask the image. The probe also catches the
    built-lean-then-run-plain case the flag echo misses. Used by **epix-mirror** (its `examples`/
-   `examples-anim`/`jupyter`/`notebooks` scripts probe `command -v latex|jupyter|jupytext`).
+   `examples-anim`/`jupyter`/`notebooks` scripts probe `command -v latex|jupyter|jupytext`), which
+   print the same set-flag → rebuild → re-run message as the flag-echo targets (2026-11-06).
 
 A third mechanism already in the fleet: `update-emacs-packages` forces `$(MAKE) image USE_EMACS=1`
 as a prerequisite (force-the-flag-and-rebuild). Fine for a cheap image; too heavy to auto-trigger
