@@ -223,6 +223,11 @@ stored pointer, decide which of these holds and write that choice down:
    handle resolves to `nullptr` instead of a reused slot (Weissflog, "Handles are the better
    pointers", 2018). This is the standard game-engine answer. It also makes saving and loading
    references easy, because a handle is plain data.
+   When slot indexes do not stay put (the store reorders its vector for draw order) or the
+   references cross several stores and objects no store owns, give each object a never-reused
+   64-bit serial registered serial → object for its lifetime, and store the serial instead. It
+   behaves the same: a stale serial resolves to `nullptr`, even if the address is reused. Worked
+   example: github.com/billsix/smc `smc/src/core/sprite_handle.h` (`cSprite_Handle`).
 4. **The lifetime really is shared, or a cache should free an object once nobody uses it.** Use
    `shared_ptr` for the users and `weak_ptr` in the cache or observer list (the `weak_ptr` table
    row above).
