@@ -328,6 +328,44 @@ composes with `StrEnum`/`IntEnum` when you need a string/int backing but not a *
 one.) **Corollary:** never write logic that depends on an `auto()` value — iterate or compare
 the members themselves (cycle with `list(E).index(x)`, not `x.value`).
 
+### Tests: parametrize over the variants, don't copy the test
+
+When several tests differ only in **data** (a dimension, a representation/type, an algorithm
+choice, a sample input), write **one** test with `@pytest.mark.parametrize`, not one copy per
+variant. A loop over the variants *inside* a test is the same smell: the first failing case hides
+the rest, and the report doesn't say which one failed. (William Emerison Six <billsix@gmail.com>,
+2026-11-07.)
+
+- **Name the variant list once, at module level**, typed, and pass it to every test that runs over
+  it (`INVERSE_METHODS: list[str] = ["reciprocal", "peel"]`, `FRAMES: list[list[Vector]] = […]`). A
+  new variant is then one line, and every test picks it up.
+- **Give readable `ids=`** (`ids=["2d", "3d"]`, `ids=["gn-2d-symbolic", "g3-concrete"]`) so a failure
+  names its case. Keep a parallel `*_IDS: list[str]` beside the data list; typing the list of
+  `pytest.param(...)` objects would need pytest's private `ParameterSet`.
+- **Write the expected value into the case, not into the test**, when it differs per variant:
+  parametrize over `(input, expected)` pairs. Don't recompute the expected value with the code under
+  test's own algorithm (a fold, a formula). That restates the implementation, and the test can't
+  fail.
+- **Stack two `parametrize` decorators for a cross product** (2 frames × 2 methods = 4 cases) instead
+  of listing every combination by hand.
+- **Share an expensive object through a module-scoped fixture, and parametrize over fixture names**
+  (`request.getfixturevalue(name)`) when the variants are costly to build (a symbolic object that
+  takes seconds to minutes). Plain data is cheap; put it straight in the parametrize list.
+- **Mind list invariance in the type checker:** a list literal mixing two element types (a symbolic
+  list next to a graded-type list) is not a `list[Base]` unless each element list is annotated
+  `list[Base]` too.
+
+**Keep tests apart when:**
+- the assertions differ, not only the data (merging would need an `if` on the parameter);
+- the test compares two variants with each other (parametrize the *pair*, not each variant);
+- the test checks the **static** type per variant (`typing.assert_type`, or a binding annotated with
+  each variant's own return type). A parameter erases that static type;
+- each copy spells out its own formula on purpose, as a readable worked example (an explicit
+  `a_1 * b_1 + a_2 * b_2` in 2D next to its 3D version).
+
+Count collected cases (`pytest --collect-only -q`) before and after a fold. The count should stay
+the same or grow; no assertion should disappear.
+
 ### Docstrings — Google / napoleon style
 
 **Write docstrings in Google style (parsed by `sphinx.ext.napoleon`), and on any symbol a
