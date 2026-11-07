@@ -43,6 +43,14 @@ files).
 - **Invariant (Python):** the Python language server is **npm `pyright`** (`npm install -g pyright`,
   driving `lsp-pyright`), never the pip `pyright` launcher, which downloads its server on first use and
   silently fails offline.
+- **Invariant (Python):** the project's ruff config **excludes the vendored tree**:
+  `extend-exclude = ["entrypoint"]` under `[tool.ruff]` in `pyproject.toml` (geometricalgebra adds
+  `"tasks/adhoc"` too). `elpa/` ships third-party `.py` files (treemacs's helpers), so a `format.sh` that
+  runs `ruff check .` / `ruff format` over the whole tree rewrites upstream code; the config-level exclude
+  covers every invocation, including an editor's. Naming the source directories in `format.sh` instead
+  (modelviewprojection's `ruff check src tests …`) also works but leaves a bare `ruff format` exposed.
+  Learned 2026-11-07: hanoi `python/`'s `make format` reformatted six vendored treemacs files; fixed with
+  the exclude.
 
 ## `init.el` — invariant order, then the language block
 
