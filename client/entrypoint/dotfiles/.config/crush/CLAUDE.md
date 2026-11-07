@@ -50,6 +50,10 @@ line, name the positions/options, include your recommendation). Sub-rules:
 - **Commit SHAs rot when history is squashed** — at task archive and the session-end sweep, scan
   touched docs for SHA1 ids and confirm each still resolves (`git cat-file -e <sha>^{commit}`);
   repoint an orphaned one to the squashed commit that replaced it, or drop it.
+- **Doc file paths are repo-root-relative** — write `tasks/reference/x.md` even inside `tasks/` or
+  `tasks/archive/…`, never `../`-relative: the agent opens a prose path from the repo root, archiving
+  can't break it, and it greps everywhere. Emacs resolves it via `helm-ff-guess-ffap-filenames` in
+  every vendored `helm.el`.
 - **A bare label is not a reference** — gloss "Option 2"/"Tier 1"/"the task doc" on first use each
   response, with its file path.
 - **Name the positions in a decision question** — never "does that change your mind?"; state the
