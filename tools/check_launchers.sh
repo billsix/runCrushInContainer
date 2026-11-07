@@ -122,11 +122,14 @@ for f in runCrush-common.sh runCrushNoInternet.sh runCrushWithInternet.sh; do
     check "bash -n $f" bash -n "$client/$f"
 done
 check "shellcheck (3 scripts)" shellcheck -x "$client/runCrushNoInternet.sh" "$client/runCrushWithInternet.sh" "$client/runCrush-common.sh"
-render=$("$real_make" -n -C "$client" shell LOCALHOST_ONLY=1 MUSE_SOCK_DIR=/tmp/x PROJECT=/p EXTRA_MOUNTS="-v /a:/b:z" 2>&1)
+render=$("$real_make" -n -C "$client" shell LOCALHOST_ONLY=1 MUSE_SOCK_DIR=/tmp/x PROJECT=/p EXTRA_PODMAN_FLAGS="-v /a:/b:z" 2>&1)
 check "make -n: --network=none"        grep -q -- '--network=none' <<<"$render"
 check "make -n: socket dir mounted"    grep -q -- '-v /tmp/x:/run/muse' <<<"$render"
 check "make -n: PROJECT at /work"      grep -q -- '-v /p:/work' <<<"$render"
-check "make -n: EXTRA_MOUNTS threaded" grep -q -- '-v /a:/b:z' <<<"$render"
+check "make -n: EXTRA_PODMAN_FLAGS threaded" grep -q -- '-v /a:/b:z' <<<"$render"
+# The old name, EXTRA_MOUNTS, is still accepted.
+render_old=$("$real_make" -n -C "$client" shell LOCALHOST_ONLY=1 MUSE_SOCK_DIR=/tmp/x PROJECT=/p EXTRA_MOUNTS="-v /c:/d:z" 2>&1)
+check "make -n: EXTRA_MOUNTS alias threaded" grep -q -- '-v /c:/d:z' <<<"$render_old"
 
 # ---- case 1: no-internet happy path ----------------------------------------------------------
 echo "== 1 no-internet happy path"
@@ -137,7 +140,7 @@ check "exit 0 (got $rc)" [ "$rc" -eq 0 ]
 check "make image called first"          bash -c 'head -1 "$1" | grep -q " image$"' _ "$log/make.args"
 line=$(make_shell_line)
 check "PROJECT=\$PWD"                    grep -q "PROJECT=$proj " <<<"$line"
-check "EXTRA_MOUNTS passed verbatim"     grep -q -- 'EXTRA_MOUNTS=-v /a:/b:z ' <<<"$line"
+check "EXTRA_PODMAN_FLAGS passed verbatim"     grep -q -- 'EXTRA_PODMAN_FLAGS=-v /a:/b:z ' <<<"$line"
 check "LOCALHOST_ONLY=1"                 grep -q 'LOCALHOST_ONLY=1 ' <<<"$line"
 check "MUSE_SOCK_DIR = the mktemp dir"   grep -q "MUSE_SOCK_DIR=$(cat "$log/tmpdir")\$" <<<"$line"
 check "ssh: -f -N ExitOnForwardFailure ControlMaster" grep -q -- '-f -N -o ExitOnForwardFailure=yes -o ControlMaster=yes' "$log/ssh.args"
@@ -154,7 +157,7 @@ proj=$(mktemp -d); cd "$proj"
 check "exit 0 (got $rc)" [ "$rc" -eq 0 ]
 line=$(make_shell_line)
 check "LOCALHOST_ONLY=0"                 grep -q 'LOCALHOST_ONLY=0 ' <<<"$line"
-check "EXTRA_MOUNTS empty"               grep -q 'EXTRA_MOUNTS= ' <<<"$line"
+check "EXTRA_PODMAN_FLAGS empty"               grep -q 'EXTRA_PODMAN_FLAGS= ' <<<"$line"
 check "ssh: five TCP -L forwards"        [ "$(grep -o -- '-L 127.0.0.1:808[0-4]:127.0.0.1:808[0-4]' "$log/ssh.args" | wc -l)" -eq 5 ]
 check "tunnel closed"                    tunnel_closed
 check "temp dir removed"                 tmpdir_gone

@@ -35,8 +35,8 @@ the alternative to revisit if either need appears; not adopted.
 
 ## The launchers — one command, everything as a unit
 
-`client/runCrushNoInternet.sh <ssh-target> <extra-mounts>` and
-`client/runCrushWithInternet.sh <ssh-target> <extra-mounts>` are **host-side** scripts (they run
+`client/runCrushNoInternet.sh <ssh-target> <extra-podman-flags>` and
+`client/runCrushWithInternet.sh <ssh-target> <extra-podman-flags>` are **host-side** scripts (they run
 `ssh`, `make` and therefore `podman` on the Linux host — so they live in `client/`, not in
 `client/entrypoint/`, which is what gets copied into the image; and they are not for
 `NESTED_PODMAN=1`). They differ in ~6 lines — the `-L` form and the `LOCALHOST_ONLY` value — so
@@ -45,9 +45,9 @@ both are thin wrappers that set `RUNCRUSH_LOCALHOST_ONLY` and `source` one share
 Makefile's shared `SHELL_RUN_FLAGS`).
 
 Arguments — exactly two, both required: `$1` the ssh target (`user@host`, passed verbatim, so
-`~/.ssh/config` aliases work); `$2` the `EXTRA_MOUNTS` string (`"-v /host/path:/path:z"`, or `""`
+`~/.ssh/config` aliases work); `$2` the `EXTRA_PODMAN_FLAGS` string (`"-v /host/path:/path:z"`, or `""`
 for none — a caller has to say so explicitly; use `:z` or no label, never `:Z`, per the
-`EXTRA_MOUNTS` comment in `client/Makefile`). There is deliberately **no project-dir argument**:
+`EXTRA_PODMAN_FLAGS` comment in `client/Makefile`). There is deliberately **no project-dir argument**:
 the launcher passes `PROJECT="$PWD"`, the directory it was run from, because `make -C client`
 would otherwise default `PROJECT` to `client/` itself.
 
@@ -68,7 +68,7 @@ Lifecycle (`runcrush_main` in `runCrush-common.sh`):
 5. **Poll** — up to 30 s for the forwards to be observable: all five `.sock` files (no-internet) or
    a TCP accept on the first port via bash's `/dev/tcp` (with-internet; this proves ssh is
    listening, nothing about the model — the forward is lazy).
-6. **`make -C client shell PROJECT="$PWD" EXTRA_MOUNTS="$2" LOCALHOST_ONLY=<0|1>
+6. **`make -C client shell PROJECT="$PWD" EXTRA_PODMAN_FLAGS="$2" LOCALHOST_ONLY=<0|1>
    MUSE_SOCK_DIR="$tmp"`** — the interactive session. When it returns, so does the launcher.
 7. **`cleanup`** — clears the traps (idempotent), `ssh -q -o ControlPath="$tmp/ctl" -O exit
    "$target"` if the control socket exists (never fails the script), `rm -rf "$tmp"`, then exits
@@ -96,7 +96,7 @@ Lifecycle (`runcrush_main` in `runCrush-common.sh`):
   `ExitOnForwardFailure` turns that into a loud failure naming the port, which is the right
   behaviour; the launcher's hint says to close the other tunnel.
 - **`$2` required rather than optional** (maintainer decision 2026-09-22, "for now at least"):
-  the extra-mounts string is easy to forget and silently getting an unmounted path is worse than a
+  the extra-podman-flags string is easy to forget and silently getting an unmounted path is worse than a
   usage error. Making it optional later is a one-line change to the `[ "$#" -eq 2 ]` check.
 
 ## Gotchas
@@ -114,7 +114,7 @@ Lifecycle (`runcrush_main` in `runCrush-common.sh`):
   (launcher exits 130). Verified 2026-09-22; the naive `setsid … &` version returned 0.
 - **`:Z` on the socket-dir mount.** `LOCALHOST_ONLY_MOUNT` uses `:Z`, which relabels the mounted
   dir with the container's private SELinux category. Harmless for a throwaway `mktemp -d` (it is
-  deleted at exit) but it is why the `EXTRA_MOUNTS` comment says never to use `:Z` on a host
+  deleted at exit) but it is why the `EXTRA_PODMAN_FLAGS` comment says never to use `:Z` on a host
   directory you keep.
 - **Not for `NESTED_PODMAN=1`** — nested image builds need network, and the launchers drive the
   host's podman directly.
@@ -129,7 +129,7 @@ Lifecycle (`runcrush_main` in `runCrush-common.sh`):
   shims that record argv and mimic the side effects the launcher depends on (the fake ssh creates
   the `.sock` files / a real TCP listener + the ControlMaster socket; `-O exit` tears them down).
   Static: `bash -n`, `shellcheck -x`, and a `make -n` render showing `--network=none`, the
-  `/run/muse` mount, `PROJECT` at `/work` and `EXTRA_MOUNTS` threaded. Lifecycle: both happy paths
+  `/run/muse` mount, `PROJECT` at `/work` and `EXTRA_PODMAN_FLAGS` threaded. Lifecycle: both happy paths
   (argv exact, five forwards in the right form, tunnel closed, temp dir gone), ssh forward failure
   (exit 1, `make shell` never runs, nothing left behind), SIGINT mid-session (exit 130 + cleanup),
   `make shell` exit 7 propagated, and the three usage errors (exit 2, ssh/make never called).

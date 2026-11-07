@@ -65,7 +65,7 @@ flag (see runClaude's doc).
   failed … Couldn't open network namespace … Permission denied` (or `did not get container start message
   from parent`). The Fedora 44 sandbox did not hit this. `--isolation=chroot` / `BUILDAH_ISOLATION=chroot`
   (the `RUN` uses the sandbox's own network) and `--network=host` both work. **Launch with
-  `EXTRA_MOUNTS="… -e BUILDAH_ISOLATION=chroot"`** (EXTRA_MOUNTS goes straight into `podman run`) so
+  `EXTRA_PODMAN_FLAGS="… -e BUILDAH_ISOLATION=chroot"`** (EXTRA_PODMAN_FLAGS goes straight into `podman run`) so
   every nested build works unchanged; without it, add `--network=host` to the one `podman build`
   (`make -n image`, then run that line by hand). Diagnosis and test: runClaudeInContainer
   `tasks/reference/nested-run-and-gates.md`.

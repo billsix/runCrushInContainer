@@ -29,7 +29,7 @@ the session log alongside it).
 - **The project you were pointed at is mounted at `/work`**
   (`-v $(PROJECT):/work`; `PROJECT` defaults to the directory `make shell` ran
   from). `shell.sh` cd's there at launch.
-- **Any other repo path you find yourself in came from `EXTRA_MOUNTS`** —
+- **Any other repo path you find yourself in came from `EXTRA_PODMAN_FLAGS`** —
   user-supplied, and invisible to these docs and the Makefile conventions. If
   your cwd is not under `/work`, that is why; nothing else about the layout
   changes.
@@ -76,7 +76,7 @@ GOBIN=/usr/local/bin GOFLAGS=-trimpath`.
 | `~/.gitconfig` | `/root/.gitconfig` | only if it exists on the host |
 | `~/.vimrc` | `/root/.vimrc` | only if it exists on the host — shadows the baked `entrypoint/dotfiles/.vimrc` (2026-09-10) |
 | `~/.ai-coding-conventions.personal.md` | `/root/.config/crush/ai-coding-conventions.personal.md` | always (`touch`ed blank if absent) — **overrides the baked blank**; note the dotted host name → un-dotted container name |
-| `EXTRA_MOUNTS` | user-chosen | user-supplied; no doc covers these paths |
+| `EXTRA_PODMAN_FLAGS` | user-chosen | user-supplied; no doc covers these paths |
 | `$(MUSE_SOCK_DIR)` (default `~/.cache/runcrush-muse-sockets`; the launchers pass a per-run `mktemp -d`) | `/run/muse` | only under `LOCALHOST_ONLY=1` — the SSH-forwarded model unix sockets (`808x.sock`) that `shell.sh`'s socat bridge re-exposes as `127.0.0.1:808x`; carries `:Z` (harmless on a throwaway dir). See `client-network-modes-and-launchers.md` |
 
 > The **diversion stack** (`~/.config/crush/stack.md`) is **not** a host mount and is **not** baked (as of

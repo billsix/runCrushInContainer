@@ -26,7 +26,7 @@
 #                       observable (the .sock files in no-internet mode; a TCP accept on the first
 #                       port in with-internet mode).
 #   5. `make shell`   — PROJECT=$PWD (the dir the launcher was run from — NOT client/, which is
-#                       what `make -C client` would default to), EXTRA_MOUNTS from $2, and the
+#                       what `make -C client` would default to), EXTRA_PODMAN_FLAGS from $2, and the
 #                       mode's LOCALHOST_ONLY / MUSE_SOCK_DIR.
 #   6. trap → cleanup — on normal exit, on `make shell` failing, and on INT/TERM/HUP: close the
 #                       tunnel (`ssh -O exit`), remove the temp dir, exit with the failing step's
@@ -48,13 +48,15 @@ fwd=()
 
 usage() {
     cat >&2 <<EOF
-usage: $(basename "$0") <ssh-target> <extra-mounts>
+usage: $(basename "$0") <ssh-target> <extra-podman-flags>
 
   <ssh-target>    user@host of the machine serving the model(s), e.g. williamsix@macmini;
                   passed verbatim to ssh, so ~/.ssh/config aliases work.
-  <extra-mounts>  REQUIRED: extra podman bind mounts for the container, as one string of
-                  -v flags, e.g. "-v /host/path:/path:z"; pass "" for none. Use ":z" or no
-                  label, never ":Z" (see EXTRA_MOUNTS in client/Makefile).
+  <extra-podman-flags>
+                  REQUIRED: extra podman-run flags for the container, as one string, e.g.
+                  bind mounts "-v /host/path:/path:z" or "-e VAR=value"; pass "" for none.
+                  For a mount use ":z" or no label, never ":Z" (see EXTRA_PODMAN_FLAGS in
+                  client/Makefile).
 
 The directory you run this from is mounted at /work (the project Crush works on).
 EOF
@@ -114,7 +116,7 @@ wait_for_tunnel() {
 runcrush_main() {
     [ "$#" -eq 2 ] || usage
     target=$1
-    local extra_mounts=$2
+    local extra_podman_flags=$2
     case "$target" in ""|-*) usage ;; esac
 
     # Traps first, so an interrupt anywhere below (even during `make image`, when there is
@@ -151,7 +153,7 @@ runcrush_main() {
     fi
     make -C "$client_dir" shell \
         PROJECT="$PWD" \
-        EXTRA_MOUNTS="$extra_mounts" \
+        EXTRA_PODMAN_FLAGS="$extra_podman_flags" \
         LOCALHOST_ONLY="$RUNCRUSH_LOCALHOST_ONLY" \
         MUSE_SOCK_DIR="$tmp"
 }

@@ -524,7 +524,7 @@ won't have those flags — **don't silently edit their build files**; add them t
 propose the edit and wait. **A nested `podman build` whose `RUN` needs the network** fails with `pasta
 failed … Couldn't open network namespace` unless the session has `BUILDAH_ISOLATION=chroot` (check
 `echo $BUILDAH_ISOLATION`); if it is unset, run that one build with `--network=host` (print it with
-`make -n image`) and tell me to relaunch with `EXTRA_MOUNTS="-e BUILDAH_ISOLATION=chroot"`. The inner image store is disk-backed and ephemeral by default (RAM tmpfs
+`make -n image`) and tell me to relaunch with `EXTRA_PODMAN_FLAGS="-e BUILDAH_ISOLATION=chroot"`. The inner image store is disk-backed and ephemeral by default (RAM tmpfs
 is opt-in via `NESTED_PODMAN_STORE=tmpfs`), and reuses the host image store read-only. **`NESTED_PODMAN`
 is run capability ONLY; a downstream project's image *content* keys off a separate opt-in `MINIMAL_IMAGE`**
 (renamed from the old overloaded `NESTED_PODMAN` 2026-09-27) — pass `MINIMAL_IMAGE=1` to a downstream
@@ -536,7 +536,7 @@ limits** (before assuming something isn't available), read
 container paths are baked vs mounted, and which reference docs exist only in the source repo —
 read `~/.config/crush/reference/container-file-layout.md`; the short version: the project you
 were pointed at is mounted at `/work`, and any other repo path you find yourself in came from
-`EXTRA_MOUNTS` and is invisible to these docs.
+`EXTRA_PODMAN_FLAGS` and is invisible to these docs.
 
 ## Ending a session — sweep the always-read docs
 

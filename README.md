@@ -229,7 +229,7 @@ make image     # full toolchain + Crush compiled from source (pinned CRUSH_TAG);
 >
 > ```sh
 > make shell NESTED_PODMAN=1 NESTED_PODMAN_STORE_BASE=/mnt/sda1/tmpContainerStorage PROJECT=/path/to/your/project \
->     EXTRA_MOUNTS="-e BUILDAH_ISOLATION=chroot"
+>     EXTRA_PODMAN_FLAGS="-e BUILDAH_ISOLATION=chroot"
 > ```
 >
 > `-e BUILDAH_ISOLATION=chroot` lets a nested `podman build` reach the network: on the Fedora 45 image a
@@ -274,7 +274,7 @@ cd client
 make shell LOCALHOST_ONLY=1 PROJECT=/path/to/your/project   # NO internet: --network=none + a socat bridge; the container reaches ONLY the model
 make shell PROJECT=/path/to/your/project                    # WITH internet: --network=host
 make shell LOCALHOST_ONLY=1 PROJECT=... MUSE_SOCK_DIR=/dir  # if you forwarded the sockets somewhere other than ~/.cache/runcrush-muse-sockets
-make shell PROJECT=... EXTRA_MOUNTS="-v /host/data:/data:z" # extra bind mounts (":z" or no label — never ":Z")
+make shell PROJECT=... EXTRA_PODMAN_FLAGS="-v /host/data:/data:z" # extra bind mounts (":z" or no label — never ":Z")
 ```
 
 Inside, the banner repeats the matching `ssh` command for the mode you're in; then `crush`.
