@@ -9,7 +9,7 @@
 #   /path/to/runCrushInContainer/client/runCrushWithInternet.sh williamsix@macmini ""
 #
 #   $1  user@host of the Mac serving the model (any ssh target; ~/.ssh/config aliases work)
-#   $2  extra bind mounts for the container, one string of -v flags, "" for none — REQUIRED,
+#   $2  extra `podman run` flags (bind mounts -v, env -e), one string, "" for none — REQUIRED,
 #       e.g. "-v /host/data:/data:z" (use ":z" or no label, never ":Z")
 #
 # Does everything as one unit: builds the image if needed; SSH-forwards the five model ports to

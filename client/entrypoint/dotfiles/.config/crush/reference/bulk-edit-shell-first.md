@@ -33,7 +33,7 @@ an *exploratory* one-liner with no downstream artifact stays unsaved.
   the file. (Seen in a Claude Code session on the hanoi workbook, 2026-11-06: two inline edit
   scripts failed this way before being moved to files.)
 - **Paths repo-root- / `/work`-relative, never container-absolute.** The project is mounted at
-  `/work` (`container-file-layout.md`); any `/foo/opt/…` path came from `EXTRA_MOUNTS` and is dead on
+  `/work` (`container-file-layout.md`); any `/foo/opt/…` path came from `EXTRA_PODMAN_FLAGS` and is dead on
   the next launch. In a saved script derive the root: `REPO="$(cd "$(dirname "$0")/../../.." && pwd)"`
   or `git rev-parse --show-toplevel`, and address reads AND writes (the data file included) from there.
 - **These images are Linux/GNU only** — GNU `sed`/`grep`/`gawk` idioms below apply as written.
