@@ -136,8 +136,12 @@ Shape: `(require 'package)`, add the `melpa` archive (`https://melpa.org/package
 
 Fixing these is `tasks/emacs-contract-conformance.md`.
 
-- **hanoi (`cpp/`, `python/`, `rust/`): no helm at all**, minimal hand-written configs. Tracked in hanoi
-  `tasks/emacs-config-match-geometricalgebra.md`.
+- **hanoi (`cpp/`, `python/`, `rust/`): the config conforms** since 2026-11-07 (hanoi
+  `tasks/archive/2026/11/07/emacs-config-match-geometricalgebra.md`). Its vendored `elpa/` trees still
+  predate helm until the maintainer runs `make update-emacs-packages` in each folder.
+- **The shared `preferences.el` comment says "C/C++ are served by lsp-mode + clangd"** in every copy,
+  including the Python, Rust, Go, … ones. The rule it explains, eglot for emacs-lisp only, is
+  language-neutral, so the wording should be too.
 - **Emacs install not in a `0N-install-emacs.sh` group script:** Craft and gltron list `emacs` in the
   base install; apue, billsEmacsConfigs' 20 folders, and smalltalk had no such script either (install
   path to be checked per project).
