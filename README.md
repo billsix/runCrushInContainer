@@ -228,8 +228,13 @@ make image     # full toolchain + Crush compiled from source (pinned CRUSH_TAG);
 > `~/.cache`) — e.g. to keep the build write-churn off an SSD by pointing it at an HDD:
 >
 > ```sh
-> make shell NESTED_PODMAN=1 NESTED_PODMAN_STORE_BASE=/mnt/sda1/tmpContainerStorage PROJECT=/path/to/your/project
+> make shell NESTED_PODMAN=1 NESTED_PODMAN_STORE_BASE=/mnt/sda1/tmpContainerStorage PROJECT=/path/to/your/project \
+>     EXTRA_MOUNTS="-e BUILDAH_ISOLATION=chroot"
 > ```
+>
+> `-e BUILDAH_ISOLATION=chroot` lets a nested `podman build` reach the network: on the Fedora 45 image a
+> build's `RUN` steps otherwise fail with `pasta failed … Couldn't open network namespace`
+> (`tasks/reference/nested-podman-design.md`).
 >
 > The base is created if missing, and the per-session store under it (`crush-nested.XXXXXX`) is
 > still deleted on exit — a hard kill would leak it there instead
