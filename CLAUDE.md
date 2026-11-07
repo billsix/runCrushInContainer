@@ -105,6 +105,9 @@ just docs) — `check_local_annotations.py` (the Python annotate-every-binding g
 `tasks/reference/vendoring-third-party-source-deps.md`) — each with a `SHARED, VENDORED TOOL` banner,
 copied into downstream projects' `tools/`. The **canonical** lives in `runClaudeInContainer
 tasks/reference/`; these are kept byte-identical (edit the canonical there, re-copy here).
+`tools/check_helm_file_at_point.{sh,el}` (an ERT check that a vendored `.emacs.d`'s `C-x C-f` prefills a
+repo-root-relative doc path; `bash tools/check_helm_file_at_point.sh <.emacs.d>`) is likewise a byte-identical mirror of
+runClaudeInContainer's `tools/` copy.
 
 ## Reference docs
 
