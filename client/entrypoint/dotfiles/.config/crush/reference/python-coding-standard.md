@@ -280,6 +280,44 @@ no-op with a comment. **Caveat:** `match` earns its keep on *structural* pattern
 every case is a boolean guard is an `if`/`elif` in different syntax, justified only by the
 exhaustiveness argument — don't convert every two-branch conditional.
 
+### Mutually exclusive branches are one `if`/`elif`/`else` chain
+
+When two or more conditions pick among the outcomes of **one decision**, write them as a single chain,
+`if` … `elif` … `else`, with the last outcome in the `else`. That includes a run of early-exit guards in
+front of a result: each guard is a branch of the same decision, so it is an `elif`, and the result is the
+`else`.
+
+```python
+# Not this: three separate ifs, then a fall-through. They exit, so they are exclusive,
+# but the reader has to check that.
+if along == zero:
+    raise ValueError("the zero vector spans no line")
+if vector == zero:
+    return 0
+if not vector.is_parallel_to(along):
+    raise ValueError("not on the line")
+return (vector / along).scalar_part()
+
+# This: one decision, read top to bottom, and the else is the default.
+if along == zero:
+    raise ValueError("the zero vector spans no line")
+elif vector == zero:
+    return 0
+elif not vector.is_parallel_to(along):
+    raise ValueError("not on the line")
+else:
+    return (vector / along).scalar_part()
+```
+
+The chain's `else` is the total default, which is what the `match` rule above asks for, so an
+all-guard `match` (`case _ if …:` in every arm) is written as this chain instead. Two things stay as
+they are: **a single guard** before the function's main body (`if bad: raise`, then the body; there is
+no second branch to chain), and **independent checks** that can each fire (accumulating errors, a
+cleanup step), which are separate `if`s on purpose. Don't let a linter talk you out of the `else`:
+ruff's `RET505`/`RET506` ("unnecessary `else` after `return`/`raise`") contradict this rule, so leave
+them off. (William Emerison Six <billsix@gmail.com>, 2026-11-07: "I want to see that they are mutually
+exclusive.")
+
 ### Refactoring a conditional — vary the mechanism (Rules A–E)
 
 Before touching one, ask in order:
