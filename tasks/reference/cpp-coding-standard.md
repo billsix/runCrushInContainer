@@ -200,6 +200,56 @@ size plus the control block and atomic refcounting, which is why it is not the d
 **Pimpl** (EMC++ 22): a `unique_ptr<Impl>` member needs the destructor (and moves) *defined in
 the `.cpp`* after `Impl` is complete, or the header's implicit destructor won't compile.
 
+### Stored borrows and "manager" classes — what may outlive what
+
+**Passing a raw `T*`/`T&` is correct modern C++** (`F.7`, `R.30`: a function that only *uses* an
+object takes `T*`/`T&`, not a smart pointer, so it works for any owner, including the stack). A
+codebase full of raw-pointer *parameters* is not under-modernized. The hazard is a **stored**
+borrow: a member, a container element, or a pointer kept across frames whose target can be
+destroyed first. `unique_ptr` at the owner does not fix that; it only says who frees. For each
+stored pointer, decide which of these holds and write that choice down:
+
+1. **The target outlives the holder by construction.** Examples: a child's back-pointer to its
+   parent, an object's pointer to the store that owns it, an alias to an application-lifetime
+   service. Use a raw `T*` (or a `T&` member when it is never null and never reseated) with a
+   comment naming the owner. Most stored pointers in a well-structured program are this case.
+2. **The target can die first, and the program is single-threaded with one owner.** Do not free
+   it in the middle of an update. Use **deferred destruction**: mark it dead, let borrowers check
+   `Is_Dead()`, and sweep dead objects at a safe point such as the end of the frame. Alternatively,
+   the owner clears the known borrowers when it destroys the target. Both keep raw pointers valid
+   until the sweep.
+3. **Many objects in one store refer to each other across frames** (entity → entity, UI → model).
+   Use a **generational handle**: `{index, generation}` resolved through the store, so a stale
+   handle resolves to `nullptr` instead of a reused slot (Weissflog, "Handles are the better
+   pointers", 2018). This is the standard game-engine answer. It also makes saving and loading
+   references easy, because a handle is plain data.
+4. **The lifetime really is shared, or a cache should free an object once nobody uses it.** Use
+   `shared_ptr` for the users and `weak_ptr` in the cache or observer list (the `weak_ptr` table
+   row above).
+
+**Never `shared_ptr` everything to avoid deciding.** It hides the ownership question, adds atomic
+refcounting, and allows cycles to leak.
+
+**A "manager" class for lifetime.** In modern C++ the ownership part of a manager is one line:
+`std::vector<std::unique_ptr<T>>` (stable `T*` across growth), `std::unordered_map<Key,
+std::unique_ptr<T>>` (lookup by name), `std::deque<T>` (stable addresses without a heap
+allocation per element), or plain value members. A class around that container earns its place
+**only by enforcing an invariant the container cannot**: a path-keyed load cache, a
+deferred-destruction sweep, draw order, handle validation. Then:
+
+- **Name it for the invariant** (`TextureCache`, `SpriteStore`, `World`). A bare `*Manager` name
+  says nothing about what it guarantees (Atwood, "I Shall Call It… SomethingManager").
+- **Hold the container by composition; don't inherit from a container base.** Inheriting for
+  storage exposes the owning container to every caller and forces virtual "narrowing" overrides.
+- **Keep the owning container private.** Hand out borrows (`T*`, `T&`, or a `std::views::transform`
+  over `.get()`), never the `vector<unique_ptr<T>>` itself.
+- **Watch address stability:** a `T*` into a `std::vector<T>` dangles on the next reallocation.
+  Store `unique_ptr<T>` elements, use a `deque`, or use handles.
+
+**Process-wide singletons** are owned by one application object. Global `T*` aliases to them are an
+acceptable migration stage. The end state passes the needed context (`World&`, `Audio&`) into the
+code that uses it, which makes dependencies visible and testable.
+
 ### Function parameters and returns — the conventional four shapes (`F.15`–`F.21`)
 
 | Intent | Spelling | Why |
@@ -548,3 +598,8 @@ not "a timing issue"; run the project's gate under ThreadSanitizer when threads 
 - Google C++ Style Guide — google.github.io/styleguide/cppguide.html (the `BasedOnStyle: google`
   the fleet formats to; its no-exceptions rule is Google's, not this standard's).
 - clang-tidy check list — clang.llvm.org/extra/clang-tidy/checks/list.html.
+- Andre Weissflog, *Handles are the better pointers* (2018) —
+  floooh.github.io/2018/06/17/handles-vs-pointers.html (generational index handles for stored
+  cross-object references).
+- Jeff Atwood, *I Shall Call It… SomethingManager* (Coding Horror, 2006) —
+  blog.codinghorror.com/i-shall-call-it-somethingmanager/ (the `*Manager` naming smell).
