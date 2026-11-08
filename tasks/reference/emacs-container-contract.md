@@ -34,12 +34,28 @@ files).
   `byte-compile`/`package-install` in any `RUN`. A build-time install is network-dependent, slow, re-runs
   whenever an earlier layer changes, and is hidden at `make shell` by the `elpa/` mount anyway.
 - **Invariant:** the vendored packages are **byte-compiled at run time, by Emacs itself**, the first time
-  Emacs starts in `make shell`: `init.el` calls `(byte-recompile-directory package-user-dir 0)` right after
-  `(package-initialize)`, which compiles every `.el` in `elpa/` that has no `.elc` yet. The `.elc` files
-  land in the bind-mounted host `elpa/`, so they persist across containers (only the first start after
-  `make update-emacs-packages` is slow); they are gitignored and `update-emacs-packages` strips them, so
-  git only ever holds source. Model: geometricalgebra and modelviewprojection `init.el`. (Decided by
-  William Emerison Six <billsix@gmail.com>, 2026-11-08.)
+  Emacs starts in `make shell`: right after `(package-initialize)`, `init.el` runs the **compile block**
+  below, which calls package.el's `package-recompile` (the compile `package-install` uses) on each
+  package whose directory has no `.elc` yet. The `.elc` files land in the bind-mounted host `elpa/`, so
+  they persist across containers: the first start after `make update-emacs-packages` compiles everything
+  (about 10 s), later starts compile nothing (about 1 s). They are gitignored and `update-emacs-packages`
+  strips them, so git only ever holds source. (Decided by William Emerison Six <billsix@gmail.com>,
+  2026-11-08.)
+
+  ```elisp
+  (dolist (entry package-alist)
+    (let ((desc (cadr entry)))
+      (unless (directory-files-recursively (package-desc-dir desc) "\\.elc\\'")
+        (with-demoted-errors "Error while compiling: %S"
+          (package-recompile desc)))))
+  ```
+
+  Why per package and not `(byte-recompile-directory package-user-dir 0)` (the first form, used until
+  2026-11-08): `byte-recompile-directory` retries every `.el` with no `.elc` on every start, and the
+  vendored `compat` package's `compat-26.el`…`compat-30.el` backports never compile on Emacs 31
+  (`Cannot open load file … compat-macs.el`, under package.el's compile too), so each start logged those
+  errors again. The per-package check sees compat's other `.elc` and skips it. Why not
+  `package-recompile-all`: it deletes and rebuilds every `.elc` on every call.
 - **Invariant:** packages are **vendored** in `elpa/`, committed source-only (`*.elc`/`*.eln` in
   `.gitignore`), refreshed by **`make update-emacs-packages`** (mounts `elpa/` + `install-melpa-packages.el`,
   wipes, reinstalls from MELPA, strips compiled files, `git add -f`).
@@ -67,7 +83,7 @@ files).
 
 Every `init.el` follows this order (geometricalgebra's and modelviewprojection's are good models):
 
-1. `(package-initialize)`, then `(byte-recompile-directory package-user-dir 0)` (the run-time compile;
+1. `(package-initialize)`, then the compile block (the run-time compile;
    see "Container side").
 2. `(load-file "~/.emacs.d/helm.el")`, then `(load-file "~/.emacs.d/preferences.el")`.
 3. **Theme block:** exactly one active `(load-theme '<theme> t)` with the others commented out on the
@@ -152,7 +168,7 @@ Shape: `(require 'package)`, add the `melpa` archive (`https://melpa.org/package
 - In the container: `make shell`, open a source file (one LSP client attaches, rooted at the mount) and
   a task doc (`C-x C-f` on a `tasks/…` path opens it).
 
-## Conformance snapshot (2026-11-07) — known drift
+## Conformance snapshot (2026-11-07, updated 2026-11-08) — known drift
 
 Fixing these is `tasks/emacs-contract-conformance.md`.
 
@@ -162,22 +178,18 @@ Fixing these is `tasks/emacs-contract-conformance.md`.
 - **The shared `preferences.el` comment says "C/C++ are served by lsp-mode + clangd"** in every copy,
   including the Python, Rust, Go, … ones. The rule it explains, eglot for emacs-lisp only, is
   language-neutral, so the wording should be too.
-- **Emacs install not in a `0N-install-emacs.sh` group script:** Craft and gltron list `emacs` in the
-  base install; apue, billsEmacsConfigs' 20 folders, and smalltalk had no such script either (install
-  path to be checked per project).
+- **Emacs install not in a `0N-install-emacs.sh` group script:** apue and smalltalk install Emacs
+  inline under `USE_EMACS` (they have no `0N-install-*.sh` group scripts at all), and billsEmacsConfigs'
+  20 folders do the same. Craft (`03-install-emacs.sh`) and gltron (`03-install-emacs.sh`) were fixed
+  2026-11-08.
 - **No `ELPA_MOUNT` / `update-emacs-packages`:** runClaudeInContainer (the sandbox installs its packages
-  differently; `USE_EMACS_CONFIG` flag) and smalltalk.
+  differently; `USE_EMACS_CONFIG` flag). smalltalk gained both 2026-11-08.
+- **Whole-`.emacs.d` mount instead of `elpa/` only:** gltron, apue, texExpToPng, and billsEmacsConfigs'
+  20 folders bake no Emacs config, so they mount the whole vendored `.emacs.d/` (config edits stay live
+  without `make image`). A documented variant, not drift (each repo's 2026-11-08 task records why).
 - **Contradictory eglot hook:** geometricalgebra, modelviewprojection, multivariate-math, and
   runClaudeInContainer hook eglot to `python-mode` in `preferences.el`, then `init.el` removes that
   hook. It works, but the contract is "eglot for emacs-lisp only", stated once.
-- **MELPA install at image build** (`emacs --batch --load install-melpa-packages.el` in a `RUN`; grep
-  of every `Dockerfile` under the maintainer's project root, 2026-11-08): apue, gltron, smalltalk,
-  spimulator, texExpToPng, and all 20 billsEmacsConfigs folders. Craft was fixed 2026-11-08
-  (github.com/billsix/Craft `tasks/archive/2026/11/08/emacs-packages-not-built-in-dockerfile.md`) and is
-  the worked example for a C project.
-- **No run-time compile:** only geometricalgebra, modelviewprojection, and runClaudeInContainer have
-  `(byte-recompile-directory package-user-dir 0)` in `init.el`; the other 31 configs load their vendored
-  packages as uncompiled source.
 - **spimulator's `preferences.el`** has no eglot block at all.
 - **Theme:** `material` vs `modus-vivendi` as the active theme (a variant, unless one is chosen as the
   standard).
