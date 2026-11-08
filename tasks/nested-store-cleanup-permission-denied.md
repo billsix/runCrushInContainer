@@ -24,7 +24,7 @@ post-fix client exit.
 **Created:** 2026-10-02 (William Emerison Six <billsix@gmail.com>). **Owner:** William Emerison Six
 <billsix@gmail.com>.
 **See also:** the substantive twin on the runClaude side,
-`runClaudeInContainer/tasks/nested-store-cleanup-permission-denied.md` (full root-cause write-up,
+`runClaudeInContainer/tasks/archive/2026/11/08/nested-store-cleanup-permission-denied.md` (full root-cause write-up,
 the 2026-10-04 leftover forensics, the fallback ranking, and the same plan with `runclaude-nested.*`
 names); `tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md` (the task that introduced the
 client's ephemeral `dir` store and this trap); `tasks/reference/nested-podman-design.md` and its
