@@ -37,6 +37,11 @@ always-loaded docs lean**, then **not reading files you don't need to read**.
   file/line pointers + what's already ruled out — not a re-derivation. The tighter the brief, the less it
   reads.
 
+- **The named exception: a deep review the maintainer asked for** (`/audit-repo deep`). Its job is to
+  read a whole repository, so it fans out fresh (non-fork) readers of ~8–10K lines each by design; the
+  first one cost millions of subagent tokens. The brief and sizing rules above still apply. Method:
+  `repo-review-conventions.md`.
+
 ## What NOT to read (and how to read less)
 
 - **Never read vendored / third-party / generated trees you won't edit** — `imgui/`, wxWidgets, SDL, a

@@ -578,6 +578,23 @@ persists on the host and the sweep trims it to pointers — harvesting durable d
 docs and deleting done narration — whereas here it is in-session, so the sweep harvests it before the
 `--rm` container discards it.)
 
+## Repo audits
+
+- `/audit-repo` — **quick**: a full read of the current repo, cross-referencing the docs (`CLAUDE.md`,
+  `README`, task docs) against the source for stale claims, undocumented features and internal
+  inconsistencies. Findings go in chat. **Read-only.**
+- `/audit-repo` with `deep` — a **deep review** of everything across ten named dimensions (docs,
+  docs ↔ code, product content, code, generators/tools, tests, proofs, build/CI, the open-task
+  backlog, the archive). Output is a dated, **frozen** record at
+  `tasks/review/<YYYY>/<MM>/<DD>/repo-review.md` (not `tasks/reference/`), pointed at from the
+  project `CLAUDE.md`. Never edit it afterwards: act on it through tasks that cite its sections. It
+  is expensive (it fans out readers by design, the named exception to the token-economy rule), so
+  run it **only when I ask**. Method: `~/.config/crush/reference/repo-review-conventions.md`.
+- `/findings-to-tasks` with a source (a `tasks/review/` record and optional `§sections`, or a list
+  from the conversation) — turn findings into task docs under `tasks/`, one per unit of work, each
+  `proposed — needs go-ahead` and citing its source section. It proposes the grouping and waits
+  before writing; it never edits the record.
+
 ## Open-issues lists
 
 An "open/known issues" list in a doc holds only **genuinely open** items — when resolved, **remove**

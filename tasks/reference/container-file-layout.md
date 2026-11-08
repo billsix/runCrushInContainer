@@ -123,6 +123,7 @@ the baked `~/.config/crush/reference/…` path**; in repo docs cite
 | `cpp-build-modernization.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-06) — **keep in sync** |
 | `sandbox-capability-map.md` | no | yes (copied from runClaudeInContainer) |
 | `bulk-edit-shell-first.md` | no | yes (delivered convention, added 2026-09-18) |
+| `repo-review-conventions.md` | yes | yes (copied from runClaudeInContainer; added 2026-11-08) — **keep in sync** |
 
 Caveat: when the mounted project is runCrushInContainer itself, a filename
 search finds up to THREE copies of a baked doc (the baked one, the
