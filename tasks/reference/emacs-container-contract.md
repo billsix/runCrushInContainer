@@ -30,10 +30,21 @@ files).
 
 - **Invariant:** Emacs is installed **binary-only** (`dnf install emacs …` plus the language server),
   gated by the `USE_EMACS` build flag (Makefile default `1`, Dockerfile ARG default `0`). **No MELPA
-  download or compile runs at image build.**
+  download or compile runs at image build**: no `emacs --batch --load install-melpa-packages.el`, no
+  `byte-compile`/`package-install` in any `RUN`. A build-time install is network-dependent, slow, re-runs
+  whenever an earlier layer changes, and is hidden at `make shell` by the `elpa/` mount anyway.
+- **Invariant:** the vendored packages are **byte-compiled at run time, by Emacs itself**, the first time
+  Emacs starts in `make shell`: `init.el` calls `(byte-recompile-directory package-user-dir 0)` right after
+  `(package-initialize)`, which compiles every `.el` in `elpa/` that has no `.elc` yet. The `.elc` files
+  land in the bind-mounted host `elpa/`, so they persist across containers (only the first start after
+  `make update-emacs-packages` is slow); they are gitignored and `update-emacs-packages` strips them, so
+  git only ever holds source. Model: geometricalgebra and modelviewprojection `init.el`. (Decided by
+  William Emerison Six <billsix@gmail.com>, 2026-11-08.)
 - **Invariant:** packages are **vendored** in `elpa/`, committed source-only (`*.elc`/`*.eln` in
   `.gitignore`), refreshed by **`make update-emacs-packages`** (mounts `elpa/` + `install-melpa-packages.el`,
   wipes, reinstalls from MELPA, strips compiled files, `git add -f`).
+- **Invariant:** `.dockerignore` excludes `entrypoint/dotfiles/.emacs.d/elpa`, so the vendored packages
+  are never baked into the image.
 - **Invariant:** the Makefile's **`ELPA_MOUNT`** bind-mounts **only `elpa/`**
   (`-v …/.emacs.d/elpa:/root/.emacs.d/elpa:U,z`), in `shell`/`shell-exec` only. Everything else in
   `.emacs.d` reaches the image through the Dockerfile's dotfiles `COPY`, so **an edit to `init.el`,
@@ -54,9 +65,10 @@ files).
 
 ## `init.el` — invariant order, then the language block
 
-Every `init.el` follows this order (Craft's and geometricalgebra's are good models):
+Every `init.el` follows this order (geometricalgebra's and modelviewprojection's are good models):
 
-1. `(package-initialize)`.
+1. `(package-initialize)`, then `(byte-recompile-directory package-user-dir 0)` (the run-time compile;
+   see "Container side").
 2. `(load-file "~/.emacs.d/helm.el")`, then `(load-file "~/.emacs.d/preferences.el")`.
 3. **Theme block:** exactly one active `(load-theme '<theme> t)` with the others commented out on the
    lines around it (`modus-vivendi`, `material`, `dracula`, `monokai`, `zenburn`). Which one is active
@@ -158,9 +170,13 @@ Fixing these is `tasks/emacs-contract-conformance.md`.
 - **Contradictory eglot hook:** geometricalgebra, modelviewprojection, multivariate-math, and
   runClaudeInContainer hook eglot to `python-mode` in `preferences.el`, then `init.el` removes that
   hook. It works, but the contract is "eglot for emacs-lisp only", stated once.
-- **`(byte-recompile-directory package-user-dir 0)` at startup** in geometricalgebra,
-  modelviewprojection, and runClaudeInContainer: it compiles into the bind-mounted `elpa/` (gitignored,
-  so harmless to git, but slow on a first start). The other 31 configs don't.
+- **MELPA install at image build:** Craft's `Dockerfile` runs `emacs --batch --load
+  install-melpa-packages.el` under `USE_EMACS=1`, lists `emacs` in `01-install-base.sh` as well, has no
+  `.dockerignore`, and its `ELPA_MOUNT` mounts the whole `.emacs.d/` rather than `elpa/`. Fix:
+  github.com/billsix/Craft `tasks/emacs-packages-not-built-in-dockerfile.md`.
+- **No run-time compile:** only geometricalgebra, modelviewprojection, and runClaudeInContainer have
+  `(byte-recompile-directory package-user-dir 0)` in `init.el`; the other 31 configs load their vendored
+  packages as uncompiled source.
 - **spimulator's `preferences.el`** has no eglot block at all.
 - **Theme:** `material` vs `modus-vivendi` as the active theme (a variant, unless one is chosen as the
   standard).
