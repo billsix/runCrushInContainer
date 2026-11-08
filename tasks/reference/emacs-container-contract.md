@@ -34,12 +34,28 @@ files).
   `byte-compile`/`package-install` in any `RUN`. A build-time install is network-dependent, slow, re-runs
   whenever an earlier layer changes, and is hidden at `make shell` by the `elpa/` mount anyway.
 - **Invariant:** the vendored packages are **byte-compiled at run time, by Emacs itself**, the first time
-  Emacs starts in `make shell`: `init.el` calls `(byte-recompile-directory package-user-dir 0)` right after
-  `(package-initialize)`, which compiles every `.el` in `elpa/` that has no `.elc` yet. The `.elc` files
-  land in the bind-mounted host `elpa/`, so they persist across containers (only the first start after
-  `make update-emacs-packages` is slow); they are gitignored and `update-emacs-packages` strips them, so
-  git only ever holds source. Model: geometricalgebra and modelviewprojection `init.el`. (Decided by
-  William Emerison Six <billsix@gmail.com>, 2026-11-08.)
+  Emacs starts in `make shell`: right after `(package-initialize)`, `init.el` runs the **compile block**
+  below, which calls package.el's `package-recompile` (the compile `package-install` uses) on each
+  package whose directory has no `.elc` yet. The `.elc` files land in the bind-mounted host `elpa/`, so
+  they persist across containers: the first start after `make update-emacs-packages` compiles everything
+  (about 10 s), later starts compile nothing (about 1 s). They are gitignored and `update-emacs-packages`
+  strips them, so git only ever holds source. (Decided by William Emerison Six <billsix@gmail.com>,
+  2026-11-08.)
+
+  ```elisp
+  (dolist (entry package-alist)
+    (let ((desc (cadr entry)))
+      (unless (directory-files-recursively (package-desc-dir desc) "\\.elc\\'")
+        (with-demoted-errors "Error while compiling: %S"
+          (package-recompile desc)))))
+  ```
+
+  Why per package and not `(byte-recompile-directory package-user-dir 0)` (the first form, used until
+  2026-11-08): `byte-recompile-directory` retries every `.el` with no `.elc` on every start, and the
+  vendored `compat` package's `compat-26.el`…`compat-30.el` backports never compile on Emacs 31
+  (`Cannot open load file … compat-macs.el`, under package.el's compile too), so each start logged those
+  errors again. The per-package check sees compat's other `.elc` and skips it. Why not
+  `package-recompile-all`: it deletes and rebuilds every `.elc` on every call.
 - **Invariant:** packages are **vendored** in `elpa/`, committed source-only (`*.elc`/`*.eln` in
   `.gitignore`), refreshed by **`make update-emacs-packages`** (mounts `elpa/` + `install-melpa-packages.el`,
   wipes, reinstalls from MELPA, strips compiled files, `git add -f`).
@@ -67,7 +83,7 @@ files).
 
 Every `init.el` follows this order (geometricalgebra's and modelviewprojection's are good models):
 
-1. `(package-initialize)`, then `(byte-recompile-directory package-user-dir 0)` (the run-time compile;
+1. `(package-initialize)`, then the compile block (the run-time compile;
    see "Container side").
 2. `(load-file "~/.emacs.d/helm.el")`, then `(load-file "~/.emacs.d/preferences.el")`.
 3. **Theme block:** exactly one active `(load-theme '<theme> t)` with the others commented out on the
@@ -174,17 +190,6 @@ Fixing these is `tasks/emacs-contract-conformance.md`.
 - **Contradictory eglot hook:** geometricalgebra, modelviewprojection, multivariate-math, and
   runClaudeInContainer hook eglot to `python-mode` in `preferences.el`, then `init.el` removes that
   hook. It works, but the contract is "eglot for emacs-lisp only", stated once.
-- **No run-time compile** (grep of every `entrypoint/dotfiles/.emacs.d/init.el` under the project root,
-  2026-11-08): multivariate-math, and hanoi `cpp/`, `python/`, `rust/` lack
-  `(byte-recompile-directory package-user-dir 0)`, so they load their vendored packages as uncompiled
-  source. No project compiles packages at image build any more (fixed 2026-11-08; Craft's
-  `tasks/archive/2026/11/08/emacs-packages-not-built-in-dockerfile.md` in github.com/billsix/Craft is the
-  C worked example).
-- **compat backport files fail the run-time compile:** on every Emacs start, `byte-recompile-directory`
-  logs `Cannot open load file … compat-macs.el` for the vendored `compat` package's
-  `compat-26.el`…`compat-30.el` (they load `compat-macs.el` by a relative path that only resolves under
-  package.el's own compile). Harmless on Emacs 31, which never loads them, but no `.elc` is written, so
-  each start retries them. Fix pending a decision (`tasks/emacs-contract-conformance.md` item 7).
 - **spimulator's `preferences.el`** has no eglot block at all.
 - **Theme:** `material` vs `modus-vivendi` as the active theme (a variant, unless one is chosen as the
   standard).
