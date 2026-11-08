@@ -170,10 +170,11 @@ Fixing these is `tasks/emacs-contract-conformance.md`.
 - **Contradictory eglot hook:** geometricalgebra, modelviewprojection, multivariate-math, and
   runClaudeInContainer hook eglot to `python-mode` in `preferences.el`, then `init.el` removes that
   hook. It works, but the contract is "eglot for emacs-lisp only", stated once.
-- **MELPA install at image build:** Craft's `Dockerfile` runs `emacs --batch --load
-  install-melpa-packages.el` under `USE_EMACS=1`, lists `emacs` in `01-install-base.sh` as well, has no
-  `.dockerignore`, and its `ELPA_MOUNT` mounts the whole `.emacs.d/` rather than `elpa/`. Fix:
-  github.com/billsix/Craft `tasks/emacs-packages-not-built-in-dockerfile.md`.
+- **MELPA install at image build** (`emacs --batch --load install-melpa-packages.el` in a `RUN`; grep
+  of every `Dockerfile` under the maintainer's project root, 2026-11-08): apue, gltron, smalltalk,
+  spimulator, texExpToPng, and all 20 billsEmacsConfigs folders. Craft was fixed 2026-11-08
+  (github.com/billsix/Craft `tasks/archive/2026/11/08/emacs-packages-not-built-in-dockerfile.md`) and is
+  the worked example for a C project.
 - **No run-time compile:** only geometricalgebra, modelviewprojection, and runClaudeInContainer have
   `(byte-recompile-directory package-user-dir 0)` in `init.el`; the other 31 configs load their vendored
   packages as uncompiled source.
