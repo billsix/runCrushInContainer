@@ -76,8 +76,11 @@ flag (see runClaude's doc).
   the rootless userns as root: the image layers' `diff/` dirs mirror the image's `/` (mode 555) and
   `/root` (550), and GNU `rm` never `chmod`s, so a bare host `rm` cannot unlink their children and
   leaked the store on every exit — fixed 2026-10-02; the fix applies only to sessions launched after
-  it, and its first real host-exit test is still pending, see `tasks/nested-store-cleanup-permission-denied.md`
-  and the runClaudeInContainer twin) with the host image store reused read-only
+  it. Each exit appends a `== <date> store=…` / `== rm exit=N` / `== clean` (or `== LEFTOVER: …`)
+  block to `$(NESTED_PODMAN_STORE_BASE)/crush-nested-cleanup.log`, outside the store so it survives
+  the `rm`. The runClaudeInContainer sandbox runs the same trap and logged 11 clean exits
+  (2026-10-04 to 2026-11-08); a client exit is still to be read from this log, see
+  `tasks/nested-store-cleanup-permission-denied.md`) with the host image store reused read-only
   (`additionalimagestores`) — no RAM ceiling. The RAM tmpfs is opt-in via `NESTED_PODMAN_STORE=tmpfs`
   (then bump `NESTED_PODMAN_TMPFS_SIZE`). **The nested podman is rootful, so `storage.conf` must live
   at `/etc/containers/storage.conf`** (the client Dockerfile now `COPY`s it there) — delivering it only
