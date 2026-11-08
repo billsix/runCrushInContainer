@@ -77,6 +77,7 @@ records the `podman unshare` requirement and the mode-555 mechanism).
 | When (local) | Store | Launched with | Exit result | Source of evidence |
 |---|---|---|---|---|
 | 2026-10-02 | — | — | fix committed (`e7f665e`, local master; not yet pushed as of 2026-10-04) | `git log` |
+| 2026-10-04 … 2026-11-08 | 11 × `runclaude-nested.*` (the runClaude twin, same trap) | **post-fix**, logged | all `rm exit=0` / `== clean` — strong evidence for the shared fix, but not a client exit | runClaude's `runclaude-nested-cleanup.log`, read 2026-11-08; that task's done-record |
 | *next client launch* → *pending* | `crush-nested.??????` | **post-fix** trap | *to be recorded* | the maintainer's terminal at exit; `ls -d $NESTED_PODMAN_STORE_BASE/crush-nested.*` before any hand cleanup; the cleanup log after step 2 |
 
 Caveat: the maintainer said (2026-10-04) they will clean stragglers **as root by hand**. A missing
