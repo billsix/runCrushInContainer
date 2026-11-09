@@ -164,7 +164,9 @@ and by whom (main thread or a reader).
 ## Carried over from the previous review       (only when there is a baseline: each prior
                                                 finding → fixed / still open / no longer applies)
 
-## Suggested follow-ups                         (tagged required / recommended / optional)
+## Suggested follow-ups                         (tagged required / recommended / optional;
+                                                each bullet starts with an ID and cites its §s:
+                                                `- [F7] Fix the generator bugs (§5.1).`)
 
 ## Open questions for the maintainer            (numbered, one ask each, with the reviewer's
                                                 recommendation)
@@ -176,6 +178,11 @@ and by whom (main thread or a reader).
   project's skip markers (e.g. `<!-- notation-rule: begin/end -->`), so a later notation
   sweep doesn't "fix" the quotation.
 - Paths are repo-root-relative. Other repos are cited by URL.
+- **Follow-up bullets carry an ID and their sections.** Number them `F1`, `F2`, … once
+  across the record (not per tier), as the first thing in the bullet, and end each with the
+  § numbers it comes from. The status tool (see "Lifecycle") matches tasks to bullets by ID;
+  a bullet without one can only be matched by section, which over-reports "done" when a
+  section holds several findings.
 
 ## Lifecycle
 
@@ -187,9 +194,22 @@ and by whom (main thread or a reader).
 - **The project's `CLAUDE.md` holds a one-line pointer to the latest review**, so the next
   review finds its baseline and an agent knows one exists. Update the pointer when a new
   review lands.
+- **A task made from a record cites it in one `**Source:**` line**: the record path, the
+  sections, and the follow-up IDs it covers
+  (`**Source:** tasks/review/2026/11/08/repo-review.md §5.1, §6.1 F7`). Keep it on one line;
+  the tool reads only that line.
+- **Status is derived, never written into the record.** `review_status.py` (a shared tool
+  beside this doc; run `/review-status [record]` from the repo root) reads the record's
+  sections and follow-ups and the `**Source:**` lines in `tasks/*.md` and
+  `tasks/archive/**/*.md`, and prints each item as **done** (every citing task archived),
+  **open** (a citing task still in `tasks/`) or **untracked** (no task cites it). A follow-up
+  without an ID is matched by section and marked "(by §)": treat that "done" as a lead and
+  check it. Tasks citing the record with neither a § nor an ID are listed separately.
 - **The next review diffs against the previous one** in its "Carried over" section ("12 of
-  15 fixed, 3 still open"). That turns the series into a measure of whether the repo is
-  getting healthier.
+  15 fixed, 3 still open"). Seed it with `review_status.py <baseline> --carried-over`, then
+  re-check each row against the tree: "done" means the task was archived, not that the
+  finding is gone, and an "untracked" finding may have been fixed in passing. That turns the
+  series into a measure of whether the repo is getting healthier.
 - **Records are never archived or deleted.** They are small and they are the history.
 - **The review itself is not a task.** No task doc is needed to run one. If the maintainer
   turns findings into tasks, each task links back to its record section.

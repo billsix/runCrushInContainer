@@ -38,8 +38,11 @@ Steps:
    - `**Status:** proposed — needs go-ahead`. Use `blocked` plus `**Blocked on:**`/`**Recheck:**` only
      for an external gate.
    - `**Priority:**` / `**Difficulty:**` as approved, and `**Created:**` with today's date.
-   - `**Source:**`: the record path and section(s) it came from (`tasks/review/2026/11/08/repo-review.md`
-     §5.1), or "conversation, <date>".
+   - `**Source:**`: one line with the record path, **every** section it came from, and the
+     follow-up IDs it covers when the record has them
+     (`tasks/review/2026/11/08/repo-review.md §5.1, §6.1 F7`), or "conversation, <date>".
+     Always write the §s, even for an item taken from "Suggested follow-ups":
+     `/review-status` matches tasks to findings by them.
    - `## BLUF`: what the task is and what "done" means.
    - `## Context`, enough to execute cold:
      - the finding(s) restated, with their evidence (`path:line`, the command that shows the bug and

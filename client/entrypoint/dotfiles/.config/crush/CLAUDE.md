@@ -594,6 +594,9 @@ docs and deleting done narration — whereas here it is in-session, so the sweep
   from the conversation) — turn findings into task docs under `tasks/`, one per unit of work, each
   `proposed — needs go-ahead` and citing its source section. It proposes the grouping and waits
   before writing; it never edits the record.
+- `/review-status` with an optional record — which of a record's findings are done (citing task
+  archived), open (citing task in `tasks/`) or untracked, derived from the tasks' `**Source:**` lines
+  by `~/.config/crush/reference/review_status.py`. Read-only; the record stays frozen.
 
 ## Open-issues lists
 

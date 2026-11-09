@@ -47,8 +47,11 @@ Steps:
 
 1. **Inventory.** `wc -l` every corpus and pick the reader split from the numbers.
 2. **Find the baseline.** Look for the latest record under `tasks/review/` and the pointer
-   to it in the project's `CLAUDE.md`. If one exists, read it: this review's "Carried over"
-   section reports each of its findings as fixed / still open / no longer applies.
+   to it in the project's `CLAUDE.md`. If one exists, read it, then seed this review's
+   "Carried over" section with
+   `python3 ~/.config/crush/reference/review_status.py <baseline> --carried-over` (run from the
+   repo root). The tool says which follow-ups have archived, open, or no tasks; re-check
+   each row against the tree and report it as fixed / still open / no longer applies.
 3. **Fan out the readers in one message.** Read the product yourself (book, tutorial,
    user-facing docs), and take one small corpus yourself if that fits.
 4. **Verify every HIGH finding before recording it.** Then dedupe and consolidate.
@@ -56,7 +59,8 @@ Steps:
    date. Create `tasks/review/.keep` if the directory is new. Include:
    - the coverage table, one row per dimension (N/A where it doesn't apply);
    - findings, each VERIFIED or LEAD;
-   - tagged follow-ups;
+   - tagged follow-ups, each starting with an ID (`[F1]`, `[F2]`, … across the record) and
+     ending with the § numbers it comes from;
    - numbered open questions.
 6. **Add or update the one-line "latest review" pointer** in the project's `CLAUDE.md`.
 7. **Stage both files by path**, and nothing else.
