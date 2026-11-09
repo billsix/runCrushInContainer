@@ -54,7 +54,9 @@ Steps:
    each row against the tree and report it as fixed / still open / no longer applies.
 3. **Fan out the readers in one message.** Read the product yourself (book, tutorial,
    user-facing docs), and take one small corpus yourself if that fits.
-4. **Verify every HIGH finding before recording it.** Then dedupe and consolidate.
+4. **Verify every HIGH finding before recording it.** Then dedupe and consolidate. For
+   versions, tags and releases, compare as versions (`git tag --sort=v:refname`, `sort -V`)
+   and ask the registry (e.g. the PyPI JSON API): a text sort hides `v0.0.20` behind `v0.0.9`.
 5. **Write the record** to `tasks/review/<YYYY>/<MM>/<DD>/repo-review.md`, using today's
    date. Create `tasks/review/.keep` if the directory is new. Include:
    - the coverage table, one row per dimension (N/A where it doesn't apply);

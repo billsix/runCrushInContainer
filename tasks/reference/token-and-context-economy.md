@@ -36,6 +36,10 @@ always-loaded docs lean**, then **not reading files you don't need to read**.
 - **If you do spawn, brief tightly with pointers, not context.** A fresh agent needs the goal + the
   file/line pointers + what's already ruled out — not a re-derivation. The tighter the brief, the less it
   reads.
+- **Say whether the agent may spawn agents of its own, and give it a budget.** An agent with a big
+  task will fan out unless told otherwise, and its children's cost never shows in its report
+  (William Emerison Six <billsix@gmail.com>, 2026-11-09): a gacalc archive pass briefed without that line spawned nine workers. Write "do the
+  work yourself; do not spawn agents", or "you may use up to N workers".
 
 - **The named exception: a deep review the maintainer asked for** (`/audit-repo deep`). Its job is to
   read a whole repository, so it fans out fresh (non-fork) readers of ~8–10K lines each by design; the

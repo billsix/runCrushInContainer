@@ -125,7 +125,14 @@ generated trees beyond a sample that confirms a claim.
 5. **Verify before trusting.** A reader's VERIFIED is a claim. Before the record calls
    something HIGH, re-check it, or make sure the reader showed the command and output.
    "grep found nothing" is not proof of absence. "X is dead" needs a check of every way X
-   could be reached.
+   could be reached. **Put that proof in the record:** a claim that something is dead, never
+   invoked or never emitted carries the command that shows it, because a VERIFIED label
+   alone can be wrong (gacalc 2026-11-08 marked "`spyder.sh` never starts Spyder" VERIFIED;
+   the script's last line is `exec spyder`).
+   - **A LEAD's severity is provisional.** Rate it by what it would do if real, not by how
+     sure you are. Anything that silently corrupts shared state or returns a wrong value is
+     at least Recommended (gacalc's "`Gn.to_blade_dict()` returns its internal dict" was
+     filed low; reproducing it showed it corrupts the shared `e_1` constant).
 6. **Consolidate.** Dedupe findings across readers: two readers finding the same thing
    independently raises confidence, so say so. Order the record by what changes the
    maintainer's next action: errors in front of a reader, and gates that silently don't
@@ -198,6 +205,10 @@ and by whom (main thread or a reader).
   sections, and the follow-up IDs it covers
   (`**Source:** tasks/review/2026/11/08/repo-review.md §5.1, §6.1 F7`). Keep it on one line;
   the tool reads only that line.
+- **The record goes stale fast; re-check twice.** Fixes land between the review and the
+  tasks (in the gacalc run, several Optional findings were already fixed a day later).
+  `/findings-to-tasks` re-checks each finding when it writes a task, and the task re-checks
+  again when its work starts, dropping or shrinking what is already done and saying so.
 - **Status is derived, never written into the record.** `review_status.py` (a shared tool
   beside this doc; run `/review-status [record]` from the repo root) reads the record's
   sections and follow-ups and the `**Source:**` lines in `tasks/*.md` and
@@ -230,6 +241,12 @@ hand-written Python, ~8K lines of tools, ~6.5K lines of tests, ~7K lines of Lean
 named exception to the default-to-inline rule in `token-and-context-economy.md`: the work
 is large, the corpora are independent, and keeping whole-corpus reads out of the main
 thread is the point.
+
+**The follow-through costs more than the review.** On gacalc, the 38 follow-ups became
+35 tasks done in three committed batches over two days (2026-11-08 to 2026-11-09), almost
+all in the main thread. The one fan-out, the archive done-record pass over 294 docs,
+reported ≈0.23M tokens for its lead agent; the nine workers that agent spawned were not
+measured. Budget for the batches, not only the review.
 
 Ways to keep the cost down:
 

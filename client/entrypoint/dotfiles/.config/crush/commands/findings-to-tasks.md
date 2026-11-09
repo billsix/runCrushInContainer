@@ -50,6 +50,8 @@ Steps:
      - what to read first, and related tasks and reference docs.
      - Re-check each finding against the tree before writing it in. A review record is a snapshot,
        so if a finding is already fixed, drop it and say so.
+     - Reproduce a LEAD before rating it, and re-rate it from what it does: a silent wrong value or
+       corrupted shared state is at least Recommended, whatever the record said.
    - `## Plan`: the steps, including the gate that proves the fix (the test to add, the `make` target
      to run).
    - `## Open questions`: anything the finding leaves for the maintainer. A question the record
