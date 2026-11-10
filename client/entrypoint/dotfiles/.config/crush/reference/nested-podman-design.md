@@ -58,6 +58,17 @@ flag (see runClaude's doc).
   Fine for building/testing (most project containers don't need isolated networking). So the working
   inner invocation is: `podman run --cgroups=disabled --network=host …`. (The image *pull* works
   without it — storage/fuse-overlayfs is fine; only container *networking* needs this.)
+- **A nested `podman build` needs `BUILDAH_ISOLATION=chroot` (diagnosed 2026-11-07, Fedora 45: podman
+  6.1.3, buildah 1.45.1).** The sandbox is a rootless container on the host (`/proc/self/uid_map` maps
+  uid 0 to the host user). The inner podman runs rootful, but buildah's `RUN` steps see the user
+  namespace and take the rootless pasta path, so every networked `RUN` fails with `setup network: pasta
+  failed … Couldn't open network namespace … Permission denied` (or `did not get container start message
+  from parent`). The Fedora 44 sandbox did not hit this. `--isolation=chroot` / `BUILDAH_ISOLATION=chroot`
+  (the `RUN` uses the sandbox's own network) and `--network=host` both work. **Launch with
+  `EXTRA_PODMAN_FLAGS="… -e BUILDAH_ISOLATION=chroot"`** (EXTRA_PODMAN_FLAGS goes straight into `podman run`) so
+  every nested build works unchanged; without it, add `--network=host` to the one `podman build`
+  (`make -n image`, then run that line by hand). Diagnosis and test: runClaudeInContainer
+  `tasks/reference/nested-run-and-gates.md`.
 - **The inner store defaults to an on-disk DIR (2026-09-27) — IMPLEMENTED and VERIFIED in both sandboxes.**
   `/var/lib/containers` is now an ephemeral host directory (`NESTED_PODMAN_STORE=dir`; a `mktemp -d`
   under `NESTED_PODMAN_STORE_BASE`, default `~/.cache`, relocatable per launch — e.g. to an HDD to
@@ -65,8 +76,11 @@ flag (see runClaude's doc).
   the rootless userns as root: the image layers' `diff/` dirs mirror the image's `/` (mode 555) and
   `/root` (550), and GNU `rm` never `chmod`s, so a bare host `rm` cannot unlink their children and
   leaked the store on every exit — fixed 2026-10-02; the fix applies only to sessions launched after
-  it, and its first real host-exit test is still pending, see `tasks/nested-store-cleanup-permission-denied.md`
-  and the runClaudeInContainer twin) with the host image store reused read-only
+  it. Each exit appends a `== <date> store=…` / `== rm exit=N` / `== clean` (or `== LEFTOVER: …`)
+  block to `$(NESTED_PODMAN_STORE_BASE)/crush-nested-cleanup.log`, outside the store so it survives
+  the `rm`. The runClaudeInContainer sandbox runs the same trap and logged 11 clean exits
+  (2026-10-04 to 2026-11-08); a client exit is still to be read from this log, see
+  `tasks/nested-store-cleanup-permission-denied.md`) with the host image store reused read-only
   (`additionalimagestores`) — no RAM ceiling. The RAM tmpfs is opt-in via `NESTED_PODMAN_STORE=tmpfs`
   (then bump `NESTED_PODMAN_TMPFS_SIZE`). **The nested podman is rootful, so `storage.conf` must live
   at `/etc/containers/storage.conf`** (the client Dockerfile now `COPY`s it there) — delivering it only

@@ -154,23 +154,42 @@ runtime `isinstance(f, SomeGeneric)` (can't take a subscripted generic), and a c
 parameter, or whose notebooks fall outside the type gate, documents the specifics and the
 `[Any]`-vs-exact-type calls in its own additions doc.
 
-### Inline a value used exactly once — unless the name documents an otherwise-opaque expression
+### Inline a value used once, and name it in a comment instead of a binding
 
 This **takes precedence over "annotate generously"**: don't create or keep a single-use
 local just to give it a type — inline it (e.g. pass the f-string straight to
-`latex_repr=`). Generous typing applies to the locals that *survive* — reused, hoisted out
-of a closure so it's computed once, or named to clarify an opaque expression. (Same spirit
-as: no local aliases for a value that already has a canonical name — reference the canonical
-name directly, never `E1 = Vector.basis_vector(1)`.)
+`latex_repr=`). Generous typing applies to the locals that *survive* — reused, or hoisted out
+of a closure so it's computed once. (Same spirit as: no local aliases for a value that already
+has a canonical name — reference the canonical name directly, never
+`E1 = Vector.basis_vector(1)`.)
 
-**The default is inline.** A local **defined and then used immediately** — assigned on one line and
-consumed on the very next (the argument to the next call, the return value, the one operand of the
-next expression) — should by default be **inlined and used as a value**, not bound to a name at all.
-Keep the name only when it **earns its keep**: it documents an otherwise-opaque expression, is reused,
-or is hoisted so it is computed once. Use discretion — a genuinely clarifying name is a real exception
-— but when in doubt, inline. (Worked examples, gacalc 2026-10-29: `rest_orthogonal_to_v` in
-`frame.make_orthogonal_frame` and the `prepended` blade in `Gn._geometric_product`, each inlined into
-the recursive call it fed.)
+**A name bound once and used once is inlined, even when the name was there to explain the
+expression.** A reader who meets a declaration scans ahead to see how far it is used; a
+single-use binding makes them do that scan for nothing, and the cost grows with the length of
+the function. Inline the expression and put a **comment above it that quotes or describes the
+subexpression and gives it its name** ("`pairs`: each orthogonal vector with the frame vector
+it came from, in frame order"), so the reader still gets the name without a binding to track.
+Keep a binding only when it is reused or hoisted so it is computed once. (Decided by William
+Emerison Six <billsix@gmail.com>, 2026-11-06; this replaced an earlier exception that kept a
+single-use name when it documented an opaque expression.)
+
+**"Used twice" does not by itself earn a name either.** Before keeping a multi-use local, check
+whether one expression absorbs the uses. `d = getattr(cls, "DIMENSION", None)` followed by
+`n = d if d is not None else fallback` is exactly `getattr(cls, "DIMENSION", fallback)` (the
+fallback is now always evaluated, which is fine when it is cheap); `dict.get(key, default)` and
+`next(iterator, default)` collapse the same shape. A cheap, clear expression such as `len(xs)`
+can simply be repeated. Keep the name when repeating its expression would be longer or harder
+to read than the name, or would compute something expensive twice; an example is a three-line
+dimension computation used in a check and again in that check's error message.
+
+**Declare a name at the point of use.** A binding built many lines before its only use makes
+the reader carry it across everything in between. Move it down to where it is used, or, if it is
+used once, inline it there.
+
+Worked example: gacalc's `Frame.to_invertible_function` refactor, 2026-11-06 (that project's
+additions doc). Earlier examples, 2026-10-29: `rest_orthogonal_to_v` in
+`frame.make_orthogonal_frame` and the `prepended` blade in `Gn._geometric_product`, each inlined
+into the recursive call it fed.
 
 ### What earns an extraction: duplication, or naming a phase — not reshaping control flow
 
@@ -184,7 +203,18 @@ Settled 2026-07-18 from what the maintainer accepted and declined:
   distinct phase of the algorithm.
 - **Neither** — leave it alone — when the helper would be used exactly once and exists only
   to reshape control flow or avoid mutating a local. That is the "inline a value used
-  exactly once" rule applied to functions.
+  once" rule applied to functions.
+- **A helper with one caller is nested inside that caller**, not defined beside it at the outer
+  level. This applies to a helper that earns its existence (a recursion, a step reused within
+  the caller) but has only one caller. Nesting shows its scope at a glance; the only cost is
+  creating a function object per call of the caller, negligible unless that caller runs in a
+  tight loop.
+- **When nesting, shadow deliberately, and verify the shadowing.** Give the nested helper's
+  parameter the caller's name when it holds the same kind of value (`peel(remaining, y)`
+  inside `backward(y)`), so the reader knows the outer binding is out of play inside the
+  helper. Check that this is correct: the helper must never need the outer value, and none of
+  its other names (parameters, pattern captures, locals) may hide an enclosing binding it does
+  need. (William Emerison Six <billsix@gmail.com>, 2026-11-06.)
 
 **"Inner-fn first, guards below" is a consequence of the above, not the goal.** When an
 extraction is earned, the inner function(s) carrying the core operation go up top (closing
@@ -265,6 +295,44 @@ Not options: labels, titles, file names, LaTeX, and values a library dictates (m
 example: github.com/billsix/geometricalgebra (`frame.InverseMethod`, `functions.MatrixBackend`,
 2026-11-10).
 
+### Mutually exclusive branches are one `if`/`elif`/`else` chain
+
+When two or more conditions pick among the outcomes of **one decision**, write them as a single chain,
+`if` … `elif` … `else`, with the last outcome in the `else`. That includes a run of early-exit guards in
+front of a result: each guard is a branch of the same decision, so it is an `elif`, and the result is the
+`else`.
+
+```python
+# Not this: three separate ifs, then a fall-through. They exit, so they are exclusive,
+# but the reader has to check that.
+if along == zero:
+    raise ValueError("the zero vector spans no line")
+if vector == zero:
+    return 0
+if not vector.is_parallel_to(along):
+    raise ValueError("not on the line")
+return (vector / along).scalar_part()
+
+# This: one decision, read top to bottom, and the else is the default.
+if along == zero:
+    raise ValueError("the zero vector spans no line")
+elif vector == zero:
+    return 0
+elif not vector.is_parallel_to(along):
+    raise ValueError("not on the line")
+else:
+    return (vector / along).scalar_part()
+```
+
+The chain's `else` is the total default, which is what the `match` rule above asks for, so an
+all-guard `match` (`case _ if …:` in every arm) is written as this chain instead. Two things stay as
+they are: **a single guard** before the function's main body (`if bad: raise`, then the body; there is
+no second branch to chain), and **independent checks** that can each fire (accumulating errors, a
+cleanup step), which are separate `if`s on purpose. Don't let a linter talk you out of the `else`:
+ruff's `RET505`/`RET506` ("unnecessary `else` after `return`/`raise`") contradict this rule, so leave
+them off. (William Emerison Six <billsix@gmail.com>, 2026-11-07: "I want to see that they are mutually
+exclusive.")
+
 ### Refactoring a conditional — vary the mechanism (Rules A–E)
 
 Before touching one, ask in order:
@@ -313,6 +381,44 @@ composes with `StrEnum`/`IntEnum` when you need a string/int backing but not a *
 one.) **Corollary:** never write logic that depends on an `auto()` value — iterate or compare
 the members themselves (cycle with `list(E).index(x)`, not `x.value`).
 
+### Tests: parametrize over the variants, don't copy the test
+
+When several tests differ only in **data** (a dimension, a representation/type, an algorithm
+choice, a sample input), write **one** test with `@pytest.mark.parametrize`, not one copy per
+variant. A loop over the variants *inside* a test is the same smell: the first failing case hides
+the rest, and the report doesn't say which one failed. (William Emerison Six <billsix@gmail.com>,
+2026-11-07.)
+
+- **Name the variant list once, at module level**, typed, and pass it to every test that runs over
+  it (`INVERSE_METHODS: list[str] = ["reciprocal", "peel"]`, `FRAMES: list[list[Vector]] = […]`). A
+  new variant is then one line, and every test picks it up.
+- **Give readable `ids=`** (`ids=["2d", "3d"]`, `ids=["gn-2d-symbolic", "g3-concrete"]`) so a failure
+  names its case. Keep a parallel `*_IDS: list[str]` beside the data list; typing the list of
+  `pytest.param(...)` objects would need pytest's private `ParameterSet`.
+- **Write the expected value into the case, not into the test**, when it differs per variant:
+  parametrize over `(input, expected)` pairs. Don't recompute the expected value with the code under
+  test's own algorithm (a fold, a formula). That restates the implementation, and the test can't
+  fail.
+- **Stack two `parametrize` decorators for a cross product** (2 frames × 2 methods = 4 cases) instead
+  of listing every combination by hand.
+- **Share an expensive object through a module-scoped fixture, and parametrize over fixture names**
+  (`request.getfixturevalue(name)`) when the variants are costly to build (a symbolic object that
+  takes seconds to minutes). Plain data is cheap; put it straight in the parametrize list.
+- **Mind list invariance in the type checker:** a list literal mixing two element types (a symbolic
+  list next to a graded-type list) is not a `list[Base]` unless each element list is annotated
+  `list[Base]` too.
+
+**Keep tests apart when:**
+- the assertions differ, not only the data (merging would need an `if` on the parameter);
+- the test compares two variants with each other (parametrize the *pair*, not each variant);
+- the test checks the **static** type per variant (`typing.assert_type`, or a binding annotated with
+  each variant's own return type). A parameter erases that static type;
+- each copy spells out its own formula on purpose, as a readable worked example (an explicit
+  `a_1 * b_1 + a_2 * b_2` in 2D next to its 3D version).
+
+Count collected cases (`pytest --collect-only -q`) before and after a fold. The count should stay
+the same or grow; no assertion should disappear.
+
 ### Docstrings — Google / napoleon style
 
 **Write docstrings in Google style (parsed by `sphinx.ext.napoleon`), and on any symbol a
@@ -350,6 +456,37 @@ def zero(cls) -> Self:
 
 The non-Python analog (C/C++, …): the same "structured doc-comment with parameter/return
 sections" discipline via doxygen/javadoc; the language changes the marker, not the habit.
+
+## Pin direct dependencies — an unpinned dep can silently backtrack to an ancient major
+
+Pin every direct third-party dependency to an exact version in `requirements.txt` /
+`pyproject.toml` (then bake it per the "Self-contained images + live source" rule). An
+**unpinned** dep is a trap: when a newer Python or a conflicting pin makes its current
+release unsatisfiable, the resolver does **not** fail — it backtracks to the newest version
+that *does* resolve, which can be years old with a different API. The build stays green; the
+code breaks later at import or type-check.
+
+- **Treat a pin that "installs" a *different* (older) version than requested as a conflict to
+  surface, not accept.** It means the exact version can't be satisfied in this environment
+  (a transitive cap, a missing wheel for this Python); find out why and resolve it — override
+  the stale cap, pin a version that resolves, or drop the dep — rather than shipping a pin
+  that lies about what runs.
+- **Run the type-checker against the project's own venv.** The gate does `source
+  /venv/bin/activate` before `ty check`, so `ty` sees the baked deps; a bare `ty check` outside
+  the venv resolves against the system interpreter and reports phantom import/attribute errors.
+- **Prefer distro `python3-*` packages for the heavy/native deps** (numpy, matplotlib, sympy, glfw,
+  pyopengl, pillow, …) via a `python -m venv --system-site-packages` venv, and `pip`-install only the
+  leaf / pure-Python deps. Pin a distro-provided dep to the version the distro **actually ships** (read
+  it from the built image, don't guess) so the pin is already-satisfied by system-site and doesn't
+  force a divergent second pip build, while still making a host install reproducible. The full
+  image/packaging mechanics are the container-template contract (the personal overlay's "Self-contained
+  images" + "Python deps" sections), not this code-style doc.
+- Worked incident (modelviewprojection, 2026-11-06): unpinned `moviepy` + `Pillow==13.0.0` (the
+  only pillow with a cp315 wheel on Python 3.15) → uv backtracked `moviepy` to the 6-year-old
+  `1.0.3` (no top-level `ImageSequenceClip`), surfacing as a `ty` `unresolved-attribute` **and**
+  a latent runtime `AttributeError`. The "unpinned" dep had passed every build until the new
+  Python + a conflicting pin met. Fix: pin `moviepy==2.1.1` and override its overly-conservative
+  `pillow<12` cap at install.
 
 ## Cross-links
 

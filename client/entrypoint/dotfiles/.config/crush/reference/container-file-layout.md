@@ -29,7 +29,7 @@ the session log alongside it).
 - **The project you were pointed at is mounted at `/work`**
   (`-v $(PROJECT):/work`; `PROJECT` defaults to the directory `make shell` ran
   from). `shell.sh` cd's there at launch.
-- **Any other repo path you find yourself in came from `EXTRA_MOUNTS`** —
+- **Any other repo path you find yourself in came from `EXTRA_PODMAN_FLAGS`** —
   user-supplied, and invisible to these docs and the Makefile conventions. If
   your cwd is not under `/work`, that is why; nothing else about the layout
   changes.
@@ -53,8 +53,8 @@ the session log alongside it).
 | `entrypoint/dotfiles/.vimrc` | `/root/.vimrc` | yes — by the host's `~/.vimrc` when it exists (2026-09-10) |
 | `entrypoint/dotfiles/.config/containers/storage.conf` | `/root/.config/containers/storage.conf` | no (nested-podman fuse-overlayfs) |
 | `entrypoint/dotfiles/.config/crush/CLAUDE.md` | `/root/.config/crush/CLAUDE.md` | no (always-loaded conventions) |
-| `entrypoint/dotfiles/.config/crush/commands/` (8 files) | `/root/.config/crush/commands/` | no (slash commands) |
-| `entrypoint/dotfiles/.config/crush/reference/` (19 files) | `/root/.config/crush/reference/` | no (see doc mapping below) |
+| `entrypoint/dotfiles/.config/crush/commands/` (11 files) | `/root/.config/crush/commands/` | no (slash commands) |
+| `entrypoint/dotfiles/.config/crush/reference/` (25 files) | `/root/.config/crush/reference/` | no (see doc mapping below) |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.md` (blank default) | `/root/.config/crush/ai-coding-conventions.personal.md` | **YES — host overlay mounted over it** |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md` | `/root/.config/crush/ai-coding-conventions.personal.example.md` | no |
 | `entrypoint/crushrc` | `/root/.config/crush/crushrc` | no (model pin, catalog off, file-tool auto-allow) |
@@ -76,7 +76,7 @@ GOBIN=/usr/local/bin GOFLAGS=-trimpath`.
 | `~/.gitconfig` | `/root/.gitconfig` | only if it exists on the host |
 | `~/.vimrc` | `/root/.vimrc` | only if it exists on the host — shadows the baked `entrypoint/dotfiles/.vimrc` (2026-09-10) |
 | `~/.ai-coding-conventions.personal.md` | `/root/.config/crush/ai-coding-conventions.personal.md` | always (`touch`ed blank if absent) — **overrides the baked blank**; note the dotted host name → un-dotted container name |
-| `EXTRA_MOUNTS` | user-chosen | user-supplied; no doc covers these paths |
+| `EXTRA_PODMAN_FLAGS` | user-chosen | user-supplied; no doc covers these paths |
 | `$(MUSE_SOCK_DIR)` (default `~/.cache/runcrush-muse-sockets`; the launchers pass a per-run `mktemp -d`) | `/run/muse` | only under `LOCALHOST_ONLY=1` — the SSH-forwarded model unix sockets (`808x.sock`) that `shell.sh`'s socat bridge re-exposes as `127.0.0.1:808x`; carries `:Z` (harmless on a throwaway dir). See `client-network-modes-and-launchers.md` |
 
 > The **diversion stack** (`~/.config/crush/stack.md`) is **not** a host mount and is **not** baked (as of
@@ -123,6 +123,8 @@ the baked `~/.config/crush/reference/…` path**; in repo docs cite
 | `cpp-build-modernization.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-06) — **keep in sync** |
 | `sandbox-capability-map.md` | no | yes (copied from runClaudeInContainer) |
 | `bulk-edit-shell-first.md` | no | yes (delivered convention, added 2026-09-18) |
+| `repo-review-conventions.md` | yes | yes (copied from runClaudeInContainer; added 2026-11-08) — **keep in sync** |
+| `review_status.py` (a tool, not a doc) | yes | yes (copied from runClaudeInContainer; added 2026-11-09) — **keep the copies byte-identical** |
 
 Caveat: when the mounted project is runCrushInContainer itself, a filename
 search finds up to THREE copies of a baked doc (the baked one, the

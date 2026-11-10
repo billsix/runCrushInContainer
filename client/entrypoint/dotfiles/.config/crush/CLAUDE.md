@@ -50,6 +50,10 @@ line, name the positions/options, include your recommendation). Sub-rules:
 - **Commit SHAs rot when history is squashed** — at task archive and the session-end sweep, scan
   touched docs for SHA1 ids and confirm each still resolves (`git cat-file -e <sha>^{commit}`);
   repoint an orphaned one to the squashed commit that replaced it, or drop it.
+- **Doc file paths are repo-root-relative** — write `tasks/reference/x.md` even inside `tasks/` or
+  `tasks/archive/…`, never `../`-relative: the agent opens a prose path from the repo root, archiving
+  can't break it, and it greps everywhere. Emacs resolves it via `helm-ff-guess-ffap-filenames` in
+  every vendored `helm.el`.
 - **A bare label is not a reference** — gloss "Option 2"/"Tier 1"/"the task doc" on first use each
   response, with its file path.
 - **Name the positions in a decision question** — never "does that change your mind?"; state the
@@ -384,6 +388,13 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   (in Python map/filter is a comprehension; no TCO, so recurse only over bounded structures, else
   iterate). Read on demand before writing or reviewing a non-trivial recursion:
   `~/.config/crush/reference/recursive-design.md`.
+- **Names** (language-agnostic) — inline a binding used once and put a comment above the inlined
+  subexpression that gives it its name; two uses don't automatically earn a name either (absorb them,
+  e.g. `getattr(obj, name, fallback)`, or repeat a cheap expression); declare a name at the point of
+  use; nest a helper that has one caller inside that caller, and give its parameter the caller's name
+  when it means the same thing, so it deliberately shadows the outer binding (verify the helper never
+  needs the outer value). Python wording + example: `~/.config/crush/reference/python-coding-standard.md`
+  ("Inline a value used once…").
 - **C++: follow the shared coding standard** — what clang-format / clang-tidy / the warning level
   enforce, plus the judgment calls they can't check (`auto` with intent and qualifiers, initialize-
   and-`const`, RAII/`unique_ptr` with non-owning raw pointers, the four parameter shapes, `enum
@@ -510,7 +521,10 @@ needs BOTH `--cgroups=disabled`** (the sandbox `/sys/fs/cgroup` is read-only, el
 `cgroup.subtree_control: Read-only file system`) **and `--network=host`** (bridged netavark fails
 nested with `setns: Operation not permitted`; host networking sidesteps it). A project's Makefile
 won't have those flags — **don't silently edit their build files**; add them to a one-off run, or
-propose the edit and wait. The inner image store is disk-backed and ephemeral by default (RAM tmpfs
+propose the edit and wait. **A nested `podman build` whose `RUN` needs the network** fails with `pasta
+failed … Couldn't open network namespace` unless the session has `BUILDAH_ISOLATION=chroot` (check
+`echo $BUILDAH_ISOLATION`); if it is unset, run that one build with `--network=host` (print it with
+`make -n image`) and tell me to relaunch with `EXTRA_PODMAN_FLAGS="-e BUILDAH_ISOLATION=chroot"`. The inner image store is disk-backed and ephemeral by default (RAM tmpfs
 is opt-in via `NESTED_PODMAN_STORE=tmpfs`), and reuses the host image store read-only. **`NESTED_PODMAN`
 is run capability ONLY; a downstream project's image *content* keys off a separate opt-in `MINIMAL_IMAGE`**
 (renamed from the old overloaded `NESTED_PODMAN` 2026-09-27) — pass `MINIMAL_IMAGE=1` to a downstream
@@ -522,7 +536,7 @@ limits** (before assuming something isn't available), read
 container paths are baked vs mounted, and which reference docs exist only in the source repo —
 read `~/.config/crush/reference/container-file-layout.md`; the short version: the project you
 were pointed at is mounted at `/work`, and any other repo path you find yourself in came from
-`EXTRA_MOUNTS` and is invisible to these docs.
+`EXTRA_PODMAN_FLAGS` and is invisible to these docs.
 
 ## Ending a session — sweep the always-read docs
 
@@ -563,6 +577,26 @@ and open/blocked/proposed work is a task doc found by scanning each repo's `task
 persists on the host and the sweep trims it to pointers — harvesting durable detail into task/reference
 docs and deleting done narration — whereas here it is in-session, so the sweep harvests it before the
 `--rm` container discards it.)
+
+## Repo audits
+
+- `/audit-repo` — **quick**: a full read of the current repo, cross-referencing the docs (`CLAUDE.md`,
+  `README`, task docs) against the source for stale claims, undocumented features and internal
+  inconsistencies. Findings go in chat. **Read-only.**
+- `/audit-repo` with `deep` — a **deep review** of everything across ten named dimensions (docs,
+  docs ↔ code, product content, code, generators/tools, tests, proofs, build/CI, the open-task
+  backlog, the archive). Output is a dated, **frozen** record at
+  `tasks/review/<YYYY>/<MM>/<DD>/repo-review.md` (not `tasks/reference/`), pointed at from the
+  project `CLAUDE.md`. Never edit it afterwards: act on it through tasks that cite its sections. It
+  is expensive (it fans out readers by design, the named exception to the token-economy rule), so
+  run it **only when I ask**. Method: `~/.config/crush/reference/repo-review-conventions.md`.
+- `/findings-to-tasks` with a source (a `tasks/review/` record and optional `§sections`, or a list
+  from the conversation) — turn findings into task docs under `tasks/`, one per unit of work, each
+  `proposed — needs go-ahead` and citing its source section. It proposes the grouping and waits
+  before writing; it never edits the record.
+- `/review-status` with an optional record — which of a record's findings are done (citing task
+  archived), open (citing task in `tasks/`) or untracked, derived from the tasks' `**Source:**` lines
+  by `~/.config/crush/reference/review_status.py`. Read-only; the record stays frozen.
 
 ## Open-issues lists
 

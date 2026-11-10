@@ -1,6 +1,6 @@
 # Nested `dir`-store cleanup fails with "Permission denied" and leaks the store dir (client side)
 
-## BLUF — FIX COMMITTED (2026-10-02, `e7f665e`); FIRST REAL HOST-EXIT TEST STILL PENDING
+## BLUF — FIX COMMITTED (2026-10-02, `e7f665e`); BLOCKED ON ONE NESTED CLIENT EXIT BY THE MAINTAINER
 
 The Crush client's nested-podman `dir`-store cleanup trap ran `rm -rf "$STORE"` on the **host** as
 the unprivileged user. The inner **rootful** podman writes the store's image layers with the image's
@@ -14,21 +14,44 @@ subuid range is owned) and deletes everything quietly. Applied to both the `shel
 traps in `client/Makefile`. "Done" = a real nested client session **launched after the fix** exits
 with **no** `rm` errors and leaves **no** leftover dir under `NESTED_PODMAN_STORE_BASE`.
 
-**Status:** in progress — fix committed, awaiting the first exit of a post-fix session. No client
-exit has been observed yet; the runClaude side observed one on 2026-10-04 that still failed, but it
-was a session **launched before** its fix commit (`make` reads the recipe at launch), so it is not
-evidence against the fix. The verification spans sessions, so the plan below gives a cold session a
-ledger to fill and (after step 2) a log file to read. Archive once the ledger records one clean
-post-fix client exit.
-**Priority:** 2 (a visible, every-exit failure that also silently fills the disk). **Difficulty:** 3.
+**Status:** blocked — the fix and its cleanup log are committed, and the identical runClaude trap
+logged 11 clean exits (2026-10-04 to 2026-11-08), but no client exit has been observed: on 2026-11-08
+`~/.cache/crush-nested-cleanup.log` did not exist on the host, because no nested client session
+(`make shell NESTED_PODMAN=1`) had been exited since the log was added. The maintainer chose to run
+that test later rather than close on the runClaude evidence.
+**Blocked on:** the maintainer exiting one `make -C client shell NESTED_PODMAN=1` session on the Linux
+host (a session launched after 2026-10-04, left with `exit`).
+**Recheck:** `[LINUX HOST] cat ~/.cache/crush-nested-cleanup.log; ls -d ~/.cache/crush-nested.* 2>/dev/null`
+— cleared when the log has at least one `==` block; a `== clean` block with no leftover dir means done.
+**Priority:** 8 (blocked; the fix is in and the shared trap is verified). **Difficulty:** 1.
 **Created:** 2026-10-02 (William Emerison Six <billsix@gmail.com>). **Owner:** William Emerison Six
 <billsix@gmail.com>.
 **See also:** the substantive twin on the runClaude side,
-`runClaudeInContainer/tasks/nested-store-cleanup-permission-denied.md` (full root-cause write-up,
-the 2026-10-04 leftover forensics, the fallback ranking, and the same plan with `runclaude-nested.*`
-names); `tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md` (the task that introduced the
+`runClaudeInContainer/tasks/archive/2026/11/08/nested-store-cleanup-permission-denied.md` (full root-cause write-up,
+the 2026-10-04 leftover forensics, and the 11 clean logged exits); `tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md` (the task that introduced the
 client's ephemeral `dir` store and this trap); `tasks/reference/nested-podman-design.md` and its
 baked twin `client/entrypoint/dotfiles/.config/crush/reference/nested-podman-design.md`.
+
+## To finish (cold start)
+
+Everything except one observation is done. The trap in both `client/Makefile` recipe blocks
+(`shell`, `shell-exec`, under the comment "Nested `dir` store") is
+`podman unshare rm -rf "$STORE"` and appends a block to the log on every exit.
+
+1. **[LINUX HOST] (maintainer)** Launch and exit one nested client session:
+   `make -C <runCrushInContainer checkout>/client shell NESTED_PODMAN=1`, then type `exit`.
+   - The `runCrushNoInternet.sh` / `runCrushWithInternet.sh` launchers do **not** exercise this path:
+     they never set `NESTED_PODMAN=1`, and `NESTED_PODMAN` defaults to `0`.
+   - Leave with `exit` (or ctrl-D). Closing the terminal window kills the shell before the trap runs;
+     that leak is by design, not a fix failure.
+   - `NESTED_PODMAN_STORE_BASE` defaults to `~/.cache`; if you pass another base, read the log there.
+2. **[LINUX HOST]** Run the Recheck command (Status block above) and paste the output into a session.
+3. **(agent)** Add a ledger row below from the pasted `==` block (store name, `rm exit=`, `clean` or
+   `LEFTOVER`).
+   - `== clean`, no leftover dir: tick the Verification box, rewrite this doc as a done-record, and
+     archive it to `tasks/archive/<YYYY>/<MM>/<DD>/` (own commit, after the work commit).
+   - `== LEFTOVER`: pick the matching entry in "Fallbacks" below, apply it to both `client/Makefile`
+     blocks identically, and wait for the next exit.
 
 ## Context — how to read this cold
 
@@ -47,8 +70,8 @@ direct children, while everything beneath them is deleted.
 the fixed trap applies only to sessions **launched after** commit `e7f665e`; a client session that
 was already running then exits with the old bare `rm` and will still print the wall.
 
-This is the client-perspective record; the full root-cause analysis, on-disk evidence, and
-fallbacks live in the runClaude twin (see **See also**). The change is byte-identical in both
+This is the client-perspective record; the full root-cause analysis and on-disk evidence live in the
+runClaude twin (see **See also**); the fallbacks are below. The change is byte-identical in both
 sandboxes by design — so is the plan: whatever step 2 changes in runClaude's `Makefile` changes
 here in `client/Makefile`, in the same session, kept identical.
 
@@ -77,6 +100,8 @@ records the `podman unshare` requirement and the mode-555 mechanism).
 | When (local) | Store | Launched with | Exit result | Source of evidence |
 |---|---|---|---|---|
 | 2026-10-02 | — | — | fix committed (`e7f665e`, local master; not yet pushed as of 2026-10-04) | `git log` |
+| 2026-10-04 … 2026-11-08 | 11 × `runclaude-nested.*` (the runClaude twin, same trap) | **post-fix**, logged | all `rm exit=0` / `== clean` — strong evidence for the shared fix, but not a client exit | runClaude's `runclaude-nested-cleanup.log`, read 2026-11-08; that task's done-record |
+| 2026-11-08 | — | — | no client exit yet: `~/.cache/crush-nested-cleanup.log` does not exist on the host | maintainer ran the Recheck command, 2026-11-08 |
 | *next client launch* → *pending* | `crush-nested.??????` | **post-fix** trap | *to be recorded* | the maintainer's terminal at exit; `ls -d $NESTED_PODMAN_STORE_BASE/crush-nested.*` before any hand cleanup; the cleanup log after step 2 |
 
 Caveat: the maintainer said (2026-10-04) they will clean stragglers **as root by hand**. A missing
@@ -104,9 +129,35 @@ store dir therefore proves nothing on its own; the row needs the exit output or 
   twin's step 3 (`ls -ld --time-style=full-iso`, `du -sh`, `find ! -perm -u+w`, `find ! -uid 0`,
   `findmnt -no SOURCE /var/lib/containers` for the running session's store name).
 - [ ] **Step 4 — decide.** One clean post-fix row → check the Verification box and archive (own
-  commit, after the work commit). A leftover → pick the matching fallback from the runClaude twin
-  ("Fallbacks if `podman unshare rm -rf` does not clean the store"), apply it identically to both
-  `client/Makefile` blocks, add a ledger row.
+  commit, after the work commit). A leftover → pick the matching fallback from "Fallbacks" below,
+  apply it identically to both `client/Makefile` blocks, add a ledger row.
+
+## Fallbacks if `podman unshare rm -rf` does not clean the store
+
+Ranked. Pick by the evidence in the log, never by guess. Apply each one identically to both
+`client/Makefile` blocks (and the runClaude twin's two, which run the same trap). Carried over
+2026-11-08 from the runClaude task before it was archived.
+
+- **`podman unshare` itself errors** (e.g. "cannot re-exec process to join the existing user
+  namespace", or podman missing from `PATH` in a non-interactive `make`): the `rm` never ran, so
+  the whole store is left (GBs, not 88 KB). Likely cause is host rootless state, not the fix;
+  check `podman unshare true` on the host by hand. Fallback: run the cleanup as a throwaway
+  container, which uses the same userns without joining the pause process:
+  `podman run --rm -v "$STORE":/s:Z registry.fedoraproject.org/fedora:45 rm -rf /s/storage /s/*`
+  (an image the host already has; it cannot remove the mountpoint itself, so follow with a plain
+  host `rmdir "$STORE"`).
+- **`rm` ran but a 555/550 parent still blocked it** (would mean `CAP_DAC_OVERRIDE` was not
+  effective, which is unexpected): prepend `chmod -R u+rwX "$STORE"` inside the same `unshare`. This
+  also works as a bare-host fallback for host-user-owned files, but not for subuid-owned ones.
+- **Subuid-owned files remain** (`find ! -uid <host uid>` on the host): the unshare mapping did
+  not cover them. Check `/etc/subuid` for the host user versus
+  `podman unshare cat /proc/self/uid_map`; a mapping change (e.g. `usermod --add-subuids`) is a host
+  fix, after which `podman system migrate` picks it up.
+- **Clean the store from inside the sandbox instead** (design alternative, not a patch): have
+  `shell.sh`'s exit path stop the inner podman and `rm -rf /var/lib/containers/*` (inner uid 0 has
+  `CAP_DAC_OVERRIDE` in the userns, so this always works), leaving the host trap only a `rmdir`.
+  Downside: does nothing if the sandbox is killed rather than exited, so keep the host `unshare`
+  trap as the primary either way.
 
 ## Cleaning already-leaked dirs (host)
 

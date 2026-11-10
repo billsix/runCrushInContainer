@@ -36,6 +36,15 @@ always-loaded docs lean**, then **not reading files you don't need to read**.
 - **If you do spawn, brief tightly with pointers, not context.** A fresh agent needs the goal + the
   file/line pointers + what's already ruled out — not a re-derivation. The tighter the brief, the less it
   reads.
+- **Say whether the agent may spawn agents of its own, and give it a budget.** An agent with a big
+  task will fan out unless told otherwise, and its children's cost never shows in its report
+  (William Emerison Six <billsix@gmail.com>, 2026-11-09): a gacalc archive pass briefed without that line spawned nine workers. Write "do the
+  work yourself; do not spawn agents", or "you may use up to N workers".
+
+- **The named exception: a deep review the maintainer asked for** (`/audit-repo deep`). Its job is to
+  read a whole repository, so it fans out fresh (non-fork) readers of ~8–10K lines each by design; the
+  first one cost millions of subagent tokens. The brief and sizing rules above still apply. Method:
+  `repo-review-conventions.md`.
 
 ## What NOT to read (and how to read less)
 
@@ -46,6 +55,11 @@ always-loaded docs lean**, then **not reading files you don't need to read**.
   — e.g., reviewing a whole C++/Rust source tree before a build you'll run anyway.
 - **Need a region, not the file?** `rg -n`/`git grep -n` to the exact spot, then `Read` with
   `offset`/`limit`. Reserve whole-file reads for small files you'll actually edit end-to-end.
+- **Sweeping several repos? Enumerate the repos, don't `grep -r` the mount root.** A shared mount (e.g.
+  `/mnt/sda1`) can also hold podman image stores (a host graphroot, `NESTED_PODMAN_STORE_BASE`), each
+  millions of files; `grep -r … /mnt/sda1/*/` walked them and hit the 2-minute tool timeout
+  (2026-11-07). List the repos first (`ls -d /mnt/sda1/*/.git`), then `git -C <repo> grep` each, which
+  also skips untracked and ignored trees.
 - **Don't pull build output into context.** Redirect verbose `cmake`/`cargo`/`emcc`/`make` output to a
   file and inspect the **exit status + a short `tail`**; never cat a full build log. A `make` target that
   rebuilds the image re-runs expensive layers — run the target's own `podman run`/build line against the
