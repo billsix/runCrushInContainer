@@ -250,6 +250,21 @@ no-op with a comment. **Caveat:** `match` earns its keep on *structural* pattern
 every case is a boolean guard is an `if`/`elif` in different syntax, justified only by the
 exhaustiveness argument — don't convert every two-branch conditional.
 
+### Options are enums, not strings
+
+A parameter that selects one of a fixed set of options (a mode, a method, a backend) takes an
+`enum.Enum`, never a string or a `Literal["a", "b"]` of strings. Define the enum next to the
+function that takes it (or in the lowest module that names it in a signature), export it, give it a
+docstring listing what each member means, and default the parameter to a member
+(`backend: MatrixBackend = MatrixBackend.NUMPY`). Dispatch with `match` on the members, and keep the
+`case _` (rule above): there it raises `TypeError` naming the enum, which is what a caller still
+passing the old string sees. Why: a typo in a string option is a runtime error at best and a silent
+wrong branch at worst; an enum member is checked by the type checker and the editor completes it.
+Not options: labels, titles, file names, LaTeX, and values a library dictates (matplotlib colours) stay
+`str`. Converting a published API this way is a breaking change (changelog + version bump). Worked
+example: github.com/billsix/geometricalgebra (`frame.InverseMethod`, `functions.MatrixBackend`,
+2026-11-10).
+
 ### Refactoring a conditional — vary the mechanism (Rules A–E)
 
 Before touching one, ask in order:
