@@ -25,7 +25,7 @@ Rust (+ rust-analyzer, rustfmt), Go (+ gopls), Python 3 (with scientific stack:
 numpy/scipy/pandas/matplotlib/sympy, ipython, notebook, pytest(+xdist), mypy,
 pylint, black, ruff, ty, uv, cython, nanobind), Java (OpenJDK 25 + latest,
 ant/maven), .NET SDK 8, Node.js/npm, Ruby, PHP, Perl, R, Julia, Octave,
-Haskell (ghc, cabal), OCaml (+ dune, opam), Erlang, Elixir, Clojure, Racket,
+Haskell (ghc, cabal, hlint, ormolu), OCaml (+ dune, opam), Erlang, Elixir, Clojure, Racket,
 Common Lisp (sbcl, clisp), Lua (+ luarocks), Zig, Swift, assembly (nasm, yasm),
 shells (bash, zsh, fish, ksh), TeX Live (with dvipng/dvisvgm/standalone),
 WebAssembly (wabt), and Lean 4 (theorem prover / proof assistant — `lean` +
