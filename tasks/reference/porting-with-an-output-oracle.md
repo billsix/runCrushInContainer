@@ -86,6 +86,18 @@ stable `list.sort(reverse=True)` matches C++ `stable_sort` with `>` by construct
 - **Keep the originals as the permanent oracle.** The port is additive; the C++ samples stay in the
   tree exactly so the harness can always be re-run.
 
+## A behavior-preserving refactor's oracle is the unmodified build — run it twice
+
+For a refactor that must change nothing (a codemod, a dispatch rewrite, a modernization pass), build
+the unmodified tree beside the changed one, and run both over every input the repo has: test
+programs, examples, and each output mode that reaches the changed code. Compare stdout, stderr and
+exit status. **Run the "before" binary twice per case**, and skip any case where it disagrees with
+itself: a program that reads the clock, or that a timeout cuts off at a different point, can't be
+compared byte for byte, and chasing its diff wastes time. Report the skips, so a reader can see
+how much went unchecked. (github.com/billsix/spimulator, 2026-11-11: 447 identical, 6 skipped as
+nondeterministic, after each step of a C dispatch rewrite. Record:
+`tasks/archive/2026/11/11/c-switch-and-else-if-chains.md`.)
+
 ## Keep the old build alive until the new one passes the oracle
 
 For a build-system port (autotools→Meson), run both in parallel until the new build reproduces

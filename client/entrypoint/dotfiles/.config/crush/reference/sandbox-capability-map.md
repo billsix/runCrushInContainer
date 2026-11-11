@@ -48,6 +48,10 @@ WebAssembly (wabt), and Lean 4 (theorem prover / proof assistant — `lean` +
 - **qemu** (full package) — user-mode emulation for running foreign-arch
   binaries (the spimulator multi-arch shim verification path).
 - **mingw64-gcc** — Windows cross-builds.
+- **binutils-mips64-linux-gnu** (added 2026-11-11) — GNU `as`/`objdump` for MIPS, the encoding oracle
+  for an assembler or simulator: `mips64-linux-gnu-as -mabi=32 -mips32r2 -EB -o x.o x.s`, then
+  `mips64-linux-gnu-objdump -d x.o` (add `-mfp64` for paired-single). `llvm-mc -triple=mips
+  -show-encoding` is quicker, but lacks some instructions (the paired-single compares, for one).
 - glibc-static / libstdc++-static for static linking.
 
 ## GUI, graphics, media
