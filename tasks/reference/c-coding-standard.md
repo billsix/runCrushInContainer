@@ -56,7 +56,7 @@ destructors, no references, and no templates to lean on.
   at whatever the installed compiler defaults to, which is not reproducible). Build at
   `-Wall -Wextra -Wpedantic` and add the ones that catch real C bugs: `-Wconversion`
   `-Wsign-conversion` (silent integer-conversion bugs), `-Wshadow`, `-Wvla` (flag accidental VLAs,
-  below), `-Wwrite-strings`, `-Wstrict-prototypes` `-Wold-style-definition` (K&R-style declarations
+  below), `-Wswitch-enum` and `-Wimplicit-fallthrough` (see "Dispatch" below), `-Wwrite-strings`, `-Wstrict-prototypes` `-Wold-style-definition` (K&R-style declarations
   that defeat argument checking), `-Wcast-align`, `-Wformat=2`. A new warning in code you touched is
   yours to fix **at the source**, never with a `-Wno-`. Where the gate runs sanitizers
   (`-fsanitize=address,undefined`), a report is a failure, not noise — UBSan is the practical way to
@@ -275,6 +275,80 @@ destructors, no references, and no templates to lean on.
 - **Report the failure from the function that discovers it** and let the caller decide; don't
   `exit()` or `abort()` from deep in a library (reserve those for truly unrecoverable invariants,
   with a message).
+
+### Dispatch — a `switch` with a `default`, and one chain per decision
+
+The C form of the cross-project "prefer total dispatch" rule (`code-style-conventions.md`), and of the
+Python standard's `match`-with-`case _` and `if`/`elif`/`else` rules. (Learned from converting a
+simulator's C engine, 2026-11-11, William Emerison Six <billsix@gmail.com>; worked example below.)
+
+- **A decision on one value is a `switch`** when it has three or more outcomes, or when its tests list
+  several constants with `||` (stacked `case` labels read better than an `||` list). A two-way test
+  on one constant stays `if`/`else`. Equality on strings can't be a `switch`; leave the chain, or
+  use a lookup table when it is long.
+- **Every `switch` has a `default`.** Write the remaining outcome down:
+  - **Other values are legitimate:** a `break` with a comment saying what happens to them ("any
+    other opcode stores nothing").
+  - **The cases cover every value:** call the project's fatal-error function with a message naming
+    the function and the bad value. Add a comment saying it is never reached and why ("the test above
+    admits only `s`, `t` and `d`", "byte is `addr & 3`, and each value has a case"). A message
+    diagnoses a broken invariant; C23 `unreachable()` would make it undefined behavior instead.
+- **A `default` turns off `-Wswitch`'s missing-enumerator warning, so build with `-Wswitch-enum`.**
+  `-Wswitch-enum` warns about an unlisted member even when a `default` exists, so an exhaustive enum
+  switch keeps its compile-time check and gains the run-time one. A switch that deliberately leaves
+  most members to its `default` opts out at the site, with the reason in a comment:
+  `#pragma GCC diagnostic push` / `ignored "-Wswitch-enum"` / `pop` around it (gcc and clang both
+  accept it). A switch on an `int` holding enumerators (an anonymous `enum`, or a value stored in a
+  narrower integer field) gets no check at all; name the enum type and give the subject that type
+  if the check matters.
+- **Before writing a fatal `default`, find every value that can reach the switch**, from the callers
+  and the data, not from the case list. A switch that looks exhaustive may not be: a table row of the
+  same type that nobody listed. (In the worked example, 16 table rows of the compare type reached a
+  "complete" 32-case switch, and two opcodes reached a jump parser that emitted nothing for them.)
+  Then a fatal `default` would be a behavior change, so keep the behavior, document it in the
+  `default`, and file the bug.
+- **A run of early-exit `if`s that make one decision is one chain.** Separate `if`s whose bodies all
+  leave (`return`, `break`, `continue`, `goto`, a no-return call) are mutually exclusive. Write them
+  as `if` / `else if` / `else`, with the code that followed the run in the final `else`, or as a
+  `switch` if they test one value (by the rule above).
+  - **Exempt:** a single guard before the main body; independent checks that can each fire.
+  - **Also exempt:** a chain whose branches all leave and whose following code is the rest of a long
+    body (a dispatch loop). Nesting all of it one level deeper doesn't read better.
+- **Every `if` / `else if` chain ends in an `else`.** It holds a comment naming the remaining outcome
+  ("below level 3 there is no bit layout", "no offset: `off` stays 0"), or the fatal call if that
+  outcome is impossible. A chain inside a macro gets the `else` too, inside the macro.
+
+**Converting a chain to a `switch` — the C-specific hazards:**
+- **`break` changes meaning.** Inside a `switch`, `break` leaves the `switch`, not an enclosing loop
+  or outer `switch`. Check every `break` in a converted body. `continue` and `return` are unaffected,
+  so a guard run ending in `continue` inside a loop converts safely.
+- **The subject is evaluated once.** A run of `if (peek() == X)` calls `peek` per test. Check that
+  the call has no side effect a second call would see.
+- **`case` labels are integer constant expressions.** Enumerators, character constants and literals
+  qualify. A `const int` object doesn't; a C23 `constexpr` object does.
+- **A `case` that declares a variable gets braces**, `case X: { int n = …; break; }`, so the name is
+  scoped to its case.
+- **Fall-through is checked** under `-Wimplicit-fallthrough`. Stacked labels with no statements
+  between them are fine; deliberate fall-through is `[[fallthrough]];` (C23).
+- **Comments move with their tests.** A comment above an `if` becomes the comment on its `case` or
+  inside its branch. Check afterwards that every comment survived.
+
+**Checking the rules:** `c_dispatch_check.py`, a SHARED, VENDORED tool that sits beside this doc
+(canonical in github.com/billsix/runClaudeInContainer `tasks/reference/`). Vendor it into a C
+project's `tools/` and run `python3 tools/c_dispatch_check.py BUILDDIR [SOURCE ...]` from the
+project root. It reads clang's JSON AST through the build's `compile_commands.json` and lists
+every one-value chain that should be a `switch`, chain with no `else`, guard run and `switch` with
+no `default`. A `dispatch-check: ok` comment, with the reason, accepts a site. It exits 1 if
+anything is left, so a clean project can gate on it.
+
+**Verifying such a refactor:** it must not change behavior, so derive the "before" mechanically.
+Build the unmodified tree, and run both binaries over every input the repo has: test programs,
+examples, and the output modes that reach the changed code. Diff stdout, stderr and exit status.
+Run the "before" binary twice per case, and skip a case where it disagrees with itself (a program
+that reads the clock or hits the timeout), rather than chasing that diff. A text-rewriting codemod
+must recognize a run exactly: no `else`, and a body that leaves. A looser match merges unrelated
+`if`s into the chain. Worked example: github.com/billsix/spimulator
+`tasks/archive/2026/11/11/c-switch-and-else-if-chains.md`.
 
 ### Structs, constants, and the preprocessor — prefer the language to the macro
 
