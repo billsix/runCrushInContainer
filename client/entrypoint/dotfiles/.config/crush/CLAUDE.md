@@ -429,6 +429,12 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   Read on demand: `~/.config/crush/reference/rust-coding-standard.md`. Primarily from Google's Rust style
   guide — and it records where the **house style deliberately OVERRIDES** that guide (e.g. "annotate every
   binding", stronger than Google's inference default), so a reviewer sees the deviations, not just the baseline.
+- **Haskell: follow the shared coding standard** — `-Wall -Werror` (+ `hlint`/`ormolu`) as the tool
+  tier, then the judgment calls: a type on every do-bind and `let`/`where` binding (lambda, case,
+  argument-pattern and guard variables exempt), `forall` for outer type variables, concrete types for
+  single-use locals, totality, ADTs over strings, explicit/qualified imports, strictness. Read it
+  **before** writing Haskell, including a throwaway `tasks/adhoc/` program or a `tools/` tool:
+  `~/.config/crush/reference/haskell-coding-standard.md`.
 - **`~/.config/crush/reference/javascript-coding-standard.md`** — read **before** writing/reviewing
   vanilla JavaScript: JSDoc type annotations on **every binding** (the Python-style rule via JSDoc), the
   `checkJs` strict type-gate, and the `make type-check` target. **Deno is the default gate** (`deno check

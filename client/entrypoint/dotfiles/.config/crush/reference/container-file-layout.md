@@ -111,6 +111,7 @@ the baked `~/.config/crush/reference/…` path**; in repo docs cite
 | `c-coding-standard.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-15) — **keep in sync** |
 | `c-modernization-sweep.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-16) — **keep in sync** |
 | `rust-coding-standard.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-23) — **keep in sync** |
+| `haskell-coding-standard.md` | yes | yes (copied from runClaudeInContainer; added 2026-11-11) — **keep in sync** |
 | `rust-gui-tui-and-ecosystem.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-23) — **keep in sync** |
 | `tauri-desktop-apps.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-23) — **keep in sync** |
 | `sphinx-book-conventions.md` | yes | yes — **keep the two copies in sync** |
