@@ -49,6 +49,7 @@ dnf install -y \
     binutils \
     binutils-devel \
     binutils-gold \
+    binutils-mips64-linux-gnu \
     bison \
     blas-devel \
     bmon \
