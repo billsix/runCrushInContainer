@@ -315,6 +315,14 @@ at) when you create it, and never `git rm` the `.keep`** — the first cleanup t
 file would otherwise remove the directory from the repo (2026-09-06, mvp: archiving the last one-shot
 codemods `git rm`'d `tasks/adhoc/` itself; the maintainer restored it with a `.keep`).
 
+**An ad-hoc script is held to its language's coding standard — read that standard BEFORE writing
+it.** "Throwaway" says where the script lives, not how it is written: a Python one follows
+`~/.config/crush/reference/python-coding-standard.md` in full (annotate every binding, parameterized
+generics, Google docstrings, `match` + `case _`), and a C/C++/Rust/JS one follows its doc in
+`~/.config/crush/reference/`. Run the project's checkers (`ruff`, `ty`, `check_local_annotations.py`)
+on it too. (Incident 2026-11-11, in the Claude sandbox: two `tasks/adhoc/` scans written without
+opening the Python standard, so most bindings were unannotated.)
+
 **Bulk op (find-many → fix-each)? Discover with a shell tool, don't tree-walk in Python** — one
 `rg -n` / `git grep -n` returns just the matches instead of spending the model's small context
 reading every file front-to-back. Log them to `tasks/adhoc/<slug>/data/` (a committed *snapshot*
@@ -328,7 +336,8 @@ bash tool runs an embedded POSIX shell, not zsh/bash. Command idioms + gotchas:
 
 ## Choosing a script's language — shell for glue, Python for logic
 
-Writing an ad-hoc script or a `tools/` tool: **shell when the job is to DRIVE programs**
+Writing an ad-hoc script or a `tools/` tool (then read the chosen language's coding standard before
+writing it — see "Ad-hoc scripts"): **shell when the job is to DRIVE programs**
 (spawn/pipe/redirect, sequence `git`/`make`/`podman`/compiler calls, `exec` wrappers); **Python the
 moment it does DATA/CONTROL logic shell does awkwardly** — the test is the work, not the length.
 Tells for Python (any one): `declare -A` maps/sets; recursion or a graph/closure walk;
@@ -376,7 +385,8 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
 ## Code conventions
 
 - **Python: follow the shared coding standard** — ruff-enforced tiers plus the judgment calls ruff
-  can't check (naming, expression/mutation rules, annotate-every-binding, idioms). Read on demand:
+  can't check (naming, expression/mutation rules, annotate-every-binding, idioms). Read it **before**
+  writing Python, including a throwaway `tasks/adhoc/` script or a `tools/` tool:
   `~/.config/crush/reference/python-coding-standard.md`. A project keeps only its own repo-specific
   Python invariants inline in its `CLAUDE.md`; everything general lives in that shared doc.
 - **Recursive / functional design** (language-agnostic) — map, filter, and fold are the names of
