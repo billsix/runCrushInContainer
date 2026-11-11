@@ -333,6 +333,14 @@ simulator's C engine, 2026-11-11, William Emerison Six <billsix@gmail.com>; work
 - **Comments move with their tests.** A comment above an `if` becomes the comment on its `case` or
   inside its branch. Check afterwards that every comment survived.
 
+**Checking the rules:** `c_dispatch_check.py`, a SHARED, VENDORED tool that sits beside this doc
+(canonical in github.com/billsix/runClaudeInContainer `tasks/reference/`). Vendor it into a C
+project's `tools/` and run `python3 tools/c_dispatch_check.py BUILDDIR [SOURCE ...]` from the
+project root. It reads clang's JSON AST through the build's `compile_commands.json` and lists
+every one-value chain that should be a `switch`, chain with no `else`, guard run and `switch` with
+no `default`. A `dispatch-check: ok` comment, with the reason, accepts a site. It exits 1 if
+anything is left, so a clean project can gate on it.
+
 **Verifying such a refactor:** it must not change behavior, so derive the "before" mechanically.
 Build the unmodified tree, and run both binaries over every input the repo has: test programs,
 examples, and the output modes that reach the changed code. Diff stdout, stderr and exit status.
