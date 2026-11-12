@@ -65,8 +65,8 @@ mounted from them at all. Done means:
    `mount_program`. Keep `/etc/containers/storage.conf` for older podman. Use
    `ENV CONTAINERS_STORAGE_CONF` only if the drop-in proves unreliable. Update the comment above
    the `COPY` in `client/Dockerfile` to describe the current mechanism.
-3. **Launchers.** In `client/runCrush-common.sh`, pass `NESTED_PODMAN=1` to `make shell` per the
-   answer to open question 1, so the client gets `/dev/fuse`, the capabilities and the read-only
+3. **Launchers.** In `client/runCrush-common.sh`, pass `NESTED_PODMAN` (default 1, see Decisions) to
+   `make shell`, so the client gets `/dev/fuse`, the capabilities and the read-only
    host store mount.
    - Pass `NESTED_PODMAN_HOST_IMAGESTORE` through if it's set in the environment, so a fork can
      point at a different store.
@@ -95,11 +95,11 @@ mounted from them at all. Done means:
      `podman build` of a `FROM <host image>` Containerfile succeeds with no pull. In no-internet
      mode, that build is the proof the feature works.
 
-## Open questions
+## Decisions
 
-1. Should the launchers always launch with `NESTED_PODMAN=1`, or opt in through an environment
-   variable (for example `RUNCRUSH_NESTED=1`)? The trade-off: always-on grants every Crush session
-   `sys_admin`, `mknod`, `net_admin`, `/dev/fuse` and `unmask=ALL`, a wider attack surface for an
-   agent driving a local model. Opt-in keeps today's default. The maintainer's instruction ("update
-   README.md and … the two run scripts … to use it") reads as always-on. Recommendation: always-on
-   in the with-internet launcher, and opt-in in the no-internet one, whose point is isolation.
+- **Both launchers default to `NESTED_PODMAN=1`** (William Emerison Six <billsix@gmail.com>,
+  2026-11-12). This applies to the no-internet launcher too, despite the wider privileges it grants
+  (`sys_admin`, `mknod`, `net_admin`, `/dev/fuse`, `unmask=ALL`). It defaults to on, so a launch can
+  still turn it off: `runCrush-common.sh` reads it from the environment as
+  `NESTED_PODMAN="${NESTED_PODMAN:-1}"` and passes it to `make shell`, so `NESTED_PODMAN=0` before
+  the launcher opts out. Document the opt-out in `README.md`.
