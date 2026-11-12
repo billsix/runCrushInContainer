@@ -474,19 +474,37 @@ code breaks later at import or type-check.
 - **Run the type-checker against the project's own venv.** The gate does `source
   /venv/bin/activate` before `ty check`, so `ty` sees the baked deps; a bare `ty check` outside
   the venv resolves against the system interpreter and reports phantom import/attribute errors.
-- **Prefer distro `python3-*` packages for the heavy/native deps** (numpy, matplotlib, sympy, glfw,
-  pyopengl, pillow, …) via a `python -m venv --system-site-packages` venv, and `pip`-install only the
-  leaf / pure-Python deps. Pin a distro-provided dep to the version the distro **actually ships** (read
-  it from the built image, don't guess) so the pin is already-satisfied by system-site and doesn't
-  force a divergent second pip build, while still making a host install reproducible. The full
-  image/packaging mechanics are the container-template contract (the personal overlay's "Self-contained
-  images" + "Python deps" sections), not this code-style doc.
+- **In an image, every Python package lives in the venv, and the venv copy wins** — install them
+  all with `uv pip install` into `/venv`, even ones the distro also ships as `python3-*`. Do **not**
+  try to reuse the distro copies through `--system-site-packages` by pinning to the distro version
+  and installing with plain `pip`: pip then reports "already satisfied" and writes **no**
+  `/venv/bin` console script, so `pytest` / `sphinx-build` / `jupyter` resolve to the distro's
+  `/usr/bin` scripts, which run as `#!/usr/bin/python3`, cannot see `/venv`, and fail to import the
+  venv's packages (bare `pytest` dies on its first import; a book's autodoc and executed notebooks
+  break; `python -m pytest` would work, but nobody types that). uv does not count system packages
+  as installed, so it gives `/venv` its own copy and its own scripts — which is what you want.
+  Only a package with **no** usable wheel stays distro-only (`dnf install` it, filter it out of the
+  pip step).
+- **Lock the whole resolved set, not just the direct deps.** Generate a `constraints.txt` with
+  `uv pip compile` for the image's own Python (direct deps + build prereqs like setuptools/wheel +
+  every transitive dependency), install with `-c constraints.txt`, and regenerate it from a
+  `make update-pins` target (needs the network) — never by hand. Direct pins alone leave the
+  transitive deps free to drift, and a drifted transitive dep breaks things far from its cause.
+  The image/packaging mechanics are the container-template contract (the personal overlay's
+  "Self-contained images" + "Python deps" sections), not this code-style doc.
 - Worked incident (modelviewprojection, 2026-11-06): unpinned `moviepy` + `Pillow==13.0.0` (the
   only pillow with a cp315 wheel on Python 3.15) → uv backtracked `moviepy` to the 6-year-old
   `1.0.3` (no top-level `ImageSequenceClip`), surfacing as a `ty` `unresolved-attribute` **and**
   a latent runtime `AttributeError`. The "unpinned" dep had passed every build until the new
   Python + a conflicting pin met. Fix: pin `moviepy==2.1.1` and override its overly-conservative
   `pillow<12` cap at install.
+- Worked incident (modelviewprojection, 2026-11-12): the image `uv pip install`ed `requirements.txt`
+  into a `--system-site-packages` venv expecting distro-matching pins to be "already satisfied" —
+  but uv ignores system packages, so all 15 distro-provided packages were installed twice, and a
+  venv `mpmath` broke the distro `sympy`'s import. Switching to plain `pip` removed the duplicates
+  but left `/venv/bin` with no `pytest` or `sphinx-build`, so `make test` and the book failed.
+  Fix: venv wins (uv installs everything) plus a `constraints.txt` lock — the layout
+  github.com/billsix/geometricalgebra already used.
 
 ## Cross-links
 
