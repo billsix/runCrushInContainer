@@ -16,14 +16,31 @@ cheaply here.
   reference docs and the baked `nested-podman-design.md` copy (byte-identical) are updated.
   `tasks/offline-nested-podman-base-images.md` is re-scoped.
 
-**Remaining check (step 7, needs the maintainer):**
-1. [LINUX HOST] `make -C client image`.
-2. [LINUX HOST] Run each launcher.
-3. [CONTAINER] Expect no `[nested podman]` warning, host images listed read-only, and a `podman
-   build` of a two-line `FROM localhost/crushcontainer:latest` Containerfile that succeeds with no
-   pull, in no-internet mode especially.
+**Remaining check (step 7, required, the maintainer's; the client can't be rebuilt cheaply from a
+sandbox):**
+1. [LINUX HOST] Optional: commit or stash the staged work first. It is staged on `master` and
+   uncommitted.
+2. [LINUX HOST] `make -C client image`.
+3. [LINUX HOST] Run each launcher from a project directory:
+   `/path/to/runCrushInContainer/client/runCrushWithInternet.sh you@mac ""`, then
+   `…/runCrushNoInternet.sh you@mac ""`.
+4. [CONTAINER] In each mode:
+   - there was no `[nested podman]` warning at start;
+   - `podman info --format '{{json .Store.GraphOptions.additionalImageStores}}'` prints
+     `["/var/lib/shared-images"]`;
+   - `podman images` lists host images with R/O true;
+   - a `podman build` of a two-line Containerfile (`FROM localhost/crushcontainer:latest` plus
+     `RUN true`) succeeds with no pull. This matters most in no-internet mode.
+5. [LINUX HOST] Check the opt-out: `NESTED_PODMAN=0 …/runCrushWithInternet.sh you@mac ""` starts a
+   client with no `/dev/fuse` and no `/var/lib/shared-images`.
+6. If all of that passes, archive this task (done-record rewrite, then `git mv`, as its own commit
+   after the work commit). Then re-check `tasks/offline-nested-podman-base-images.md` and close it
+   if it no longer applies.
 
-Archive this task after that.
+**Optional follow-up, not done.** A nested `podman build` whose `RUN` steps need the network still
+needs `-e BUILDAH_ISOLATION=chroot` passed by hand (README, "Put that throwaway store on a different
+disk"). Since the launchers now default to nested podman, they could add it whenever `NESTED_PODMAN`
+is 1. It is only useful in with-internet mode. Not done yet; it needs the maintainer's yes.
 **Priority:** 3
 **Difficulty:** 4
 **Started:** 2026-11-12
