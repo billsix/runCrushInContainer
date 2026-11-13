@@ -11,6 +11,7 @@
 #   4  SIGINT mid-session           → exit 130; tunnel closed; temp dir gone
 #   5  make shell exits 7           → exit 7 propagated; tunnel closed; temp dir gone
 #   6  usage errors (0 args, 1 arg) → exit 2, ssh/make never called
+#   7  NESTED_PODMAN=0 in the env   → make shell gets NESTED_PODMAN=0 (the opt-out)
 # Plus `bash -n` + shellcheck on the three scripts and a `make -n` render of the shell target.
 # Paths are relative to this script / the repo root — nothing container-absolute.
 # Run from anywhere:  bash tools/check_launchers.sh   (promoted from tasks/adhoc/runcrush-launcher-scripts/ 2026-09-22)
@@ -130,6 +131,10 @@ check "make -n: EXTRA_PODMAN_FLAGS threaded" grep -q -- '-v /a:/b:z' <<<"$render
 # The old name, EXTRA_MOUNTS, is still accepted.
 render_old=$("$real_make" -n -C "$client" shell LOCALHOST_ONLY=1 MUSE_SOCK_DIR=/tmp/x PROJECT=/p EXTRA_MOUNTS="-v /c:/d:z" 2>&1)
 check "make -n: EXTRA_MOUNTS alias threaded" grep -q -- '-v /c:/d:z' <<<"$render_old"
+# NESTED_PODMAN=1 mounts the host image store read-only (any existing dir stands in for it).
+render_nested=$("$real_make" -n -C "$client" shell NESTED_PODMAN=1 NESTED_PODMAN_STORE=tmpfs NESTED_PODMAN_HOST_IMAGESTORE="$repo_root" PROJECT=/p 2>&1)
+check "make -n: host image store mounted ro" grep -q -- "-v $repo_root:/var/lib/shared-images:ro" <<<"$render_nested"
+check "make -n: /dev/fuse when nested"  grep -q -- '--device /dev/fuse' <<<"$render_nested"
 
 # ---- case 1: no-internet happy path ----------------------------------------------------------
 echo "== 1 no-internet happy path"
@@ -142,6 +147,7 @@ line=$(make_shell_line)
 check "PROJECT=\$PWD"                    grep -q "PROJECT=$proj " <<<"$line"
 check "EXTRA_PODMAN_FLAGS passed verbatim"     grep -q -- 'EXTRA_PODMAN_FLAGS=-v /a:/b:z ' <<<"$line"
 check "LOCALHOST_ONLY=1"                 grep -q 'LOCALHOST_ONLY=1 ' <<<"$line"
+check "NESTED_PODMAN=1 by default"       grep -q 'NESTED_PODMAN=1 ' <<<"$line"
 check "MUSE_SOCK_DIR = the mktemp dir"   grep -q "MUSE_SOCK_DIR=$(cat "$log/tmpdir")\$" <<<"$line"
 check "ssh: -f -N ExitOnForwardFailure ControlMaster" grep -q -- '-f -N -o ExitOnForwardFailure=yes -o ControlMaster=yes' "$log/ssh.args"
 check "ssh: five unix-socket -L forwards" [ "$(grep -o -- '-L [^ ]*/808[0-4]\.sock:127.0.0.1:808[0-4]' "$log/ssh.args" | wc -l)" -eq 5 ]
@@ -157,6 +163,7 @@ proj=$(mktemp -d); cd "$proj"
 check "exit 0 (got $rc)" [ "$rc" -eq 0 ]
 line=$(make_shell_line)
 check "LOCALHOST_ONLY=0"                 grep -q 'LOCALHOST_ONLY=0 ' <<<"$line"
+check "NESTED_PODMAN=1 by default"       grep -q 'NESTED_PODMAN=1 ' <<<"$line"
 check "EXTRA_PODMAN_FLAGS empty"               grep -q 'EXTRA_PODMAN_FLAGS= ' <<<"$line"
 check "ssh: five TCP -L forwards"        [ "$(grep -o -- '-L 127.0.0.1:808[0-4]:127.0.0.1:808[0-4]' "$log/ssh.args" | wc -l)" -eq 5 ]
 check "tunnel closed"                    tunnel_closed
@@ -212,6 +219,13 @@ check "one arg → exit 2 (got $rc)"       [ "$rc" -eq 2 ]
 "$client/runCrushNoInternet.sh" -h "" >/dev/null 2>&1; rc=$?
 check "-h as target → exit 2 (got $rc)"  [ "$rc" -eq 2 ]
 check "ssh/make never called"            bash -c '[ ! -e "$1/ssh.args" ] && [ ! -e "$1/make.args" ]' _ "$log"
+
+# ---- case 7: the NESTED_PODMAN opt-out -------------------------------------------------------
+echo "== 7 NESTED_PODMAN=0 opts out"
+reset_log
+NESTED_PODMAN=0 "$client/runCrushWithInternet.sh" fake@mac "" >/dev/null 2>&1; rc=$?
+check "exit 0 (got $rc)"                 [ "$rc" -eq 0 ]
+check "NESTED_PODMAN=0 passed"           grep -q 'NESTED_PODMAN=0 ' <<<"$(make_shell_line)"
 
 echo
 [ "$status" -eq 0 ] && echo "ALL PASS" || echo "FAILURES"

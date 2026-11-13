@@ -1,6 +1,29 @@
 # Nested podman ignores the host image store (podman 6), and the launchers never offer it
 
-**Status:** proposed — needs go-ahead
+**Status:** implemented and staged 2026-11-12; awaiting the host rebuild + launch check
+(step 7). Steps 1–6 are done, with one difference: step 1 was reproduced in the
+runClaudeInContainer sandbox (same base and `COPY`), not in the client, which can't be built
+cheaply here.
+- **Fix.** `client/Dockerfile` installs the drop-in `50-crush-nested.conf`, and
+  `client/entrypoint/shell.sh` warns when the mounted store is unused (the same snippet as the
+  sibling task's, which was tested there).
+- **Launchers.** `client/runCrush-common.sh` passes `NESTED_PODMAN="${NESTED_PODMAN:-1}"`.
+  `NESTED_PODMAN_HOST_IMAGESTORE` reaches `client/Makefile` from the environment unchanged, so no
+  code was needed for it.
+- **Gate.** `tools/check_launchers.sh` gained the default-on check, the opt-out case 7, and a
+  `make -n` check that the store is mounted read-only. ALL PASS.
+- **Docs.** README, the launcher headers, the `client/Makefile` `LOCALHOST_ONLY` comment, the
+  reference docs and the baked `nested-podman-design.md` copy (byte-identical) are updated.
+  `tasks/offline-nested-podman-base-images.md` is re-scoped.
+
+**Remaining check (step 7, needs the maintainer):**
+1. [LINUX HOST] `make -C client image`.
+2. [LINUX HOST] Run each launcher.
+3. [CONTAINER] Expect no `[nested podman]` warning, host images listed read-only, and a `podman
+   build` of a two-line `FROM localhost/crushcontainer:latest` Containerfile that succeeds with no
+   pull, in no-internet mode especially.
+
+Archive this task after that.
 **Priority:** 3
 **Difficulty:** 4
 **Started:** 2026-11-12

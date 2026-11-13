@@ -52,10 +52,9 @@ Pipeline (see `client/Dockerfile`):
    network). This is the bulk of the ~22 GB and the build time.
 5. `COPY entrypoint/dotfiles/ /root/` — dotfiles, incl. `.config/crush/` conventions and
    `.config/containers/storage.conf`.
-6. `COPY entrypoint/dotfiles/.config/containers/storage.conf /etc/containers/storage.conf` — the
-   *same* store config, delivered to the rootful path the **nested** podman reads (added 2026-09-27;
-   needs a rebuild to take effect — see Level 2 and runClaudeInContainer
-   `tasks/dir-backed-nested-podman-storage.md`).
+6. `COPY entrypoint/dotfiles/.config/containers/storage.conf` to `/etc/containers/storage.conf` and
+   again to `/etc/containers/storage.conf.d/50-crush-nested.conf`. This is the *same* store config:
+   the drop-in copy is the one that survives containers-common's vendor drop-in (see Level 2 (b)).
 7. `COPY entrypoint/crushrc …` and `COPY entrypoint/shell.sh /shell.sh`.
 
 **Where the layers go:** the finished image and all its layers are committed to the host's rootless
@@ -107,12 +106,13 @@ if that path exists). The inner `storage.conf`'s `additionalimagestores = [ "/va
 ]` then lets the inner podman **read** the host's already-built images as read-only lower layers,
 without copying; the writable layer still goes to the temp dir in (a).
 
-**Rootful gotcha (fixed 2026-09-27, needs a rebuild):** the inner podman runs **rootful** (uid 0 in
-the userns), so it reads `/etc/containers/storage.conf`, not the rootless
-`~/.config/containers/storage.conf`. Delivering `storage.conf` only to the rootless path left
-`additionalimagestores` silently ignored. The Dockerfile now also `COPY`s it to `/etc/containers/` —
-effective after the next `make image`. Detail: runClaudeInContainer
-`tasks/dir-backed-nested-podman-storage.md`.
+**Gotcha: a vendor drop-in overrides the main file.** containers-common's
+`/usr/share/containers/storage.rootful.conf.d/00-vendor-rootful.conf` sets `additionalimagestores`.
+Drop-ins load after the main `storage.conf`, so the vendor file silently replaces our setting. The
+client Dockerfile therefore also installs our file as the drop-in
+`/etc/containers/storage.conf.d/50-crush-nested.conf`, and `client/entrypoint/shell.sh` warns when
+the store is mounted but unused. Detail: `tasks/reference/nested-podman-design.md` ("Which storage
+config the nested podman reads").
 
 ### (c) A tmpfs over the host runtime dir's `libpod` state
 
@@ -132,7 +132,7 @@ see `tasks/reference/nested-podman-design.md`.)
 
 ## See also
 
-- runClaudeInContainer `tasks/dir-backed-nested-podman-storage.md` — the disk-store change, the
+- runClaudeInContainer `tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md` — the disk-store change, the
   rootful-config fix, and the verification (canonical location; the client mirrors its Makefile change).
 - `tasks/reference/nested-podman-design.md` — every nested flag and why (fuse-overlayfs,
   `--cgroups=disabled`, `--network=host`/netavark, the `libpod` tmpfs), plus the store-backend section.

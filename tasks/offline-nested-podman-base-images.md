@@ -1,5 +1,13 @@
 # Seed base images so nested podman builds work offline
 
+> **Re-scope (2026-11-12):** the client now reuses the host's image store read-only, and both
+> launchers start the client with `NESTED_PODMAN=1`
+> (`tasks/nested-podman-host-image-store-ignored.md`). An offline nested build can therefore use
+> any base image already on the host, which is approach (1) below in practice. What remains here
+> is only the airgap case where the HOST itself lacks the base image. Re-check that case after
+> that task's host verification; close this task if it no longer applies. The RAM-tmpfs mechanism
+> described below is no longer the default store.
+
 **Status:** proposed — needs go-ahead. Gap identified 2026-08-22; **not yet attempted on the offline
 system** (maintainer builds the client image offline fine, but has done no nested-podman work there).
 **Priority:** 4
@@ -44,7 +52,7 @@ different missing artifacts.
 2. **`podman load` from a baked-in tar on startup**, gated on `NESTED_PODMAN=1` (e.g. in `shell.sh`).
    Works, but re-copies into RAM each launch and costs tmpfs space — worse than (1).
 3. **Dir-backed persistent inner store**, pre-seeded once (mirrors runClaude's open thread
-   `tasks/dir-backed-nested-podman-storage.md`). Bigger change; solves RAM-pressure too, but heavier
+   `tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md`). Bigger change; solves RAM-pressure too, but heavier
    than needed just for offline base images.
 
 ## Considerations
@@ -85,5 +93,5 @@ different missing artifacts.
 
 - `tasks/reference/nested-podman-design.md` — the RAM-store operating note this gap sits under.
 - `tasks/archive/2026/08/22/add-nested-podman-to-client.md` — the sibling offline bug (doc, not image).
-- runClaudeInContainer: `tasks/dir-backed-nested-podman-storage.md` (the dir-backed-store open thread,
+- runClaudeInContainer: `tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md` (the dir-backed-store open thread,
   approach 3's origin).

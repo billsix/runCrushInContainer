@@ -18,7 +18,9 @@
 # mounted at /work — the container is --network=none and reaches the model only through those
 # sockets (a socat bridge inside re-exposes them as 127.0.0.1:808x, so Crush is unchanged); and
 # on exit — normal, error, or ctrl-C — closes the tunnel and removes the temp dir.
-# Runs on the Linux HOST only (it drives podman directly); not for NESTED_PODMAN=1.
+# Runs on the Linux HOST only (it drives podman directly), never inside a container. The
+# client it launches can run podman, reusing host-built images read-only (NESTED_PODMAN=1 by
+# default; `NESTED_PODMAN=0 <this script> …` opts out).
 # Twin: runCrushWithInternet.sh. Shared body: runCrush-common.sh.
 RUNCRUSH_LOCALHOST_ONLY=1
 # shellcheck source-path=SCRIPTDIR

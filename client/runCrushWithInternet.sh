@@ -18,7 +18,9 @@
 # already holds one of those ports, close it first; runs `make shell` (--network=host) with this
 # directory mounted at /work; and on exit — normal, error, or ctrl-C — closes the tunnel and
 # removes its temp dir.
-# Runs on the Linux HOST only (it drives podman directly); not for NESTED_PODMAN=1.
+# Runs on the Linux HOST only (it drives podman directly), never inside a container. The
+# client it launches can run podman, reusing host-built images read-only (NESTED_PODMAN=1 by
+# default; `NESTED_PODMAN=0 <this script> …` opts out).
 # Twin: runCrushNoInternet.sh. Shared body: runCrush-common.sh.
 RUNCRUSH_LOCALHOST_ONLY=0
 # shellcheck source-path=SCRIPTDIR

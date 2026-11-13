@@ -4,8 +4,11 @@
 #
 # Shared body of the two one-shot Crush launchers, runCrushNoInternet.sh and
 # runCrushWithInternet.sh. SOURCED by them, never run directly. Host-side: it runs `ssh`, `make`
-# and therefore `podman` on the Linux host, so it is not for use inside a container and not
-# combinable with NESTED_PODMAN=1. The wrapper sets RUNCRUSH_LOCALHOST_ONLY (1 = no internet,
+# and therefore `podman` on the Linux host, so it is not for use inside a container. The client
+# it launches CAN run podman: NESTED_PODMAN defaults to 1 here (export NESTED_PODMAN=0 to opt
+# out), which also mounts the host's image store read-only so nested builds reuse host-built
+# images (NESTED_PODMAN_HOST_IMAGESTORE, read by client/Makefile from the environment). The
+# wrapper sets RUNCRUSH_LOCALHOST_ONLY (1 = no internet,
 # 0 = with internet) before sourcing this, then calls runcrush_main "$@".
 #
 # Lifecycle, in order (design + rationale: tasks/reference/client-network-modes-and-launchers.md):
@@ -25,7 +28,7 @@
 #   4. poll           — belt and braces: wait up to CONNECT_TIMEOUT s for the forwards to be
 #                       observable (the .sock files in no-internet mode; a TCP accept on the first
 #                       port in with-internet mode).
-#   5. `make shell`   — PROJECT=$PWD (the dir the launcher was run from — NOT client/, which is
+#   5. `make shell`   — NESTED_PODMAN (default 1), PROJECT=$PWD (the dir the launcher was run from — NOT client/, which is
 #                       what `make -C client` would default to), EXTRA_PODMAN_FLAGS from $2, and the
 #                       mode's LOCALHOST_ONLY / MUSE_SOCK_DIR.
 #   6. trap → cleanup — on normal exit, on `make shell` failing, and on INT/TERM/HUP: close the
@@ -152,6 +155,7 @@ runcrush_main() {
         echo "[runCrush] 3/3  make shell (--network=host: the model + the internet)" >&2
     fi
     make -C "$client_dir" shell \
+        NESTED_PODMAN="${NESTED_PODMAN:-1}" \
         PROJECT="$PWD" \
         EXTRA_PODMAN_FLAGS="$extra_podman_flags" \
         LOCALHOST_ONLY="$RUNCRUSH_LOCALHOST_ONLY" \

@@ -82,16 +82,17 @@ flag (see runClaude's doc).
   (2026-10-04 to 2026-11-08); a client exit is still to be read from this log, see
   `tasks/nested-store-cleanup-permission-denied.md`) with the host image store reused read-only
   (`additionalimagestores`) — no RAM ceiling. The RAM tmpfs is opt-in via `NESTED_PODMAN_STORE=tmpfs`
-  (then bump `NESTED_PODMAN_TMPFS_SIZE`). **The nested podman is rootful, so `storage.conf` must live
-  at `/etc/containers/storage.conf`** (the client Dockerfile now `COPY`s it there) — delivering it only
-  to the rootless `~/.config/containers/` path left `additionalimagestores` silently ignored.
+  (then bump `NESTED_PODMAN_TMPFS_SIZE`). **The store config is also installed as a drop-in**
+  (`/etc/containers/storage.conf.d/50-crush-nested.conf`), because a containers-common vendor
+  drop-in overrides a main-file `additionalimagestores` (see "Which storage config the nested
+  podman reads" below).
   **Verified in-session in both sandboxes 2026-09-27** (each relaunched with the disk store): the store
   is on an `ext4` host disk (not tmpfs), `/var/lib/shared-images` is mounted read-only, host-built
   images (`crushcontainer`, `claudecontainer`, `smc`) list read-only, a
   `FROM localhost/crushcontainer:latest` build reused the base with no pull, and a forced ~20 GB fresh
   layer committed cleanly to the disk store (a 46 GB image, no `no space left on device` — the tmpfs
   OOM-at-commit class is retired). Host test + details: runClaudeInContainer
-  `tasks/dir-backed-nested-podman-storage.md`.
+  `tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md`.
 - **Short names need `localhost/<tag>` and no TTY** in agent-driven runs; `make -n <target>` to print
   the expanded `podman run`, then re-run by hand with `--cgroups=disabled` added and `-it` dropped.
 - **Networking just works** (bridged netavark, verified in runClaude); `--network=host` is a fallback.
@@ -134,3 +135,42 @@ must stay coupled to the actual capability flags: a plain non-nested launch woul
 advertise nested support while `/dev/fuse`/caps/tmpfs are absent.
 
 The full rationale/declined-alternatives live in runClaudeInContainer's copy of this doc.
+
+## Which storage config the nested podman reads
+
+The nested podman is rootful. Its storage config loads as containers-config(5) describes
+(github.com/containers/container-libs `common/docs/containers-config.5.md`, "Load Order"):
+
+1. **One main file**, the highest-precedence `storage.conf` that exists: `~/.config/containers/`, then
+   `/etc/containers/`, then `/usr/share/containers/`. "Only one main file … will be loaded."
+2. **Then every drop-in** from the `storage.conf.d/` and `storage.rootful.conf.d/` directories under
+   `/usr/share/containers/` and `/etc/containers/` (and `~/.config/containers/storage.conf.d/`), sorted by
+   **file name**, each file overriding settings from earlier ones.
+
+containers-common 0.69 (Fedora 45, with podman 6.1.3) ships
+`/usr/share/containers/storage.rootful.conf.d/00-vendor-rootful.conf`, which sets
+`additionalimagestores = ["/usr/lib/containers/storage"]`. It applies after the main file, so it
+**replaces** our `additionalimagestores`, and the host store at `/var/lib/shared-images` is silently
+ignored. `podman images` then shows only images built inside the container, and in no-internet mode
+a nested build can't get a base image at all.
+
+**Fix (2026-11-12):** `client/Dockerfile` installs the same `storage.conf` a second time, as the
+drop-in `/etc/containers/storage.conf.d/50-crush-nested.conf`, which sorts after the vendor's. The
+`/etc/containers/storage.conf` copy stays for an older podman. `client/entrypoint/shell.sh` warns at
+interactive start when `/var/lib/shared-images` is mounted but missing from
+`podman info --format '{{json .Store.GraphOptions.additionalImageStores}}'`.
+
+**The host store also serves as build cache (verified 2026-11-12).** A nested `make image` of a
+project the host already built reuses the host's layers: github.com/billsix/spimulator hit the cache
+on 42 of 43 steps. That holds only when `FROM` resolves to the same base image the host used. A newer
+base pulled into the inner store (for example `fedora:45`, which then appears twice in
+`podman images`, once with R/O false) shadows the host's and misses every step; untag the inner copy
+to restore the hits.
+
+The diagnosis was made in the runClaudeInContainer sandbox on 2026-11-12. That sandbox uses the same
+Fedora 45 base, the same `storage.conf` and the same `/etc` `COPY`. `strace -e trace=openat podman
+info` showed the main file and then the vendor drop-ins being read. Installing the drop-in by hand
+there listed 85 read-only host images, and a `FROM` a host image used `/var/lib/shared-images` layers
+with no pull. Before 2026-09-27 the file was delivered only to the rootless path; copying it to
+`/etc` fixed that then. Under containers-common 0.69 the vendor drop-in breaks it again, whichever
+main file is used.

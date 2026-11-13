@@ -299,7 +299,7 @@ it in the **opt-in RAM tmpfs** nested store fails at the *layer commit* (not ins
 left on device` — commit peak (base+diff+temp) exceeds the final size. A 32 GB store overflowed;
 `mount -o remount,size=50g /var/lib/containers` (or a bigger `NESTED_PODMAN_TMPFS_SIZE`) worked around
 it — and this failure is exactly what motivated the on-disk-dir store now being the default (no RAM
-ceiling; see runClaudeInContainer `tasks/dir-backed-nested-podman-storage.md`), but
+ceiling; see runClaudeInContainer `tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md`), but
 the intended path is a real disk-backed host build, which has no such ceiling. (There is no longer a
 minimal variant to sidestep this nested — see "One image, always the full toolchain" above and
 `tasks/reference/nested-podman-vs-image-content.md`.) See runClaudeInContainer's

@@ -150,8 +150,8 @@ NET_FLAGS ?= --network=host
 # 127.0.0.1:8080/8081 -- so Crush's config is unchanged, but the container can reach
 # NOTHING but the model (no internet, no other host). Requires the host to SSH-forward the
 # model to those unix sockets instead of TCP (the shell.sh banner + README show both forms).
-# For running Crush against the model; not meant to combine with NESTED_PODMAN=1 (nested
-# builds need network). The one-shot launchers runCrush{NoInternet,WithInternet}.sh drive it
+# Combined with NESTED_PODMAN=1 (the launchers' default), nested builds have no network: a
+# `FROM` must name an image in the read-only host store, and RUN steps can't download. The one-shot launchers runCrush{NoInternet,WithInternet}.sh drive it
 # end-to-end. Design: tasks/reference/client-network-modes-and-launchers.md.
 LOCALHOST_ONLY ?= 0
 MUSE_SOCK_DIR ?= $(HOME)/.cache/runcrush-muse-sockets
@@ -240,7 +240,7 @@ NESTED_PODMAN ?= 0
 # A dir on the host's real fs (like the tmpfs) is not overlay, so fuse-overlayfs runs on
 # it -- unlike the sandbox's own overlay rootfs (overlay-on-overlay is kernel-rejected).
 # One sandbox per store dir at a time. Design + host-verification checklist:
-# runClaudeInContainer tasks/dir-backed-nested-podman-storage.md.
+# runClaudeInContainer tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md.
 NESTED_PODMAN_STORE ?= dir
 NESTED_PODMAN_STORE_BASE ?= $(HOME)/.cache
 NESTED_PODMAN_TMPFS_SIZE ?= 8g

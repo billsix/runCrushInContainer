@@ -38,8 +38,10 @@ the alternative to revisit if either need appears; not adopted.
 `client/runCrushNoInternet.sh <ssh-target> <extra-podman-flags>` and
 `client/runCrushWithInternet.sh <ssh-target> <extra-podman-flags>` are **host-side** scripts (they run
 `ssh`, `make` and therefore `podman` on the Linux host — so they live in `client/`, not in
-`client/entrypoint/`, which is what gets copied into the image; and they are not for
-`NESTED_PODMAN=1`). They differ in ~6 lines — the `-L` form and the `LOCALHOST_ONLY` value — so
+`client/entrypoint/`, which is what gets copied into the image, and they never run inside a
+container). They launch the client with `NESTED_PODMAN=1` by default, so Crush can run podman and
+nested builds reuse the read-only host image store; `NESTED_PODMAN=0` in the environment opts out
+(William Emerison Six <billsix@gmail.com>, 2026-11-12). They differ in ~6 lines — the `-L` form and the `LOCALHOST_ONLY` value — so
 both are thin wrappers that set `RUNCRUSH_LOCALHOST_ONLY` and `source` one shared body,
 `client/runCrush-common.sh` (one copy of the lifecycle, same anti-drift reasoning as the
 Makefile's shared `SHELL_RUN_FLAGS`).
@@ -116,8 +118,10 @@ Lifecycle (`runcrush_main` in `runCrush-common.sh`):
   dir with the container's private SELinux category. Harmless for a throwaway `mktemp -d` (it is
   deleted at exit) but it is why the `EXTRA_PODMAN_FLAGS` comment says never to use `:Z` on a host
   directory you keep.
-- **Not for `NESTED_PODMAN=1`** — nested image builds need network, and the launchers drive the
-  host's podman directly.
+- **The launchers themselves run on the host only**: they drive the host's podman directly. The
+  client they start is nested-capable by default. In no-internet mode its nested builds have no
+  network, so a `FROM` must name an image in the read-only host store and `RUN` steps can't
+  download.
 - **The socket path length limit (108 bytes) is not a concern** for `mktemp -d`'s default
   `/tmp/tmp.XXXXXXXXXX/8080.sock`; it could be if `TMPDIR` points somewhere deep.
 

@@ -18,7 +18,9 @@ cd /path/to/your/project
 ```
 
 Then type `crush` at the prompt. The second argument is the extra `-v` mounts for the container
-(required — `""` for none, or e.g. `"-v /host/data:/data:z"`). The first run builds a ~22 GB image
+(required — `""` for none, or e.g. `"-v /host/data:/data:z"`). Crush can run `podman` inside the
+container, and nested builds reuse images already built on the host
+(see "Podman inside the container" below; `NESTED_PODMAN=0` before the launcher turns it off). The first run builds a ~22 GB image
 and takes a while; every run after that starts in seconds. Everything below is what those lines do
 (server, tunnel, client) and how to run each piece by hand.
 
@@ -198,7 +200,31 @@ cd /path/to/your/project
 /path/to/runCrushInContainer/client/runCrushNoInternet.sh   you@mac-studio.local ""   # NO internet: the container reaches only the model
 /path/to/runCrushInContainer/client/runCrushWithInternet.sh you@mac-studio.local ""   # model + full internet
 /path/to/runCrushInContainer/client/runCrushNoInternet.sh   you@mac-studio.local "-v /host/data:/data:z"   # extra mount (":z", never ":Z")
+NESTED_PODMAN=0 /path/to/runCrushInContainer/client/runCrushNoInternet.sh you@mac-studio.local ""      # no podman inside the container
 ```
+
+#### Podman inside the container
+
+Both launchers start the client with `NESTED_PODMAN=1`. Crush can then run `podman`
+(`make image`, `make test` in a container-per-project repo), and your host's podman image store is
+mounted **read-only**, so a nested build reuses images you already built on the host instead of
+pulling or rebuilding them.
+
+```sh
+# [LINUX]     a different host store, or none (empty turns reuse off)
+NESTED_PODMAN_HOST_IMAGESTORE=/path/to/storage /path/to/runCrushInContainer/client/runCrushWithInternet.sh you@mac-studio.local ""
+# [CONTAINER] host images are listed with R/O true
+podman images --format '{{.Repository}}:{{.Tag}} R/O {{.ReadOnly}}'
+```
+
+> In the **no-internet** launcher a nested build has no network: its `FROM` must name an image
+> already in the host store, and `RUN` steps can't download anything.
+> A nested build reuses the host's layers as cache only when its `FROM` resolves to the same base
+> image the host used. If `podman images` lists a base such as `fedora:45` twice, the copy with
+> R/O false was pulled inside and shadows the host's: `podman untag` it.
+> If the shell prints a `[nested podman]` warning at start, the store is mounted but podman is not
+> using it; rebuild the image (`make image`). The cause and fix are in
+> `tasks/reference/nested-podman-design.md` ("Which storage config the nested podman reads").
 
 ### By hand — the SSH forward, `make image` and `make shell` as separate steps
 
