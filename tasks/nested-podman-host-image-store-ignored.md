@@ -44,7 +44,7 @@ is 1. It is only useful in with-internet mode. Not done yet; it needs the mainta
 **Priority:** 3
 **Difficulty:** 4
 **Started:** 2026-11-12
-**Sibling:** runClaudeInContainer `tasks/nested-podman-host-image-store-ignored.md` (same podman 6
+**Sibling:** runClaudeInContainer `tasks/archive/2026/11/13/nested-podman-host-image-store-ignored.md` (same podman 6
 bug, found there first; fix both the same way).
 **Related:** `tasks/offline-nested-podman-base-images.md`. Host image-store reuse is the natural
 answer to that task's offline `FROM` problem, so re-scope or close it once this task lands.

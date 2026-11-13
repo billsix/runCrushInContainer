@@ -518,6 +518,21 @@ fail if **any** failed — a plain sequence exits with only the last command's s
 `status=0; cmd || status=1; … exit $status` (per-iteration in loops). `set -e` is the wrong fix (it's
 fail-fast, losing the report-everything property).
 
+## A format-on-exit hook `cd`s to the repo root first
+
+A shell-exit hook that runs `format.sh` does `cd /<proj>` (the repo mount root) itself, never a
+subdirectory: the user types `exit` from anywhere, and the script's repo-relative paths (`ruff check
+.`, `ty check src`, `find . … | xargs clang-format`) resolve wrong or cover only part of the tree from
+elsewhere. Shape: `exit() { cd /<proj>; /format.sh; builtin exit "$@"; }`.
+
+## Batch container runs don't take `-it`
+
+`podman run -it` belongs only on runs a person is attached to: a shell, a GUI app, a server stopped
+with Ctrl-C, a tool that prompts. Format, lint, type-check, test, build and docs runs omit it: with
+no terminal (CI, an agent's nested `make`) `-t` fails (`the input device is not a TTY`), and the pty
+merges stderr into stdout and rewrites line endings. Keep it on a batch target only for one named
+interactive tool, with a comment saying which.
+
 ## A tool is an oracle — install what you need, and persist it in the image
 
 The tool closest to a question is ground truth, not a guess (see `porting-with-an-output-oracle.md`):
