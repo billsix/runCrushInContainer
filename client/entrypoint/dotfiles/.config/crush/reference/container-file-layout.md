@@ -54,7 +54,7 @@ the session log alongside it).
 | `entrypoint/dotfiles/.config/containers/storage.conf` | `/root/.config/containers/storage.conf` | no (nested-podman fuse-overlayfs) |
 | `entrypoint/dotfiles/.config/crush/CLAUDE.md` | `/root/.config/crush/CLAUDE.md` | no (always-loaded conventions) |
 | `entrypoint/dotfiles/.config/crush/commands/` (11 files) | `/root/.config/crush/commands/` | no (slash commands) |
-| `entrypoint/dotfiles/.config/crush/reference/` (25 files) | `/root/.config/crush/reference/` | no (see doc mapping below) |
+| `entrypoint/dotfiles/.config/crush/reference/` (27 files) | `/root/.config/crush/reference/` | no (see doc mapping below) |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.md` (blank default) | `/root/.config/crush/ai-coding-conventions.personal.md` | **YES — host overlay mounted over it** |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md` | `/root/.config/crush/ai-coding-conventions.personal.example.md` | no |
 | `entrypoint/crushrc` | `/root/.config/crush/crushrc` | no (model pin, catalog off, file-tool auto-allow) |
@@ -124,6 +124,7 @@ the baked `~/.config/crush/reference/…` path**; in repo docs cite
 | `cpp-build-modernization.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-06) — **keep in sync** |
 | `sandbox-capability-map.md` | no | yes (copied from runClaudeInContainer) |
 | `bulk-edit-shell-first.md` | no | yes (delivered convention, added 2026-09-18) |
+| `shell-and-gate-scripts.md` | no | yes (portable sections copied from runClaudeInContainer; added 2026-11-13) — **keep in sync** |
 | `repo-review-conventions.md` | yes | yes (copied from runClaudeInContainer; added 2026-11-08) — **keep in sync** |
 | `review_status.py` (a tool, not a doc) | yes | yes (copied from runClaudeInContainer; added 2026-11-09) — **keep the copies byte-identical** |
 

@@ -516,14 +516,16 @@ hand-transcribe it. Hand-instrumentation (print/trace) recipes per language, on 
 A `format`/`lint`/`check` script that chains tools should run **every** step (report all the red) yet
 fail if **any** failed — a plain sequence exits with only the last command's status. Use
 `status=0; cmd || status=1; … exit $status` (per-iteration in loops). `set -e` is the wrong fix (it's
-fail-fast, losing the report-everything property).
+fail-fast, losing the report-everything property). A format script also runs from the repo root both
+in the container and on the host (guarded venv activation, relative paths), and a rewritten script
+keeps its executable bit. Detail and code shapes: `~/.config/crush/reference/shell-and-gate-scripts.md`.
 
 ## A format-on-exit hook `cd`s to the repo root first
 
 A shell-exit hook that runs `format.sh` does `cd /<proj>` (the repo mount root) itself, never a
 subdirectory: the user types `exit` from anywhere, and the script's repo-relative paths (`ruff check
 .`, `ty check src`, `find . … | xargs clang-format`) resolve wrong or cover only part of the tree from
-elsewhere. Shape: `exit() { cd /<proj>; /format.sh; builtin exit "$@"; }`.
+elsewhere. Shape: `exit() { cd /<proj>; /format.sh; builtin exit "$@"; }`. Detail: `~/.config/crush/reference/shell-and-gate-scripts.md`.
 
 ## Batch container runs don't take `-it`
 
@@ -531,7 +533,7 @@ elsewhere. Shape: `exit() { cd /<proj>; /format.sh; builtin exit "$@"; }`.
 with Ctrl-C, a tool that prompts. Format, lint, type-check, test, build and docs runs omit it: with
 no terminal (CI, an agent's nested `make`) `-t` fails (`the input device is not a TTY`), and the pty
 merges stderr into stdout and rewrites line endings. Keep it on a batch target only for one named
-interactive tool, with a comment saying which.
+interactive tool, with a comment saying which. Detail: `~/.config/crush/reference/shell-and-gate-scripts.md`.
 
 ## A tool is an oracle — install what you need, and persist it in the image
 
