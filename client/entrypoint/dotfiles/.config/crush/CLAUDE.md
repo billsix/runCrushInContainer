@@ -639,6 +639,11 @@ docs and deleting done narration — whereas here it is in-session, so the sweep
 - `/review-status` with an optional record — which of a record's findings are done (citing task
   archived), open (citing task in `tasks/`) or untracked, derived from the tasks' `**Source:**` lines
   by `~/.config/crush/reference/review_status.py`. Read-only; the record stays frozen.
+- `/spell-out-names` with an optional scope — plan a sweep that spells out abbreviated names
+  (`gpr` → `general_purpose_registers`) as task docs, then stop; it renames nothing. Read
+  `~/.config/crush/reference/spelled-out-names-sweep.md` first, and before running any such sweep:
+  the repo checks that come first (upstream merges, consumers, generators, mirrors, unbuilt code,
+  what must not change), the policy questions, and the rename and proof mechanics.
 
 ## Open-issues lists
 

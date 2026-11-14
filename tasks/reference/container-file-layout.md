@@ -53,7 +53,7 @@ the session log alongside it).
 | `entrypoint/dotfiles/.vimrc` | `/root/.vimrc` | yes — by the host's `~/.vimrc` when it exists (2026-09-10) |
 | `entrypoint/dotfiles/.config/containers/storage.conf` | `/root/.config/containers/storage.conf` | no (nested-podman fuse-overlayfs) |
 | `entrypoint/dotfiles/.config/crush/CLAUDE.md` | `/root/.config/crush/CLAUDE.md` | no (always-loaded conventions) |
-| `entrypoint/dotfiles/.config/crush/commands/` (11 files) | `/root/.config/crush/commands/` | no (slash commands) |
+| `entrypoint/dotfiles/.config/crush/commands/` (12 files) | `/root/.config/crush/commands/` | no (slash commands) |
 | `entrypoint/dotfiles/.config/crush/reference/` (27 files) | `/root/.config/crush/reference/` | no (see doc mapping below) |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.md` (blank default) | `/root/.config/crush/ai-coding-conventions.personal.md` | **YES — host overlay mounted over it** |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md` | `/root/.config/crush/ai-coding-conventions.personal.example.md` | no |
@@ -112,6 +112,7 @@ the baked `~/.config/crush/reference/…` path**; in repo docs cite
 | `c-modernization-sweep.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-16) — **keep in sync** |
 | `rust-coding-standard.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-23) — **keep in sync** |
 | `haskell-coding-standard.md` | yes | yes (copied from runClaudeInContainer; added 2026-11-11) — **keep in sync** |
+| `spelled-out-names-sweep.md` | yes | yes (copied from runClaudeInContainer; added 2026-11-14) — **keep in sync** |
 | `rust-gui-tui-and-ecosystem.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-23) — **keep in sync** |
 | `tauri-desktop-apps.md` | yes | yes (copied from runClaudeInContainer; added 2026-10-23) — **keep in sync** |
 | `sphinx-book-conventions.md` | yes | yes — **keep the two copies in sync** |
