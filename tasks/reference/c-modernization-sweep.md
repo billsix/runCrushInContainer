@@ -71,6 +71,12 @@ change:
 
 ## Sweep mechanics — pitfalls that waste a pass
 
+- **Run the vendored rule checkers first, and treat their output as the worklist.**
+  `c_dispatch_check.py` (switch/else-if rules) and `c_designated_init_check.py` (positional struct
+  initializers) list sites no compiler warning or clang-tidy check does (`c-coding-standard.md`
+  says where each lives). A pass that only reads code by eye walks past static tables: three
+  spimulator C23 passes left 1082 positional `{"name", 1, 2}` rows until the second tool existed.
+
 - **A warning-flag probe can silently no-op under a wrapper compiler.** `meson`'s
   `cc.has_argument('-Werror')` (and similar probes) compile a test program; if the toolchain wrapper
   emits its own warning, the probe fails and the flag is skipped with no error — you think `-Werror` is

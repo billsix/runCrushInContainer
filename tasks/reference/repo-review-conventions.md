@@ -69,7 +69,12 @@ N/A, not silently dropped.
    reader-facing text, and draft markings.
 4. **Code quality.** The hand-written source: correctness bugs (with a failing input),
    docstrings that misstate behaviour, the project's and the shared coding standard, dead
-   code, duplication, layering.
+   code, duplication, layering. **Run the standard's mechanical checkers and report every site
+   they list as a finding**, whether or not the project vendors or gates them: for C,
+   `c_dispatch_check.py` and `c_designated_init_check.py` (`c-coding-standard.md`), for Python
+   `check_local_annotations.py`. A rule of the standard with no checker gets a targeted grep or
+   AST scan instead. Findings become tasks through `/findings-to-tasks`, so a deviation from the
+   standard is a finding even where the code works.
 5. **Generators and tools.** Code generators (sample their output; never read whole
    generated trees), check scripts (does each gate enforce what the docs say, or can it
    pass vacuously?), and one-shot or dead tools that should have been removed.

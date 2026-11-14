@@ -354,7 +354,18 @@ must recognize a run exactly: no `else`, and a body that leaves. A looser match 
 
 - **Use designated initializers** (C99): `struct point p = { .x = 10, .y = 20 };` — order-independent
   and self-documenting, and any member you omit is zero-initialized. A **compound literal**
-  `(struct point){ .x = 1 }` makes an unnamed object you can pass inline.
+  `(struct point){ .x = 1 }` makes an unnamed object you can pass inline. This covers **static
+  tables** too: an array of structs is written `{.name = "a0", .value = 4}` row by row, and a
+  generated table changes in its generator. **Checking it:** `c_designated_init_check.py`, a SHARED,
+  VENDORED tool beside this doc (canonical in github.com/billsix/runClaudeInContainer
+  `tasks/reference/`); vendor it into the project's `tools/` and run `python3
+  tools/c_designated_init_check.py BUILDDIR [SOURCE ...]` against any build with a compile
+  database (gcc or clang; clang must be installed). It lists every positional struct/union
+  initializer, takes a `designated-init-check: ok` comment
+  (with the reason) to accept a site, and exits 1 if any are left. clang-tidy's
+  `modernize-use-designated-initializers` reports nothing for C (clang-tidy 23), so it is no
+  substitute. (Found 2026-11-14 in github.com/billsix/spimulator: three C23 passes had left 1082
+  positional table rows, because no tool listed them.)
 - **Zero-initialize with `{ }`** (C23; `{ 0 }` before C23) rather than `memset(&s, 0, sizeof s)` —
   it's checked by the type system and can't get the size wrong. (Note `memset`-zero is not
   guaranteed to produce a null pointer or a floating 0.0 on exotic targets; `{ 0 }` is.)

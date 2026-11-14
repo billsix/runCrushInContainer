@@ -101,7 +101,8 @@ The egress patch/flag system and the 213-Go-dep dependency network audit are in
 
 `tasks/reference/` also carries **mirrored copies of runClaude's SHARED, VENDORED tool scripts** (not
 just docs) — `check_local_annotations.py` (the Python annotate-every-binding gate),
-`c_dispatch_check.py` (the C dispatch-rules checker, `c-coding-standard.md` "Dispatch") and
+`c_dispatch_check.py` (the C dispatch-rules checker, `c-coding-standard.md` "Dispatch"),
+`c_designated_init_check.py` (the C positional-struct-initializer checker) and
 `update_dep_common.sh` (the source-dep re-vendor helper; pattern in
 `tasks/reference/vendoring-third-party-source-deps.md`) — each with a `SHARED, VENDORED TOOL` banner,
 copied into downstream projects' `tools/`. The **canonical** lives in `runClaudeInContainer
