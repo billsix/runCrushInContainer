@@ -32,6 +32,18 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
 COPY entrypoint/01b-install-binary-tools.sh /usr/local/bin/
 RUN /usr/local/bin/01b-install-binary-tools.sh
 
+# Lean 4 (theorem prover) via elan. install-lean.sh installs OFFLINE from the vendored
+# /vendor/elan when CRUSH_VENDORED=1 (airgap; the elan volume is mounted by the Makefile
+# when `make vendor` produced it), else ONLINE via the official curl installer. The
+# Versions are pinned (ELAN_VERSION, LEAN_TOOLCHAIN; client/Makefile). This sits right after
+# the toolchain layers, before the Crush build and its many ARGs, so a CRUSH_TAG bump or a
+# patch-flag flip does not re-download Lean.
+ARG ELAN_VERSION=v4.2.4
+ARG LEAN_TOOLCHAIN=leanprover/lean4:v4.35.0
+COPY entrypoint/install-lean.sh /usr/local/bin/
+RUN ELAN_VERSION="$ELAN_VERSION" LEAN_TOOLCHAIN="$LEAN_TOOLCHAIN" /usr/local/bin/install-lean.sh
+ENV PATH="/root/.elan/bin:${PATH}"
+
 # --- RHEL 9 variant (UBI 9 / CentOS Stream 9 base): the Python language server from a /venv ---
 # Kept COMMENTED OUT on purpose: this image is Fedora, where `ty` comes from dnf (01-install-base.sh)
 # like every other language server the crushrc declares. RHEL 9 packages NO Python LSP at all — no
@@ -52,17 +64,6 @@ RUN /usr/local/bin/01b-install-binary-tools.sh
 # RUN python3.11 -m venv --system-site-packages /venv && \
 #     /venv/bin/pip install --no-index --find-links /vendor/wheels ty
 # ENV PATH=/venv/bin:$PATH
-
-# Vendoring-only tools (the `hf` CLI), gated behind VENDOR_TOOLS (default 0 — Makefile turns it
-# ON only for `make vendor`). These are needed ONLY to run `make vendor` inside this image while
-# ONLINE; the image itself and the OFFLINE airgap rebuild do not use them, so a normal/airgap
-# build never installs them and the airgap dnf mirror never needs them. See
-# tasks/archive/2026/08/22/vendor-via-client-image.md.
-ARG VENDOR_TOOLS=0
-COPY entrypoint/02-install-vendor-tools.sh /usr/local/bin/
-RUN --mount=type=cache,target=/var/cache/libdnf5 \
-    --mount=type=cache,target=/var/lib/dnf \
-    if [ "$VENDOR_TOOLS" = "1" ]; then /usr/local/bin/02-install-vendor-tools.sh; fi
 
 # Silence podman's RHEL subscription-secrets mount. containers-common ships
 # /usr/share/containers/mounts.conf = "/usr/share/rhel/secrets:/run/secrets", which podman tries to
@@ -147,13 +148,20 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     PATCH_OUT_COPILOT="$PATCH_OUT_COPILOT" \
     /usr/local/bin/03-build-crush.sh
 
-# Lean 4 (theorem prover) via elan. install-lean.sh installs OFFLINE from the vendored
-# /vendor/elan when CRUSH_VENDORED=1 (airgap; the elan volume is mounted by the Makefile
-# when `make vendor` produced it), else ONLINE via the official curl installer. The
-# vendor/vendor-lean.sh helper is already COPY'd into /usr/local/bin/vendor/ above.
-COPY entrypoint/install-lean.sh /usr/local/bin/
-RUN /usr/local/bin/install-lean.sh
-ENV PATH="/root/.elan/bin:${PATH}"
+# Vendoring-only tools (the `hf` CLI), gated behind VENDOR_TOOLS (default 0 — Makefile turns it
+# ON only for `make vendor`). These are needed ONLY to run `make vendor` inside this image while
+# ONLINE; the image itself and the OFFLINE airgap rebuild do not use them, so a normal/airgap
+# build never installs them and the airgap dnf mirror never needs them. See
+# tasks/archive/2026/08/22/vendor-via-client-image.md.
+# After the Crush build, so `make vendor` (VENDOR_TOOLS=1) and a normal build share every
+# layer above.
+ARG VENDOR_TOOLS=0
+COPY entrypoint/02-install-vendor-tools.sh /usr/local/bin/
+RUN --mount=type=cache,target=/var/cache/libdnf5 \
+    --mount=type=cache,target=/var/lib/dnf \
+    if [ "$VENDOR_TOOLS" = "1" ]; then /usr/local/bin/02-install-vendor-tools.sh; fi
+
+
 
 # Baked dotfiles (prompt, ls alias, GPG_TTY): /root/.extrabashrc, sourced from ~/.bashrc.
 # Host ~/.tmux.conf / ~/.gitconfig / ~/.gnupg are mounted conditionally by the Makefile.

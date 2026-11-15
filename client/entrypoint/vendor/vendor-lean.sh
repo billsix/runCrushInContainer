@@ -8,7 +8,7 @@ set -e
 DEST="${1:?usage: vendor-lean.sh <dest-elan-home>}"
 mkdir -p "$DEST"
 export ELAN_HOME="$DEST"
-curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
-"$DEST/bin/elan" default stable
+curl -fsSL "https://raw.githubusercontent.com/leanprover/elan/${ELAN_VERSION:-v4.2.4}/elan-init.sh" | sh -s -- -y --default-toolchain none
+"$DEST/bin/elan" default "${LEAN_TOOLCHAIN:-leanprover/lean4:v4.35.0}"
 "$DEST/bin/lean" --version
-echo "vendored elan + stable Lean toolchain into $DEST"
+echo "vendored elan + Lean ${LEAN_TOOLCHAIN:-leanprover/lean4:v4.35.0} into $DEST"

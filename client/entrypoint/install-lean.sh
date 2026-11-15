@@ -16,9 +16,9 @@ if [ -d /vendor/elan ]; then
     # default toolchain already set + present from `make vendor` — no network needed.
 else
     echo "install-lean: online elan install"
-    curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+    curl -fsSL "https://raw.githubusercontent.com/leanprover/elan/${ELAN_VERSION:-v4.2.4}/elan-init.sh" | sh -s -- -y --default-toolchain none
     export PATH="$HOME/.elan/bin:$PATH"
-    elan default stable
+    elan default "${LEAN_TOOLCHAIN:-leanprover/lean4:v4.35.0}"
 fi
 export PATH="$HOME/.elan/bin:$PATH"
 lean --version

@@ -65,6 +65,10 @@ CRUSH_CONTEXT_DEBUG ?= 0
 # `make image CRUSH_LSP_ASYNC=0` builds without them (to re-test on a CRUSH_TAG bump). See
 # ../tasks/reference/crush-lsp-integration.md.
 CRUSH_LSP_ASYNC ?= 1
+# Lean 4 pins (install-lean.sh / vendor-lean.sh): the elan installer's git tag and the default
+# toolchain. Bump both together; the image layer re-runs only when they change.
+ELAN_VERSION ?= v4.2.4
+LEAN_TOOLCHAIN ?= leanprover/lean4:v4.35.0
 
 # ---- Egress patch flags: one per decision, defaults encode the audit's disposition ----
 # From the dependency network audit (../tasks/reference/dependency-network-audit.md, D1-D12).
@@ -292,6 +296,8 @@ image: ## build the client image: full toolchain + Crush built from source (pinn
 		--build-arg CRUSH_SHELL_HISTORY=$(CRUSH_SHELL_HISTORY) \
 		--build-arg CRUSH_CONTEXT_DEBUG=$(CRUSH_CONTEXT_DEBUG) \
 		--build-arg CRUSH_LSP_ASYNC=$(CRUSH_LSP_ASYNC) \
+		--build-arg ELAN_VERSION=$(ELAN_VERSION) \
+		--build-arg LEAN_TOOLCHAIN=$(LEAN_TOOLCHAIN) \
 		--build-arg VENDOR_TOOLS=$(VENDOR_TOOLS) \
 		$(PATCH_FLAGS) \
 		$(CRUSH_VENDOR_FLAGS) .
