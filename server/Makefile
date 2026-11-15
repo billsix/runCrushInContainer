@@ -285,8 +285,8 @@ checksums-refresh: ## compute MD5+SHA-256+BLAKE2b for the ACTIVE models' downloa
 .PHONY: checksums-verify
 checksums-verify: ## verify the ACTIVE models' downloaded GGUFs against models.CHECKSUMS (fail loudly + quarantine on mismatch)
 	@# Verify all three hashes for each ACTIVE file.  A mismatch of ANY algorithm exits nonzero and
-	@# renames the bad file to <file>.corrupt so it can't be served.  An unpinned file (a new quant,
-	@# or before `make checksums-refresh` has ever run) warns but does not block.
+	@# renames the bad file to <file>.corrupt so it can't be served.  An unpinned file (a new quant)
+	@# warns but does not block; a missing or empty models.CHECKSUMS fails (nothing could be verified).
 	@$(PY) $(CHECKSUM_TOOL) verify --warn-unpinned --quarantine $(CHECKSUMS) $(foreach f,$(ACTIVE_FILES),$(MODEL_DIR)/$(f))
 
 # Guard shared by serve/serve-mlx: refuse a MODEL= whose country is not in MODEL_COUNTRIES.
@@ -304,7 +304,8 @@ serve-country-guard:
 serve: serve-country-guard ## [MAC] verify checksum + run llama-server for MODEL=<glimmer|gemma|granite|devstral|qwen> on its port (OpenAI /v1)
 	@# Integrity gate: re-verify the selected model's file against models.CHECKSUMS BEFORE launching.
 	@# On a mismatch (on-disk bit-rot, a bad copy, tampering) this exits nonzero and llama-server is
-	@# never started.  Fast: it hashes only the one file about to be loaded.
+	@# never started; a missing or empty models.CHECKSUMS also refuses.  An unpinned ad-hoc quant
+	@# (MODEL_FILE=...) warns and is served.  Fast: it hashes only the one file about to be loaded.
 	@$(PY) $(CHECKSUM_TOOL) verify --warn-unpinned $(CHECKSUMS) $(MODEL_DIR)/$(MODEL_FILE)
 	$(SERVER_BIN) -m $(MODEL_DIR)/$(MODEL_FILE) --alias $(MODEL_ALIAS) --host $(HOST) --port $(PORT) \
 		-ngl $(NGL) -c $(CTX) --parallel $(NP)
