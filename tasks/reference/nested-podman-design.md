@@ -93,6 +93,19 @@ flag (see runClaude's doc).
   layer committed cleanly to the disk store (a 46 GB image, no `no space left on device` — the tmpfs
   OOM-at-commit class is retired). Host test + details: runClaudeInContainer
   `tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md`.
+- **Build big images on the host; nested layer commits are slow (William Emerison Six
+  <billsix@gmail.com>, 2026-11-15).** The inner store uses `fuse-overlayfs`, which has no native
+  overlay diff (`podman info`: `Native Overlay Diff: false`), so every commit runs storage's
+  `NaiveDiffDriver` and walks the whole merged tree of the new layer and its parent through FUSE.
+  The cost scales with the whole image, not the step: in runClaudeInContainer on 2026-11-15, a
+  one-line `RUN` on top of github.com/billsix/modelviewprojection's TeX Live image took 256 s to
+  commit, and one commit in a real rebuild ran over 40 minutes. It looks like a hang (log stopped after `STEP n: RUN`, no process
+  running the step, `podman build` in `futex` wait); `kill -QUIT` it and the Go stack dump shows
+  `NaiveDiffDriver.Diff` under `CommitResults`. SIGTERM may not stop the build, and a survivor
+  holds the storage lock, so check `pgrep -fa "podman build"` before retrying. No launch flag avoids
+  it (a tmpfs store uses the same driver): run `make image` for big images on the host, and the
+  sandbox reuses them read-only through `NESTED_PODMAN_HOST_IMAGESTORE`. Full write-up: the
+  nested-run-and-gates.md reference doc in github.com/billsix/runClaudeInContainer ("Build big images on the host").
 - **Short names need `localhost/<tag>` and no TTY** in agent-driven runs; `make -n <target>` to print
   the expanded `podman run`, then re-run by hand with `--cgroups=disabled` added and `-it` dropped.
 - **Networking just works** (bridged netavark, verified in runClaude); `--network=host` is a fallback.

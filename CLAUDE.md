@@ -126,7 +126,8 @@ runClaudeInContainer's `tools/` copy.
 - `tasks/reference/nested-podman-vs-image-content.md` — why `NESTED_PODMAN` (run-time) and image
   content are decoupled, and the LSP-broke-when-nested post-mortem.
 - `tasks/reference/nested-podman-design.md` — nested-podman design/flags for the client (inner runs
-  use the PODMAN_RUN_FLAGS convention + `--network=host`).
+  use the PODMAN_RUN_FLAGS convention + `--network=host`), and why big images should be built on the
+  host: nested layer commits use fuse-overlayfs's slow naive diff.
 - `tasks/reference/image-build-and-storage-pipeline.md` — the two podman levels (host `make image`
   building `crushcontainer` vs nested podman inside the sandbox), where every image layer is written,
   and how to reclaim disk.

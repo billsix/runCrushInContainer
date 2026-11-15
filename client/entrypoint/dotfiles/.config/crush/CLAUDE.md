@@ -580,6 +580,14 @@ read `~/.config/crush/reference/container-file-layout.md`; the short version: th
 were pointed at is mounted at `/work`, and any other repo path you find yourself in came from
 `EXTRA_PODMAN_FLAGS` and is invisible to these docs.
 
+**Before building a large image nested, ask me to build it on the host instead.** Nested layer
+commits are slow: `fuse-overlayfs` has no native overlay diff, so each commit walks the whole image
+(on a TeX-sized image, 4 minutes for a one-line step and once over 40; 2026-11-15). Name the project and the command
+(`[HOST] make image` in that repo), then wait; the sandbox reuses the host-built image read-only.
+**Exception: when I've told you to work in the background or that I'm away, don't ask: build it
+yourself, nested, and accept the wait.** A small image, or one whose steps will all hit the cache,
+just build. Detail: `~/.config/crush/reference/nested-podman-design.md` ("Build big images on the host").
+
 ## Ending a session — sweep the always-read docs
 
 When I signal end-of-session, reconcile the always-read docs (`CLAUDE.md`, `README.md`, every

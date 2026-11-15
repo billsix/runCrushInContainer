@@ -226,6 +226,15 @@ podman images --format '{{.Repository}}:{{.Tag}} R/O {{.ReadOnly}}'
 > using it; rebuild the image (`make image`). The cause and fix are in
 > `tasks/reference/nested-podman-design.md` ("Which storage config the nested podman reads").
 
+> **Build large images on the host first.** Inside the sandbox every layer commit is slow: the inner
+> podman stores layers with `fuse-overlayfs`, which has no native overlay diff, so each commit walks
+> the whole image. On a big image (TeX Live, toolchains) a one-line `RUN` step took 4 minutes to
+> commit, and one commit ran over 40 minutes and looked like a hang. On the host a commit takes
+> seconds. So run
+> `make image` for the project on the host, then launch the sandbox; it reuses that image read-only.
+> No launch flag avoids this. Detail: `tasks/reference/nested-podman-design.md` ("Build big images on
+> the host").
+
 ### By hand — the SSH forward, `make image` and `make shell` as separate steps
 
 The launcher is exactly these three steps plus cleanup. Run them yourself when you want the tunnel
