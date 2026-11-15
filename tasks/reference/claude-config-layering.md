@@ -77,6 +77,17 @@ The `shell` target mounts, in order (later mounts shadow earlier paths):
 Auth and sessions never live in git; conventions never live only in a container; personal
 specifics never live in the tracked repo. That split is the whole design.
 
+**Gotcha: a single-file bind mount shows the file as it was at launch once git replaces it.** The
+personal overlay (`~/.ai-coding-conventions.personal.md`) and the tracked `CLAUDE.md` are mounted as
+single files, which binds the host file's inode. An in-place edit (an editor, `Edit`, Python
+`write_text`) keeps the inode and shows through. A `git merge`, `checkout`, `rebase` or `stash` writes a
+new file and unlinks the old one, so the running sandbox keeps the stale copy until it is relaunched.
+Found 2026-11-15: after the maintainer merged a dotfiles branch, the sandbox's
+`~/.claude/ai-coding-conventions.personal.md` still held the pre-merge Python-deps rule, and a repo
+review reported a contradiction that no longer existed. When the current text matters (an audit, a
+comparison), read the overlay from its working copy, github.com/billsix/dotfiles
+`.ai-coding-conventions.personal.md`, if that repo is mounted, and `cmp` it against the mounted copy.
+
 ## If the login menu returns despite the mounts
 
 The onboarding persistence (mount 2) only works if `~/.claude.json` is actually bind-mounted

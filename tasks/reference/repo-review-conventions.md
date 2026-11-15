@@ -134,6 +134,11 @@ generated trees beyond a sample that confirms a claim.
    invoked or never emitted carries the command that shows it, because a VERIFIED label
    alone can be wrong (gacalc 2026-11-08 marked "`spyder.sh` never starts Spyder" VERIFIED;
    the script's last line is `exec spyder`).
+   - **Compare against the live source, not a mounted snapshot.** The personal overlay and the
+     shared `CLAUDE.md` are single-file mounts that go stale when git replaces the host file
+     (`claude-config-layering.md`, "Gotcha"). A contradiction against them is real only after
+     re-reading the working copy (runClaudeInContainer 2026-11-15 reported a Python-deps
+     contradiction that a dotfiles merge had already resolved).
    - **A LEAD's severity is provisional.** Rate it by what it would do if real, not by how
      sure you are. Anything that silently corrupts shared state or returns a wrong value is
      at least Recommended (gacalc's "`Gn.to_blade_dict()` returns its internal dict" was

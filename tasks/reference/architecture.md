@@ -167,7 +167,7 @@ for its own `client/` image, but that's incidental to its purpose.
   can build/run a project's own containers nested (opt-in, default off). Flag set (`/dev/fuse`,
   `unmask=ALL`, `cap-add=sys_admin,mknod,net_admin`, an on-disk-dir inner store `/var/lib/containers`
   by default — RAM tmpfs opt-in via `NESTED_PODMAN_STORE=tmpfs`) + baked `storage.conf`
-  (fuse-overlayfs). Every inner run needs
+  (native kernel overlay) and `containers.conf` drop-ins. Every inner run needs
   `--cgroups=disabled`; the client itself is often nested, so project builds inside it are three-deep
   (run the client on the host for a clean level). Full detail: `tasks/reference/nested-podman-design.md`.
 - **Dotfiles + host config (2026-08-20):** the Dockerfile bakes `client/entrypoint/dotfiles/.extrabashrc`
