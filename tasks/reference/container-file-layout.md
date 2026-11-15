@@ -56,7 +56,7 @@ the session log alongside it).
 | `entrypoint/dotfiles/.config/containers/storage.conf` | `/root/.config/containers/storage.conf`, and again as `/etc/containers/storage.conf.d/50-crush-nested.conf` | no (nested podman: native overlay, host image store) |
 | `entrypoint/dotfiles/.config/containers/containers.conf` | `/root/.config/containers/containers.conf`, and again as `/etc/containers/containers.conf.d/50-crush-nested.conf` | no (buildah's temp dir on the store volume) |
 | `entrypoint/dotfiles/.config/crush/CLAUDE.md` | `/root/.config/crush/CLAUDE.md` | no (always-loaded conventions) |
-| `entrypoint/dotfiles/.config/crush/commands/` (12 files) | `/root/.config/crush/commands/` | no (slash commands) |
+| `entrypoint/dotfiles/.config/crush/commands/` (13 files) | `/root/.config/crush/commands/` | no (slash commands) |
 | `entrypoint/dotfiles/.config/crush/reference/` (30 files) | `/root/.config/crush/reference/` | no (see doc mapping below) |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.md` (blank default) | `/root/.config/crush/ai-coding-conventions.personal.md` | **YES — host overlay mounted over it** |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md` | `/root/.config/crush/ai-coding-conventions.personal.example.md` | no |

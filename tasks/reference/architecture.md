@@ -357,7 +357,7 @@ The full working-method machinery is **ported and in use** (Phases 0–4, 2026-0
   project→URL mapping / mount layout / instructions** without editing anything tracked; the agent loads
   it every session and the tracked conventions stay maintainer-agnostic. Example to copy:
   `client/entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md`; see `FORKING.md`;
-- **12 slash commands** (`/new-task`, `/new-reference`, `/new-reference-set`, `/archive-task`,
+- **13 slash commands** (`/new-task`, `/new-reference`, `/new-reference-set`, `/archive-task`, `/recheck-blocked`,
   `/stack` and `/stack-*`, `/audit-repo`, `/findings-to-tasks`, `/review-status`, `/spell-out-names` — in Crush's `/` dialog under the **User** tab). Each is a port of runClaudeInContainer's, not a byte mirror: no YAML frontmatter, `$UPPERCASE` argument tokens instead of `$ARGUMENTS`, `~/.config/crush` paths;
 - **nested-podman** (`make shell NESTED_PODMAN=1`; inner runs: `--network=host` needed at this depth, and the cgroups flag auto-applies via the PODMAN_RUN_FLAGS convention — see `tasks/reference/nested-podman-design.md`);
 - **`make shell-exec`** (`client/Makefile`) — the batch twin of `make shell`: `make shell-exec
@@ -381,9 +381,9 @@ The full working-method machinery is **ported and in use** (Phases 0–4, 2026-0
 
 **Deliberately NOT ported:** auth plumbing (local keyless llama-server behind SSH — nothing to sign
 into), interactive GUI/Wayland + gamepad passthrough (headless Xvfb still works), and a dedicated
-`crush-config-layering.md` (optional — covered by `architecture.md` + `crush-capabilities.md`), and the
-"Blocked tasks" convention with `/recheck-blocked` (being ported by `tasks/port-blocked-task-convention.md`).
-Fork guidance is in `FORKING.md`.
+`crush-config-layering.md` (optional — covered by `architecture.md` + `crush-capabilities.md`).
+Fork guidance is in `FORKING.md`. (The "Blocked tasks" convention and `/recheck-blocked` were ported
+2026-11-15; a URL `Recheck:` needs the with-internet launcher.)
 
 **Copied from runClaudeInContainer because something here cites them** (byte mirrors in
 `tasks/reference/`, repo-only, not baked; 2026-11-15): `nested-run-and-gates.md`,

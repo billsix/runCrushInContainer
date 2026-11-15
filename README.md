@@ -471,7 +471,7 @@ The first cut was just "get it running"; the client has since grown a few things
 The runClaudeInContainer working-method machinery is now **ported** — the cross-project conventions
 (a lean, always-loaded `CLAUDE.md`), the task-doc and reference-doc systems, the diversion stack
 (in-session only; the session-end sweep preserves what's still in flight), the personal-overlay
-layering, the 12 slash commands, and nested-podman support (`make shell NESTED_PODMAN=1`). See
+layering, the 13 slash commands, and nested-podman support (`make shell NESTED_PODMAN=1`). See
 `tasks/port-runclaude-conventions-systems.md`.
 
 **Customize it for yourself — the personal overlay (`ai-coding-conventions.personal.md`).** The baked, always-loaded

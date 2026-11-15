@@ -46,4 +46,8 @@ Steps:
    self-contained" — just fill them in. Full BLUF write-up: `~/.config/crush/reference/bluf-bottom-line-up-front.md`.)
 
 6. Ask me for the title and one-paragraph goal (don't invent them from the slug). Fill them in once I answer, then **draft the `## BLUF`** (1–4 sentences — what the task is and what "done" means) from the title/goal for me to tweak, and **populate `## Context`** with what you already know (files to read first, related/prior tasks and reference docs, current state of the relevant code, decisions already made with rationale — leave a stub prompting for it if you don't yet have enough). Also **propose a Priority and Difficulty** (1–10 each, per the scale in the "Task documents" section of `CLAUDE.md` — 1=highest priority / easiest, geometric ~1.5×/step) with a one-line rationale for each, and let me adjust before finalizing. Leave Plan/Notes/Open questions for me or for our work to populate.
-7. Confirm the path of the created file.
+7. If the task can't start until an **external condition** changes (an upstream release, a hands-on
+   check only I can do), set `**Status:** blocked` instead, give it a high Priority number, and add
+   `**Blocked on:**` (the condition, one line) and `**Recheck:**` (a cheap runnable check + the
+   cleared signal) under the header, per "Blocked tasks" in `~/.config/crush/CLAUDE.md`.
+8. Confirm the path of the created file.

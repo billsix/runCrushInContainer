@@ -226,7 +226,12 @@ sentences: what the task IS and what "done" means, the point first; from US-Army
 write-up `~/.config/crush/reference/bluf-bottom-line-up-front.md`) and **`## Context`** (cold-start
 orientation: what to read first, current state, decisions-with-rationale) — then Goal / Plan / Notes /
 Open questions. Priority & Difficulty are 1–10 (1 = highest priority / easiest); pick next work by
-lowest-priority-number then lowest-difficulty-number. Update as work progresses. When complete, **move**
+lowest-priority-number then lowest-difficulty-number. **Blocked tasks** — gated on something
+outside our control (an upstream release, a hands-on check only I can do) — set `**Status:** blocked`
+plus `**Blocked on:**` (the condition) and `**Recheck:**` (a cheap runnable check + the signal that
+means cleared), get a high priority-number, stay out of the easy-wins ranking, and are listed
+separately at session start and session end. Blocked ≠ parked (a testable gate vs. not-now).
+`/recheck-blocked` tests them on demand, never automatically. Update as work progresses. When complete, **move**
 to `tasks/archive/<YYYY>/<MM>/<DD>/<slug>.md` — **yours to do proactively at the moment of completion,
 no go/no-go question (2026-08-31; timing corrected 2026-09-07)**: done-state met + gates green = the
 archive is *owed* (harvest durable knowledge to reference docs, **rewrite the task doc into a lean

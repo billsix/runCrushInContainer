@@ -13,7 +13,7 @@ conflicts.
 
 - **Portable (use as-is):** the whole container build/run stack (`server/Makefile`, `client/Makefile`,
   `client/Dockerfile`, `client/entrypoint/`), the baked conventions `CLAUDE.md` + the reference docs,
-  the 12 slash commands, and the nested-podman flag set.
+  the 13 slash commands, and the nested-podman flag set.
 - **Personal / swappable:** the model + quant + pinned tags (Makefile variables), the personal-overlay
   `@`-imported `~/.ai-coding-conventions.personal.md`, the dotfiles (`.extrabashrc`), and the SSH-tunnel
   target.

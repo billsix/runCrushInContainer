@@ -1,91 +1,37 @@
-# Port the blocked-task convention + `/recheck-blocked` into runCrushInContainer
+# Ported the blocked-task convention and /recheck-blocked into the Crush conventions
 
-**Status:** proposed — in the 2026-11-15 audit batch (go-ahead given 2026-11-15)
+**Status:** complete
+**Completed:** 2026-11-15
 **Priority:** 3
 **Difficulty:** 3
 **Started:** 2026-08-23
 **Source:** tasks/review/2026/11/15/repo-review.md §3.3
 
-## BLUF
+## What this did
 
-Port runClaudeInContainer's blocked-task convention (`**Blocked on:**` + `**Recheck:**` fields) and its
-`/recheck-blocked` command into this repo's baked Crush conventions and commands, so the two sibling
-conventions systems agree. "Done" = both are delivered through the existing conventions/command path and
-pass the "Verify" section below.
+Ported github.com/billsix/runClaudeInContainer's blocked-task convention (2026-08-23), with the
+maintainer's go-ahead from the 2026-11-15 review (its open question 1):
 
-## Context
+- `client/entrypoint/dotfiles/.config/crush/CLAUDE.md`, "Task documents": a compact rule:
+  `**Status:** blocked` + `**Blocked on:**` + `**Recheck:**`, a high priority-number, out of the
+  easy-wins ranking, listed separately at session start and end, blocked ≠ parked, and
+  `/recheck-blocked` on demand only. Kept to one paragraph because the file is always loaded into the
+  local model's window.
+- `commands/recheck-blocked.md` (new, the 13th command, in Crush's format: `$SCOPE` argument, no
+  frontmatter): finds blocked tasks, lists them, runs each Recheck (command, version compare,
+  URL + signal, or human-gated), reports CLEARED / still blocked / unknown, offers to un-block, stages
+  only.
+- `commands/new-task.md`: a step for creating a task as `blocked` with the two fields.
+- Command counts 12 → 13 in `CLAUDE.md`, `README.md`, `FORKING.md`, `architecture.md` and
+  `container-file-layout.md` (and its baked twin).
 
-Port the **blocked-task convention** and its **`/recheck-blocked`** command — just added to
-runClaudeInContainer (`github.com/billsix/runClaudeInContainer`) on 2026-08-23 — into this
-Crush sibling, so the two conventions systems stay in sync. A *blocked* task is one that
-can't start until an **external condition** changes (an upstream tool ships a feature, a
-release lands, a standard stabilizes, or the maintainer runs a hands-on verification), and it
-carries a **runnable re-check** so a future session can test whether the gate has cleared
-without re-deriving anything.
+Decision on the task's open risk (does the client have a web-fetch tool?): the web tools are kept by
+default (`PATCH_OUT_WEB_TOOLS=0`), so a URL Recheck works from the with-internet launcher; in
+no-internet mode the command reports it **unknown** and says it needs internet.
 
-This is a follow-on to `tasks/port-runclaude-conventions-systems.md` (the original conventions
-port) and reuses the same delivery mechanism it established.
+## Verification
 
-Read first: that task, then "Crush-specific wiring" and "Key risk" below. Source finding:
-`tasks/review/2026/11/15/repo-review.md` §3.3.
-
-## What to port (source: runClaudeInContainer, 2026-08-23)
-
-Three pieces, all already written in the source repo — adapt, don't reinvent:
-
-1. **Convention text** — a `### Blocked tasks — deferred until an external condition changes`
-   subsection in the "Task documents" section of the shared `CLAUDE.md`, plus three small
-   tweaks: the Priority note mentions blocked tasks; the session-start scan lists them
-   separately (kept out of the easy-wins ranking); the session-end sweep reminds they exist.
-   Defines `**Status:** blocked` + two header fields: **`Blocked on:`** (the condition) and
-   **`Recheck:`** (a cheap runnable check + the *cleared* signal — a `WebFetch` URL + what to
-   look for, a version compare with a version-aware sort, a command, or a named manual step).
-   Distinguishes **blocked** (a concrete testable gate) from **parked** (subjective not-now).
-2. **`recheck-blocked` command** — runs every blocked task's `Recheck:` and reports which
-   gates cleared, offering to un-block and re-rate Priority. Default scope = current repo;
-   `--all` sweeps every mount. Re-checking is **on demand — never automatic**.
-3. **`new-task` command tweak** — a note that a task blocked on an external condition uses
-   `Status: blocked` + the `Blocked on:`/`Recheck:` fields.
-
-## Crush-specific wiring (how this repo delivers conventions + commands)
-
-Per `tasks/port-runclaude-conventions-systems.md`:
-
-- **Conventions** live baked at `client/entrypoint/dotfiles/.config/crush/CLAUDE.md`
-  (registered as the one `option global-context-path` in `crushrc`). Add the blocked-task
-  subsection + the three tweaks there. **Mind the context budget:** that `CLAUDE.md` was
-  deliberately trimmed to a **lean core (~11.5 KB / ~2.9k tokens)** to fit the local model's
-  32k/64k window — keep the ported text tight (tighter than the runClaude wording if needed),
-  not a verbatim copy.
-- **Commands** are Crush custom-command `.md` files at
-  `client/entrypoint/dotfiles/.config/crush/commands/` (currently 7). Add `recheck-blocked.md`
-  as the 8th and edit `new-task.md`. They appear under the `/` dialog's **"User" tab** (press
-  `Tab`) and **only after `make image`** bakes them.
-
-## Key risk / open question (verify before relying on `/recheck-blocked` here)
-
-- **Does the Crush client have a usable web-fetch tool, and can the local model drive it?**
-  `recheck-blocked` leans on fetching a URL and reading it (runClaude uses `WebFetch`). The
-  vendored Crush tool set (`client/vendor/crush/internal/`) shows no obvious `fetch`/`web`
-  tool, and the client runs a **local model with a small context window** that may be weak at
-  multi-step web-checking. If web-fetch isn't available or reliable, scope `Recheck:` here to
-  **command-based / version-compare / manual-step** checks and say so in the command, rather
-  than URL-fetch checks. Confirm the tool situation first.
-
-## Verify
-
-- After `make image`, `/recheck-blocked` shows under the `/` "User" tab and runs against a
-  test blocked task.
-- The lean `CLAUDE.md` still fits the model window (no overflow like the first conventions
-  port hit — see `tasks/archive/2026/08/20/context-window-sizing.md`).
-- Existing informally-"blocked" tasks in this repo (e.g. `bump-crush-to-v0.90.0.md`, noted
-  "blocked on…") can adopt the new `Blocked on:`/`Recheck:` shape — do that as part of the port
-  or note it as a fast-follow.
-
-## Open questions
-
-1. Web-fetch tooling on the Crush client — available and local-model-drivable, or should
-   `Recheck:` be restricted to non-web checks here? (See "Key risk" — recommend confirming the
-   tool set before wiring the command.)
-2. Fold this into `port-runclaude-conventions-systems.md` (still open) as another phase, or
-   keep it as this separate focused task? (Recommend: keep separate; cross-link both.)
+The command file and the convention text are in the baked dotfiles tree, so the client
+`make image` bakes them (`COPY entrypoint/dotfiles/ /root/`). Not verified here: the command
+appearing under Crush's `/` "User" tab, which needs a Crush session against the model (the
+maintainer's).
