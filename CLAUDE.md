@@ -158,6 +158,11 @@ here — it drifts). **Cite a baked doc by its `~/.config/crush/reference/…` p
 `tasks/reference/…`** (the latter is a repo path absent inside the container); a baked doc copied
 from `tasks/reference/` must keep both copies in sync.
 
+## Reviews
+
+Latest deep review: `tasks/review/2026/11/15/repo-review.md` (first review; §0 maps the same-day
+runClaudeInContainer review's follow-ups onto this repo). Records are frozen; act on them through tasks.
+
 ## Tasks
 
 Scan `tasks/` (top-level, not `tasks/archive/`) at session start for the current, prioritized list —
