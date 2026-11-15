@@ -586,14 +586,13 @@ read `~/.config/crush/reference/container-file-layout.md`; the short version: th
 were pointed at is mounted at `/work`, and any other repo path you find yourself in came from
 `EXTRA_PODMAN_FLAGS` and is invisible to these docs.
 
-**Before building a large image nested, ask me to build it on the host instead.** Nested layer
-commits are slow: `fuse-overlayfs` has no native overlay diff, so each commit walks the whole image
-(on a TeX-sized image, 4 minutes for a one-line step and once over 40; 2026-11-15). Name the project
-and the command (`[HOST] make image` in that repo), then wait; the sandbox reuses the host-built
-image read-only. **Exception: when I've told you to work in the background or that I'm away
-(including any batch run under "The authorized-batch workflow"), don't ask: build it yourself,
-nested, and accept the wait.** A small image, or one whose steps will all hit the cache, just build.
-Detail: `~/.config/crush/reference/nested-podman-design.md` ("Build big images on the host").
+**Build images nested; a host-built image is reused, not required.** The nested podman uses
+native kernel overlay, so a layer commit costs about what it does on the host (13 s against 62 s
+under the old fuse-overlayfs, 2026-11-15), and the client reuses host-built images read-only. If
+the shell prints the `[nested podman] … no native overlay diff` warning, the client image predates
+that switch: every nested commit walks the whole image again, so ask me to rebuild it on the host
+(`[HOST] make -C client image`) before a large nested build. Detail:
+`~/.config/crush/reference/nested-podman-design.md` ("Storage driver").
 
 ## Ending a session — sweep the always-read docs
 

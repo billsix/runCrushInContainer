@@ -224,7 +224,7 @@ PERSONAL_MOUNT := $(shell touch $(PERSONAL_FILE) 2>/dev/null; echo "-v $(PERSONA
 
 # Nested podman (opt-in: `make shell NESTED_PODMAN=1`): run podman INSIDE the client so Crush can
 # build/run a project's own containers nested (make image/run/shell for container-per-project repos).
-# Inner storage uses fuse-overlayfs (entrypoint/dotfiles/.config/containers/storage.conf). Every
+# Inner storage uses native kernel overlay (entrypoint/dotfiles/.config/containers/storage.conf). Every
 # INNER `podman run` still needs `--cgroups=disabled` (the sandbox /sys/fs/cgroup is read-only).
 # See tasks/reference/nested-podman-design.md. NOTE the client is often itself run nested, so a
 # project build inside it is podman-in-podman-in-podman — run the client on the host (or an
@@ -239,11 +239,11 @@ NESTED_PODMAN ?= 0
 #                      `rm`'d when `make shell` exits (a trap). No RAM ceiling: the old
 #                      tmpfs filled RAM and OOM'd on big images and at layer-commit
 #                      (the 22.3 GB client image itself needed size=50g); disk is plentiful.
-#   tmpfs           -- the old RAM-backed store (fastest, bounded by RAM). Select with
+#   tmpfs           -- a RAM-backed store (bounded by RAM; gone at exit). Select with
 #                      `make shell NESTED_PODMAN=1 NESTED_PODMAN_STORE=tmpfs`; size it
 #                      with NESTED_PODMAN_TMPFS_SIZE.
-# A dir on the host's real fs (like the tmpfs) is not overlay, so fuse-overlayfs runs on
-# it -- unlike the sandbox's own overlay rootfs (overlay-on-overlay is kernel-rejected).
+# A dir on the host's real fs (like the tmpfs) is not overlay, so native kernel overlay runs
+# on it -- unlike the sandbox's own overlay rootfs (overlay-on-overlay is kernel-rejected).
 # One sandbox per store dir at a time. Design + host-verification checklist:
 # runClaudeInContainer tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md.
 NESTED_PODMAN_STORE ?= dir
@@ -258,7 +258,7 @@ NESTED_PODMAN_HOST_IMAGESTORE ?= $(HOME)/.local/share/containers/storage
 ifeq ($(NESTED_PODMAN),1)
 # label=disable is already always-on via SELINUX_OPT. unmask=ALL lets the inner rootful netavark
 # write per-interface sysctls (bridged networking); net_admin is for its veth/bridge over netlink;
-# /dev/fuse backs fuse-overlayfs; the store is the inner image store. No libpod-shadow
+# /dev/fuse is kept for fuse-based tools; the store is the inner image store. No libpod-shadow
 # tmpfs is needed here (unlike runClaudeInContainer) because the client does NOT mount the host's
 # $XDG_RUNTIME_DIR, so there's no host podman state to collide with.
 # Store mount: tmpfs mode adds the RAM tmpfs here; dir mode's ephemeral disk bind mount is

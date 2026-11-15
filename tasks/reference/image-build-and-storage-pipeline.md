@@ -90,15 +90,13 @@ and is deleted on exit — **not** the host store `~/.local/share/containers/sto
 tmpfs. A hard-killed session can leak the dir → `podman unshare rm -rf ~/.cache/crush-nested.*` (a bare
 `rm` cannot delete the layers' read-only dirs).
 
-**Why a dedicated real-fs dir?** The sandbox rootfs is itself an **overlay** mount; layering the
-inner `fuse-overlayfs` on top is **overlay-on-overlay under a nested userns, which the kernel
-rejects**. A tmpfs is a real (non-overlay) fs — the historical reason the store was tmpfs. A **host
+**Why a dedicated real-fs dir?** The sandbox rootfs is itself an **overlay** mount; an inner overlay
+whose upper dir sits on top of it is **overlay-on-overlay, which the kernel rejects**. A tmpfs is a real (non-overlay) fs — the historical reason the store was tmpfs. A **host
 directory on the real disk fs, bind-mounted in, is equally a real fs**, so it sidesteps the problem
 with no RAM ceiling. That is the 2026-09-27 change: the ~22 GB client image and TeX-Live-sized
 downstream builds used to fail at *layer-commit* (`no space left`) in the RAM tmpfs (needing
-`remount,size=50g`). Either store still commits slowly: `fuse-overlayfs` has no native overlay
-diff, so each nested commit walks the whole image; build large images on the host
-(`tasks/reference/nested-podman-design.md`, "Build big images on the host"). Opt back into RAM with `NESTED_PODMAN_STORE=tmpfs` (sized by
+`remount,size=50g`). On either store the inner podman uses native kernel overlay, so a nested
+commit costs what a host commit does (`tasks/reference/nested-podman-design.md`, "Storage driver"). Opt back into RAM with `NESTED_PODMAN_STORE=tmpfs` (sized by
 `NESTED_PODMAN_TMPFS_SIZE`, default 8g).
 
 ### (b) Read-only reuse of the host store — so a nested build doesn't re-pull
@@ -136,7 +134,7 @@ networking, `--network=host` — see that doc.
 
 - runClaudeInContainer `tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md` — the disk-store change, the
   rootful-config fix, and the verification (canonical location; the client mirrors its Makefile change).
-- `tasks/reference/nested-podman-design.md` — every nested flag and why (fuse-overlayfs,
+- `tasks/reference/nested-podman-design.md` — every nested flag and why (the storage driver,
   `--cgroups=disabled`, `--network=host`/netavark, the `libpod` tmpfs), plus the store-backend section.
 - `tasks/reference/nested-podman-vs-image-content.md` — why `NESTED_PODMAN` (run-time) and image
   content are decoupled.

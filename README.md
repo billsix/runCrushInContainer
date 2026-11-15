@@ -231,14 +231,21 @@ podman images --format '{{.Repository}}:{{.Tag}} R/O {{.ReadOnly}}'
 > using it; rebuild the image (`make image`). The cause and fix are in
 > `tasks/reference/nested-podman-design.md` ("Which storage config the nested podman reads").
 
-> **Build large images on the host first.** Inside the sandbox every layer commit is slow: the inner
-> podman stores layers with `fuse-overlayfs`, which has no native overlay diff, so each commit walks
-> the whole image. On a big image (TeX Live, toolchains) a one-line `RUN` step took 4 minutes to
-> commit, and one commit ran over 40 minutes and looked like a hang. On the host a commit takes
-> seconds. So run
-> `make image` for the project on the host, then launch the sandbox; it reuses that image read-only.
-> No launch flag avoids this. Detail: `tasks/reference/nested-podman-design.md` ("Build big images on
-> the host").
+> **Nested builds commit layers at native speed.** The inner podman uses the kernel's own overlay,
+> so a layer commit costs what it does on the host (13 s against 62 s under the old fuse-overlayfs
+> setup). If the shell prints `[nested podman] … no native overlay diff` at start, your client
+> image predates that: rebuild it (`[LINUX] make -C client image`) and relaunch. Detail:
+> `tasks/reference/nested-podman-design.md` ("Storage driver").
+>
+> **Keep the inner store in RAM instead** (`NESTED_PODMAN_STORE=tmpfs`, sized by
+> `NESTED_PODMAN_TMPFS_SIZE`, default `8g`). The default store is a disk directory; RAM is bounded by
+> memory and vanishes at exit like the disk store:
+>
+> ```sh
+> make -C client shell NESTED_PODMAN=1 NESTED_PODMAN_STORE=tmpfs NESTED_PODMAN_TMPFS_SIZE=16g PROJECT=/path/to/your/project   # RAM store
+> make -C client shell NESTED_PODMAN=1 PROJECT=/path/to/your/project                                                         # disk store (default)
+> # the launchers take the same variables: NESTED_PODMAN_STORE=tmpfs /path/to/runCrushInContainer/client/runCrushNoInternet.sh you@mac-studio.local ""
+> ```
 
 ### By hand — the SSH forward, `make image` and `make shell` as separate steps
 

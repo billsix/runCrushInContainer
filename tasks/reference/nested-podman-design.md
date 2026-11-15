@@ -17,7 +17,7 @@ in with `make shell NESTED_PODMAN=1` (off by default for a bare `make shell`; bo
 
 | Flag | Why |
 | --- | --- |
-| `--device /dev/fuse` | Inner storage is fuse-overlayfs (overlay-on-overlay under nested userns is kernel-rejected). |
+| `--device /dev/fuse` | Kept for fuse-based tools; the store itself uses native kernel overlay ("Storage driver" below). |
 | `--security-opt unmask=ALL` | The inner rootful podman uses **netavark**, which writes per-interface sysctls to bring the bridge up; the sandbox `/proc/sys` is read-only without this, so bridged networking breaks. |
 | `--cap-add=sys_admin,mknod,net_admin` | Baseline mount/device work + `net_admin` for netavark's veth/bridge over netlink (else `netavark: Operation not permitted`). |
 | `--device /dev/net/tun` | Retained for the rootless/pasta path; harmless. |
@@ -25,8 +25,24 @@ in with `make shell NESTED_PODMAN=1` (off by default for a bare `make shell`; bo
 
 `--security-opt label=disable` is already **always-on** in the client (`SELINUX_OPT`), so it's not
 repeated. Inner storage is driven by the baked `entrypoint/dotfiles/.config/containers/storage.conf`
-(`mount_program = /usr/bin/fuse-overlayfs`). `podman`/`buildah`/`skopeo`/`fuse-overlayfs` already ship
-in the image.
+and the `containers.conf` drop-in; see "Storage driver" below. `podman`/`buildah`/`skopeo` already
+ship in the image.
+
+### Storage driver: native kernel overlay (2026-11-15)
+
+The inner podman uses the kernel's own overlay: `storage.conf` sets no `mount_program`, overrides
+the vendor drop-in's `mountopt = "nodev,metacopy=on"` with `"nodev"` (the kernel rejects `metacopy`
+in a user namespace), and the `containers.conf` drop-in puts buildah's temp dir
+(`image_copy_tmp_dir`) at `/var/lib/containers/tmp`, which `client/entrypoint/shell.sh` creates. It
+works because the store is a real filesystem (the disk dir or the tmpfs); the kernel refuses an
+overlay whose upper dir is on another overlay, so the store can never be the client's rootfs, and
+buildah's default `/var/tmp` (on the rootfs) fails a build-context mount. A layer commit then tars
+only the new layer; under fuse-overlayfs, which has no native diff, each commit walked the whole
+image. Measured in the sibling github.com/billsix/runClaudeInContainer on 2026-11-15 (same kernel
+and podman): a two-step build on a 3.1 GB base took 13 s native, 9 s native on tmpfs, 62 s under
+fuse-overlayfs. `shell.sh` warns at start when podman reports no native overlay diff (an image built
+before the switch). Requirements and lore: runClaudeInContainer's `tasks/reference/nested-run-and-gates.md`
+("Storage speed").
 
 ## Difference from runClaudeInContainer: no libpod-shadow tmpfs
 
@@ -57,7 +73,7 @@ flag (see runClaude's doc).
   shares the client's network, which is already the host's via the client's own `--network=host`).
   Fine for building/testing (most project containers don't need isolated networking). So the working
   inner invocation is: `podman run --cgroups=disabled --network=host …`. (The image *pull* works
-  without it — storage/fuse-overlayfs is fine; only container *networking* needs this.)
+  without it — storage is fine; only container *networking* needs this.)
 - **A nested `podman build` needs `BUILDAH_ISOLATION=chroot` (diagnosed 2026-11-07, Fedora 45: podman
   6.1.3, buildah 1.45.1).** The sandbox is a rootless container on the host (`/proc/self/uid_map` maps
   uid 0 to the host user). The inner podman runs rootful, but buildah's `RUN` steps see the user
@@ -93,19 +109,19 @@ flag (see runClaude's doc).
   layer committed cleanly to the disk store (a 46 GB image, no `no space left on device` — the tmpfs
   OOM-at-commit class is retired). Host test + details: runClaudeInContainer
   `tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md`.
-- **Build big images on the host; nested layer commits are slow (William Emerison Six
-  <billsix@gmail.com>, 2026-11-15).** The inner store uses `fuse-overlayfs`, which has no native
-  overlay diff (`podman info`: `Native Overlay Diff: false`), so every commit runs storage's
-  `NaiveDiffDriver` and walks the whole merged tree of the new layer and its parent through FUSE.
+- **Under the old fuse-overlayfs store, nested layer commits were slow (William Emerison Six
+  <billsix@gmail.com>, 2026-11-15); native overlay (above) removed this.** fuse-overlayfs has no
+  native overlay diff (`podman info`: `Native Overlay Diff: false`), so every commit ran storage's
+  `NaiveDiffDriver` and walked the whole merged tree of the new layer and its parent through FUSE.
   The cost scales with the whole image, not the step: in runClaudeInContainer on 2026-11-15, a
   one-line `RUN` on top of github.com/billsix/modelviewprojection's TeX Live image took 256 s to
   commit, and one commit in a real rebuild ran over 40 minutes. It looks like a hang (log stopped after `STEP n: RUN`, no process
   running the step, `podman build` in `futex` wait); `kill -QUIT` it and the Go stack dump shows
   `NaiveDiffDriver.Diff` under `CommitResults`. SIGTERM may not stop the build, and a survivor
-  holds the storage lock, so check `pgrep -fa "podman build"` before retrying. No launch flag avoids
-  it (a tmpfs store uses the same driver): run `make image` for big images on the host, and the
-  sandbox reuses them read-only through `NESTED_PODMAN_HOST_IMAGESTORE`. Full write-up: the
-  nested-run-and-gates.md reference doc in github.com/billsix/runClaudeInContainer ("Build big images on the host").
+  holds the storage lock, so check `pgrep -fa "podman build"` before retrying. If the start-up
+  warning says podman has no native overlay diff, the client image predates the switch: rebuild it
+  on the host. Full write-up: the nested-run-and-gates.md reference doc in
+  github.com/billsix/runClaudeInContainer ("Storage speed").
 - **Short names need `localhost/<tag>` and no TTY** in agent-driven runs; `make -n <target>` to print
   the expanded `podman run`, then re-run by hand with `--cgroups=disabled` added and `-it` dropped.
 - **Networking just works** (bridged netavark, verified in runClaude); `--network=host` is a fallback.

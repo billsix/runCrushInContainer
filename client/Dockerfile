@@ -160,18 +160,21 @@ ENV PATH="/root/.elan/bin:${PATH}"
 COPY entrypoint/dotfiles/ /root/
 RUN echo "source ~/.extrabashrc" >> ~/.bashrc
 
-# Store config for the nested podman (fuse-overlayfs, plus the read-only host image store at
+# Store config for the nested podman (native kernel overlay, plus the read-only host image store at
 # /var/lib/shared-images). podman loads ONE main storage.conf, the highest-precedence one that
 # exists (~/.config, then /etc, then /usr/share), and then every storage.conf.d/ and
 # storage.rootful.conf.d/ drop-in, sorted by file name, each overriding what came before.
 # containers-common ships /usr/share/containers/storage.rootful.conf.d/00-vendor-rootful.conf,
 # which sets additionalimagestores to /usr/lib/containers/storage, so a main file alone loses
 # the host store. The same file is therefore also installed as a drop-in whose name sorts after
-# the vendor's. The /etc main-file copy serves an older podman without the vendor drop-in.
+# the vendor's; the main file is the ~/.config copy the dotfiles COPY above brings in.
 # Detail: tasks/reference/nested-podman-design.md ("Which storage config the nested podman reads").
-COPY entrypoint/dotfiles/.config/containers/storage.conf /etc/containers/storage.conf
 COPY entrypoint/dotfiles/.config/containers/storage.conf \
      /etc/containers/storage.conf.d/50-crush-nested.conf
+# buildah's temp dir on the store volume, so native overlay can mount build contexts; see
+# the file's header.
+COPY entrypoint/dotfiles/.config/containers/containers.conf \
+     /etc/containers/containers.conf.d/50-crush-nested.conf
 
 # Baked default Crush config: a local llama.cpp provider with the model pinned explicitly and
 # the built-in catalog suppressed (see tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md).
