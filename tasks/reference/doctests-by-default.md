@@ -58,6 +58,11 @@ has a single home, and leave the regression.
 
 ## Writing doctests that actually pass
 
+- **A rounded doctest makes a tolerance test redundant.** A doctest that prints
+  `[round(float(c), 6) for c in v]` (or `float(...)` of an exact value) is an exact-repr check of
+  the same assertion an `isclose(...)` plain test makes; once it covers the case, delete the plain
+  test. The "tolerance-based stays plain" exception is for cases with no stable rounded form.
+
 - **Annotate every binding IN the doctest too.** The house "annotate every binding" rule does not
   stop at the doctest fence: a Python doctest writes `name: T = ...` and a Rust doctest writes
   `let x: T = ...`, exactly as the surrounding code would. A doctest is example code the reader
@@ -100,6 +105,19 @@ has a single home, and leave the regression.
   reason to apply the guard project-wide *before* wiring the doctest gate, so the gate's config stays
   a plain "collect everything". (hanoi, 2026-10-27: confirmed all 11 modules import cleanly headless,
   so no per-module exclusion was needed.)
+- **A deliberate import-time EXIT is not import-safe either — exclude the program directories,
+  don't allowlist the library.** Some book repos guard each demo the other way round, ending its
+  imports with `if __name__ != "__main__": sys.exit(...)` so the chapter listing reads as a flat
+  program. `--doctest-modules` then dies at collection with `INTERNALERROR ... SystemExit` (not a
+  test failure). When the guard is part of the book's design, keep it and set `testpaths = tests src`
+  plus one `--ignore=<dir>` (or `--ignore-glob`) per program directory in `addopts`, rather than an
+  allowlist of library modules: with an exclusion list a new library module's doctests are collected
+  with no config edit. (mvp, 2026-11-14: 47 demos; the allowlist did not include `pgzero_gl/` or
+  `graphingcalculator/`, so a doctest added there would never have run.)
+- **A factory-built module attribute has no docstring to host a doctest.** `rotate =
+  plane_rotation(...)` binds a closure whose `__module__` is the library that built it, so
+  `DocTestFinder` never visits it, and its documentation is a `#` comment. Its tests stay plain (or
+  go in the module docstring if they read well there).
 - **Discoverability:** a test file named with a hyphen or `-test` (e.g. `foo-test.py`) is collected
   by neither `pytest` nor `-m unittest`; migrating its cases into module doctests sidesteps that.
 
@@ -157,3 +175,8 @@ the consolidation, doc-region, generator, namespace, and lint lessons above.
   source of the `## C++` section above. The `Game` class's cases sit after the class (a `TEST_CASE`
   can't go inside a class body); the free functions in `presenter.hpp`/`recipe.hpp` carry theirs
   immediately after each function.
+- **mvp** (github.com/billsix/modelviewprojection, 2026-11-14) — mostly consolidation: the library
+  docstrings already carried doctests, so 13 of 22 `tests/test_mathutils.py` cases were deleted
+  after extending four doctests to cover what they asserted. Lessons: the inverse `__main__` guard
+  (an import-time `sys.exit`) and the exclusion-list `testpaths` above; factory-built attributes
+  have no doctest home; a rounded doctest retires a tolerance test.
