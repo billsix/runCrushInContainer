@@ -398,3 +398,18 @@ Where a follow-up mirrors one in the runClaude record, it says so; do the two to
 1. Should this repo carry the "Blocked tasks" convention and `/recheck-blocked` (§3.3)? Recommended: yes, as `tasks/port-blocked-task-convention.md` already proposes; this repo has five blocked or gated tasks.
 2. For byte-mirrored baked docs that cite docs not baked into the container (§3.4): bake the cited docs (`doctests-by-default.md`, `code-style-conventions.md`), or accept the dangling cites? Recommended: bake them; they are small.
 3. Is Granite really meant to run with a 64k context (§2.5)? Recommended: set its context to the model's 8k unless a longer one was tested.
+
+## Answers to the open questions (William Emerison Six <billsix@gmail.com>, 2026-11-15)
+
+Dated note added after the review; the findings above are unchanged.
+
+1. **Yes**: carry the "Blocked tasks" convention and `/recheck-blocked`
+   (`tasks/port-blocked-task-convention.md`).
+2. **(a)**: bake `doctests-by-default.md` and `code-style-conventions.md` into the image.
+3. **Keep Granite's 64k context for now**; a follow-up task checks it:
+   `tasks/verify-granite-context-window.md`.
+
+The runClaudeInContainer record's answers apply here too where §0 mirrors them: native overlay
+(F1), the Python-deps rule (the personal overlay's distro-first rule), "never `:Z`" for host trees,
+and the RAM store kept behind the `NESTED_PODMAN_STORE=tmpfs` toggle with README, `CLAUDE.md` and
+launcher documentation.
