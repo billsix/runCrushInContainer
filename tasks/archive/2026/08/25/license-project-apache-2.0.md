@@ -1,93 +1,49 @@
 # License this project under Apache-2.0
 
-**Status:** DONE 2026-08-25 (William Emerison Six <billsix@gmail.com>) — see Outcome.
-**Priority:** 3
-**Difficulty:** 2
-**Created:** 2026-08-25 (William Emerison Six <billsix@gmail.com>)
+**Status:** complete
+**Created:** 2026-08-25 (William Emerison Six <billsix@gmail.com>) · **Completed:** 2026-08-25
 
-## Outcome (2026-08-25)
+Gave runCrushInContainer an explicit Apache-2.0 license: a root `LICENSE`, an explicit README section with
+a vendored-deps caveat, the same caveat in `FORKING.md`, and SPDX headers on the project's own source
+files. Before this there was no `LICENSE` file, no SPDX header on any of the project's own files (the only
+`SPDX-License-Identifier` hits were in the vendored, MIT-licensed `server/llama.cpp/`), and the README said
+only that the project "follows the `runClaudeInContainer` family." Apache-2.0 fits a fork-friendly
+template and matches the model it runs (Muse Glimmer, Apache-2.0).
 
-Implemented and staged:
+## What was done (2026-08-25)
 
-- **`LICENSE`** added at repo root — the **verbatim Apache-2.0** text (202 lines, fetched from
-  `apache.org/licenses/LICENSE-2.0.txt`, not hand-transcribed).
-- **`README.md` `## License`** rewritten from the vague "follows the family" line to explicit
-  **Apache-2.0 (see `LICENSE`)** + the vendored-deps caveat (grant covers the repo's own files; bundled
-  llama.cpp/Crush/model keep their own licenses). Same caveat added as a new `## License` in `FORKING.md`.
+- **`LICENSE`**: the verbatim Apache-2.0 text (202 lines), fetched from
+  `apache.org/licenses/LICENSE-2.0.txt` rather than hand-transcribed.
+- **`README.md` `## License`**: rewritten to "Apache-2.0 (see `LICENSE`)" plus the caveat that the grant
+  covers the repo's own files and bundled llama.cpp, Crush and the model keep their own licenses.
+- **`FORKING.md`**: a new `## License` section with the same caveat and "your fork may relicense its own
+  additions."
 - **SPDX headers** (`# Copyright (c) 2026 William Emerison Six` / `# SPDX-License-Identifier: Apache-2.0`,
-  family style) added to the **11 own source files**: `vendor.sh`, `client/Dockerfile`, `client/Makefile`,
-  `server/Makefile`, the six `client/entrypoint/*.sh` (incl. `vendor/vendor-crush.sh`), `.extrabashrc`,
-  and `crushrc`. Header goes after the shebang where present. All shell scripts still pass `bash -n`.
-- **`CLAUDE.md`** needed no change (it stated no license).
+  the family's two-line style from `geometricalgebra`) on the 11 own source files at the time: `vendor.sh`,
+  `client/Dockerfile`, `client/Makefile`, `server/Makefile`, the six `client/entrypoint/*.sh` (including
+  `vendor/vendor-crush.sh`), `.extrabashrc` and `crushrc`. The header goes after the shebang where present;
+  all shell scripts still passed `bash -n`.
+- `CLAUDE.md` needed no change (it stated no license).
 
-**Deliberately NOT headered** (reported exceptions): the vendored trees `client/vendor/crush` &
-`server/llama.cpp` (keep upstream licenses); `client/patches/crush-at-import.patch` (a diff — a header
-could break `git apply`, and it patches third-party Crush); all `.md` docs and the baked family reference
-copies (prose; LICENSE + README cover them); `storage.conf` and the ignore files (config/noise);
-`client/.crush/*` runtime state (gitignored).
+## Deliberately not headered
 
-**Open question 1 (family alignment):** left for you — this repo is Apache-2.0; whether
-`runClaudeInContainer` itself should be relicensed for consistency is a separate repo/task.
-**Open question 2 (Crush's exact license):** the README/FORKING caveat says "Charm's terms" rather than
-naming Crush's specific license — a minor follow-up if you want it pinned down precisely.
+- The vendored trees `client/vendor/crush` and `server/llama.cpp`: they keep their upstream licenses, and
+  relicensing third-party code would be wrong.
+- `client/patches/crush-at-import.patch`: a diff against third-party Crush, and a header could break
+  `git apply`.
+- All `.md` docs and the baked family reference copies (prose; `LICENSE` + README cover them);
+  `storage.conf` and the ignore files (config); `client/.crush/*` runtime state (gitignored).
 
-## Goal
+## Decisions
 
-Give runCrushInContainer an **explicit Apache-2.0 license**. Today there is **no `LICENSE` file** and the
-only statement is vague — `README.md:214`: *"Follows the `runClaudeInContainer` family. Copyright © 2026
-William Emerison Six."* Apache-2.0 fits: the model it runs (Muse Glimmer) is Apache-2.0, and the project
-is meant to be a **fork-friendly template**, which wants a clear permissive license.
+- **This repo is Apache-2.0** (requested explicitly by the maintainer). Whether `runClaudeInContainer`
+  should be relicensed for family consistency was left to the maintainer as a separate repo's question
+  and not decided here; the family is not uniform anyway (`geometricalgebra` is LGPL-2.1).
+- **Crush's license in the caveat**: at completion the README/FORKING caveat said "Charm's terms" without
+  naming the license. The README now names it, **FSL-1.1-MIT**, in its License section.
 
-## Context (measured 2026-08-25)
+## Related
 
-- **No `LICENSE` file** anywhere in the repo's own tree.
-- **No SPDX headers on the project's own files.** (The `SPDX-License-Identifier` hits in the tree are all
-  under `server/llama.cpp/` — the **vendored** llama.cpp, which is MIT and keeps its own license.)
-- The project's own source is small and glue-like: `vendor.sh`, `client/Dockerfile`, `client/Makefile`,
-  `client/entrypoint/*.sh`, `server/Makefile`, `client/patches/*`, `entrypoint/dotfiles/*`, and the docs.
-
-## Plan
-
-1. **Add a root `LICENSE`** = the full Apache-2.0 text, with the copyright line **`Copyright 2026 William
-   Emerison Six`** (match the README's existing attribution).
-2. **State it in `README.md`** — replace the vague `## License` section with an explicit "Apache-2.0
-   (see `LICENSE`)" line, **and** add the vendored-deps caveat from step 4.
-3. **Add SPDX headers to the project's OWN files only** — `# SPDX-License-Identifier: Apache-2.0` plus a
-   copyright line, on `vendor.sh`, the `Dockerfile`(s), `Makefile`(s), `entrypoint/*.sh`, and
-   `client/patches/*`. Match the family's header style (`geometricalgebra` uses a two-line
-   copyright + `SPDX-License-Identifier` block).
-4. **Scope caveat — do this at the step above, before running any sweep:** apply headers and the license
-   **only to the project's own files**. **Never touch the vendored trees** `client/vendor/crush`
-   (Crush's own license) or `server/llama.cpp` (MIT) — relicensing vendored third-party code is wrong and
-   those dirs are gitignored anyway. The README note should say the Apache-2.0 grant covers *this repo's
-   own scripts/config*, and bundled/vendored components (llama.cpp MIT, Crush, Go deps, the model)
-   retain their own licenses.
-5. **Update `CLAUDE.md` / `FORKING.md`** if they state or imply a license (FORKING.md currently doesn't
-   mention one — add a one-line "licensed Apache-2.0; your fork can relicense its own additions").
-
-## Verify
-
-- `LICENSE` present at root; `README.md` License section names Apache-2.0 and links it.
-- A `grep -rL SPDX-License-Identifier` over the project's own scripts (excluding vendored trees) shows
-  none missed; a `grep -r SPDX` shows the vendored trees were **not** touched.
-
-## Open questions
-
-1. **Is Apache-2.0 for *this repo* intended to diverge from the family, or should the family align?** The
-   README says it "follows the `runClaudeInContainer` family," but that family's actual license isn't
-   confirmed here (the sibling `geometricalgebra` is LGPL-2.1, so the family is *not* uniformly Apache).
-   You asked for Apache-2.0 explicitly, so **this repo → Apache-2.0** is the decision; the open part is
-   only whether `runClaudeInContainer` itself should also be relicensed for consistency (separate repo,
-   separate task). **Recommend:** Apache-2.0 here now; leave the family-alignment question for you to
-   decide separately.
-2. **Redistribution check on Crush:** the client image builds Crush from vendored **source** (and applies
-   a local patch). Confirm Charm Crush's own license permits that vendoring/patching + redistribution of
-   the source tree in an airgap tarball, so the Apache grant on *our* glue doesn't imply anything about
-   Crush's terms. **Recommend:** verify Crush's LICENSE at implementation time and note it in the README
-   caveat; this doesn't block licensing our own files.
-
-## Cross-links
-
-- `README.md` (`## License`, line ~212) — the vague statement to replace.
-- `FORKING.md` — template/fork guidance (add the license line).
-- Vendored trees to leave alone: `client/vendor/crush`, `server/llama.cpp`.
+- `README.md` (`## License`), `FORKING.md` (`## License`), `LICENSE`.
+- `tasks/archive/2026/08/21/patch-crush-for-at-imports.md`: the FSL-1.1-MIT read on carrying a local
+  Crush patch.

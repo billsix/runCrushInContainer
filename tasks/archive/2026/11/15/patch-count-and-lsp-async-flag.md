@@ -20,7 +20,7 @@
   Makefile".
 
 The sweep's combination count (42) changes when the sweep covers all 17 patches; that is
-`tasks/egress-sweep-coverage.md`.
+`tasks/archive/2026/11/15/egress-sweep-coverage.md`.
 
 ## Verification
 
