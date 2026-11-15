@@ -45,7 +45,7 @@ option metrics false
 # shows ~15-20 embedded models (and, if our provider is ever dropped, falls into an onboarding
 # picker of them). `default-providers` is inverted, so `false` = "do NOT include the built-in
 # providers" (sets disable_default_providers=true). See
-# tasks/suppress-embedded-provider-catalog.md.
+# tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md.
 option default-providers false
 
 # --- Autodiscover the live models (decided 2026-09-20) ---
@@ -127,7 +127,7 @@ model small "$first_live/$first_live"
 # Named `ty` (not `python`): Crush's resolveServerName maps an unknown user name to the first
 # bundled server whose command matches, and a server named `python` misresolves to the registry's
 # `tvm_ffi_navigator` (command `python`); `ty` resolves cleanly. --filetypes py still binds it to
-# Python files. (See tasks/lsp-python-server-not-registering.md.)
+# Python files. (See tasks/archive/2026/09/13/lsp-python-server-not-registering.md.)
 lsp add ty --command ty --args server --filetypes py \
     --root-markers pyproject.toml --root-markers setup.py --root-markers .git
 lsp add go --command gopls --filetypes go \

@@ -4,7 +4,7 @@
 v0.89.0 source (`internal/agent/prompt/prompt.go`, `internal/agent/agent.go`,
 `internal/skills/`, `internal/log/log.go`, `internal/cmd/root.go`, `internal/config/`), 2026-09-13
 by William Emerison Six <billsix@gmail.com>. Written for the "first query eats ~48K tokens on
-geometricalgebra" investigation (`tasks/investigate-context-bloat-geometricalgebra.md`); update in
+geometricalgebra" investigation (`tasks/archive/2026/09/14/investigate-context-bloat-geometricalgebra.md`); update in
 place.
 
 ## Version banner + re-sync check
@@ -76,7 +76,7 @@ Findings that generalize:
   files spliced.
 - The always-loaded CLAUDE.md files being the entire problem is the lesson: an oversized project or
   global CLAUDE.md is paid on **every** turn. Trim record:
-  `tasks/trim-crush-context-files.md`, work record `tasks/investigate-context-bloat-geometricalgebra.md`.
+  `tasks/trim-crush-context-files.md`, work record `tasks/archive/2026/09/14/investigate-context-bloat-geometricalgebra.md`.
 
 ## L2 — the authoritative total, and where the gap is
 

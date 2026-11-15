@@ -57,7 +57,7 @@ CRUSH_SHELL_HISTORY ?= 1
 # XML, git status, total) to <data-dir>/logs/crush.log. Default OFF — turn ON to diagnose
 # first-turn context bloat: `make image CRUSH_CONTEXT_DEBUG=1`, run, then read the CTXDBG lines
 # from the mounted project's .crush/logs/crush.log. Keep the patch; leave this 0 in shipped
-# images. See ../tasks/investigate-context-bloat-geometricalgebra.md and
+# images. See ../tasks/archive/2026/09/14/investigate-context-bloat-geometricalgebra.md and
 # ../tasks/reference/crush-context-assembly.md.
 CRUSH_CONTEXT_DEBUG ?= 0
 # The two powernap LSP bugfix patches (crush-lsp-router-notif.patch, crush-lsp-async.patch): without
@@ -103,7 +103,7 @@ PATCH_FLAGS = \
 	--build-arg PATCH_OUT_HYPER=$(PATCH_OUT_HYPER) \
 	--build-arg PATCH_OUT_COPILOT=$(PATCH_OUT_COPILOT)
 
-# Offline/airgap vendoring (see tasks/vendor-build-sources-for-airgap-rebuild.md). `make vendor`
+# Offline/airgap vendoring (see tasks/archive/2026/08/22/vendor-build-sources-for-airgap-rebuild.md). `make vendor`
 # (ONLINE) pre-fetches the Crush source + all its Go module deps into $(VENDOR_DIR)/crush; then
 # `make image CRUSH_VENDORED=1` rebuilds the image from that with NO network. VENDOR_DIR is the
 # host folder that gets zipped and carried to the airgap box. When CRUSH_VENDORED=1 the image build
@@ -327,7 +327,7 @@ vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/cr
 
 # --- shell / shell-exec share ONE container invocation, defined here so the two
 # targets can never drift. Scoped to this pair ONLY. See runClaudeInContainer
-# tasks/add-shell-exec-target.md for the design.
+# github.com/billsix/runClaudeInContainer tasks/archive/2026/08/29/add-shell-exec-target.md for the design.
 SHELL_RUN_FLAGS = \
 		--entrypoint /bin/bash \
 		$(PODMAN_RUN_FLAGS) \

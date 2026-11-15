@@ -95,6 +95,6 @@ the client side.
 
 ## Related
 
-- `tasks/investigate-context-bloat-geometricalgebra.md` (archived) — the diagnosis + method.
+- `tasks/archive/2026/09/14/investigate-context-bloat-geometricalgebra.md` (archived) — the diagnosis + method.
 - `tasks/reference/crush-context-assembly.md` — how the system prompt is assembled; the re-measure procedure.
 - Lever 1 work records: `tasks/archive/2026/09/{13,14}/trim-claude-md.md` (this repo) and the same in every project repo.

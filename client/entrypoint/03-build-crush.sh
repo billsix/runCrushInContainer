@@ -64,7 +64,7 @@
 #                                 because they're correctness fixes; `make image CRUSH_LSP_ASYNC=0`
 #                                 builds without them.
 #                                 Re-verify both on every CRUSH_TAG bump. See
-#                                 tasks/lsp-python-server-not-registering.md.
+#                                 tasks/archive/2026/09/13/lsp-python-server-not-registering.md.
 #   CRUSH_CONTEXT_DEBUG          0/1, default 0 — DEBUG-only instrumentation patch (a FEATURE
 #                                 flag, not a bugfix): logs a per-source token/byte breakdown of
 #                                 the assembled system prompt (each context file @-expanded, the
@@ -72,7 +72,7 @@
 #                                 <data-dir>/logs/crush.log. Turn ON to attribute first-turn
 #                                 context bloat on a large repo, then read the CTXDBG lines from
 #                                 the log. Keep the patch in patches/ but leave this OFF in
-#                                 shipped images. See tasks/investigate-context-bloat-geometricalgebra.md
+#                                 shipped images. See tasks/archive/2026/09/14/investigate-context-bloat-geometricalgebra.md
 #                                 and tasks/reference/crush-context-assembly.md.
 #   PATCH_OUT_UPDATE_CHECK        0/1, default 1 — no startup api.github.com release check
 #   PATCH_OUT_TELEMETRY           0/1, default 1 — PostHog/data.charm.land unreachable at
@@ -160,7 +160,7 @@ apply_patch "$PATCH_OUT_COPILOT"              "no-copilot.patch"
 # A cached/mis-applied patch would silently reintroduce the powernap deadlock (ty's
 # documentSymbol times out). This assertion runs inside the (uncached-when-patches-change)
 # build layer, so a SUCCESSFUL build proves the wrap is in the tree; it also prints a
-# grep-able marker for the build log. See tasks/lsp-python-server-not-registering.md.
+# grep-able marker for the build log. See tasks/archive/2026/09/13/lsp-python-server-not-registering.md.
 _CONN=/tmp/crush/vendor/github.com/charmbracelet/x/powernap/pkg/transport/connection.go
 _ROUTER=/tmp/crush/vendor/github.com/charmbracelet/x/powernap/pkg/transport/router.go
 if [ "$CRUSH_LSP_ASYNC" = "1" ]; then

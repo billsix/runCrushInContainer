@@ -57,7 +57,7 @@ RUN /usr/local/bin/01b-install-binary-tools.sh
 # ON only for `make vendor`). These are needed ONLY to run `make vendor` inside this image while
 # ONLINE; the image itself and the OFFLINE airgap rebuild do not use them, so a normal/airgap
 # build never installs them and the airgap dnf mirror never needs them. See
-# tasks/vendor-via-client-image.md.
+# tasks/archive/2026/08/22/vendor-via-client-image.md.
 ARG VENDOR_TOOLS=0
 COPY entrypoint/02-install-vendor-tools.sh /usr/local/bin/
 RUN --mount=type=cache,target=/var/cache/libdnf5 \
@@ -95,7 +95,7 @@ ARG CRUSH_AT_IMPORT=0
 ARG CRUSH_SHELL_HISTORY=0
 # DEBUG-only: 1 applies crush-context-debug.patch (per-source system-prompt token
 # breakdown logged to <data-dir>/logs/crush.log). Default 0; keep it 0 in shipped
-# images. See tasks/investigate-context-bloat-geometricalgebra.md.
+# images. See tasks/archive/2026/09/14/investigate-context-bloat-geometricalgebra.md.
 ARG CRUSH_CONTEXT_DEBUG=0
 # The powernap LSP bugfix patches; default 1 even for a bare `podman build` (they are fixes).
 ARG CRUSH_LSP_ASYNC=1

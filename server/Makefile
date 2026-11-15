@@ -233,7 +233,7 @@ llama: ## [MAC] clone + build llama.cpp for Metal, pinned to LLAMACPP_TAG
 vendor: ## [ONLINE] pre-fetch llama.cpp (full history @ LLAMACPP_TAG) + the ACTIVE models' GGUFs, for an offline rebuild/serve
 	@# Populates the two server-side internet-sourced artifacts WITHOUT building (the Metal build
 	@# happens later on the airgap Mac via `make llama`, which reuses this checkout). Only the
-	@# ACTIVE models (MODEL_COUNTRIES) are fetched. See tasks/vendor-build-sources-for-airgap-rebuild.md.
+	@# ACTIVE models (MODEL_COUNTRIES) are fetched. See tasks/archive/2026/08/22/vendor-build-sources-for-airgap-rebuild.md.
 	@test -d $(LLAMACPP_DIR) || git clone --branch $(LLAMACPP_TAG) $(LLAMACPP_REPO) $(LLAMACPP_DIR)
 	$(MAKE) pull
 	@echo "vendored: $(LLAMACPP_DIR) (full history @ $(LLAMACPP_TAG)) + $(MODEL_DIR)/: $(ACTIVE_FILES) $(FULL_MODEL_FILES)"

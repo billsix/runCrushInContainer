@@ -364,8 +364,8 @@ The full working-method machinery is **ported and in use** (Phases 0–4, 2026-0
   SCRIPT=<path under the mounted PROJECT at /work> | CMD='...'` runs a script/command in the same
   container env and exits (no TTY) — for ad-hoc/CI use. `shell` + `shell-exec` share one
   `SHELL_RUN_FLAGS` variable so they can't drift; `client/entrypoint/shell.sh` ends `set -e … exec
-  bash "$@"`. Cross-project fan-out + design: `github.com/billsix/runClaudeInContainer`
-  `tasks/add-shell-exec-target.md` and `.../fan-out-shell-exec-to-projects.md`. The general template
+  bash "$@"`. Cross-project fan-out + design: github.com/billsix/runClaudeInContainer
+  `tasks/archive/2026/08/29/add-shell-exec-target.md` and `tasks/archive/2026/08/29/fan-out-shell-exec-to-projects.md`. The general template
   contract for this lives in the personal overlay (`ai-coding-conventions.personal.md`), not here.
 - **seventeen local Crush patches** (`client/patches/`), each behind a defaulted build flag — the
   two FEATURE patches (`crush-at-import.patch` / `CRUSH_AT_IMPORT ?= 1`, and `crush-shell-history.patch`

@@ -8,7 +8,7 @@ server/models/
 # llama.cpp checkout + build
 server/llama.cpp/
 
-# --- client/ vendored sources (never commit; large — see tasks/vendor-build-sources-for-airgap-rebuild.md) ---
+# --- client/ vendored sources (never commit; large — see tasks/archive/2026/08/22/vendor-build-sources-for-airgap-rebuild.md) ---
 # Pre-fetched Crush source + Go module deps for an offline (CRUSH_VENDORED=1) rebuild.
 client/vendor/
 

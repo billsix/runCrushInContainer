@@ -11,7 +11,7 @@
 #
 # Every package here is a strict subset of 01-install-base.sh, installed first, so the
 # full image is "minimal + more": dnf no-ops the overlap and the two variants share this
-# base layer. See tasks/minimal-client-image.md.
+# base layer. See tasks/archive/2026/09/10/minimal-client-image.md.
 #
 # Extracted per the "host-agnostic setup belongs in a script" convention: the same set
 # can be installed on a bare Fedora host, not only during `podman build`. Optionless
