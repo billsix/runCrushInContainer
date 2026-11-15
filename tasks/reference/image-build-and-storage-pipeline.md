@@ -95,7 +95,9 @@ rejects**. A tmpfs is a real (non-overlay) fs — the historical reason the stor
 directory on the real disk fs, bind-mounted in, is equally a real fs**, so it sidesteps the problem
 with no RAM ceiling. That is the 2026-09-27 change: the ~22 GB client image and TeX-Live-sized
 downstream builds used to fail at *layer-commit* (`no space left`) in the RAM tmpfs (needing
-`remount,size=50g`). Opt back into RAM with `NESTED_PODMAN_STORE=tmpfs` (sized by
+`remount,size=50g`). Either store still commits slowly: `fuse-overlayfs` has no native overlay
+diff, so each nested commit walks the whole image; build large images on the host
+(`tasks/reference/nested-podman-design.md`, "Build big images on the host"). Opt back into RAM with `NESTED_PODMAN_STORE=tmpfs` (sized by
 `NESTED_PODMAN_TMPFS_SIZE`, default 8g).
 
 ### (b) Read-only reuse of the host store — so a nested build doesn't re-pull
