@@ -1,24 +1,33 @@
-# Sync the delivered conventions: nested section, Python rule, unported docs
+# Synced the delivered conventions: the nested section, the nested-gates rule, the cited docs
 
-**Status:** proposed — in the 2026-11-15 audit batch
+**Status:** complete
+**Completed:** 2026-11-15
 **Priority:** 3
 **Difficulty:** 3
 **Created:** 2026-11-15 (William Emerison Six <billsix@gmail.com>)
 **Source:** tasks/review/2026/11/15/repo-review.md §3.2, §3.3, §0.1, §0.4 F9 F22
 
-## BLUF
+## What this did
 
-The delivered `crush/CLAUDE.md` has a stale nested section, the old Python-deps rule, and is missing the "Verification gates in nested containers" section. Its conventions and commands cite runClaude docs never ported. Maintainer decisions 2026-11-15: distro-first Python rule; port only the runClaude docs something here cites (into `tasks/reference/`, not baked), plus the nested-gates section.
+- **`client/entrypoint/dotfiles/.config/crush/CLAUDE.md`, "Running projects in a nested container":**
+  it said a project's Makefile "won't have those flags — don't silently edit". It now says a
+  converted Makefile applies `--cgroups=disabled` itself via `PODMAN_RUN_FLAGS`, that converting one
+  is pre-authorized, and that `--network=host` is this client's extra (pass it per run or through
+  `PODMAN_RUN_FLAGS`; don't silently edit a project's build files for it).
+- **Added the "Verification gates in nested containers" section** (from runClaudeInContainer's
+  shared `CLAUDE.md`): done means the project's containerized gate passed, flag coverage, one
+  default-flags gate before ending a session, and the `: image` rebuild gotcha.
+- **Cited runClaude docs** (maintainer decision 2026-11-15, option (a): only what something here
+  cites, into `tasks/reference/`, not baked): `nested-run-and-gates.md` (8 cites),
+  `codegen-conventions.md` (5), `minimal-nested-images.md` (2) and `claude-config-layering.md` (1),
+  copied as byte mirrors. `tasks/reference/architecture.md` lists them, and lists the "Blocked tasks"
+  convention among what was not ported yet (it is `tasks/port-blocked-task-convention.md`).
+- **Python-deps rule:** no change. The review's contradiction came from a stale copy of the
+  personal overlay; the delivered "venv copy wins" rule matches the overlay (record correction).
+- `nested-podman-signal…` and `minimal-image…` sections already carried the current rules.
 
-## Context
+## Verification
 
-- §3.2: `crush/CLAUDE.md:567-573` ("won't have those flags") vs `:561`.
-- `crush/CLAUDE.md:398` "venv copy wins".
-- §0.4: 13 unported runClaude docs; the cited ones include `task-doc-conventions.md`, `reference-doc-conventions.md`, `git-workflow-conventions.md`.
-
-## Plan
-
-1. Fix the nested section (converted Makefiles auto-apply `PODMAN_RUN_FLAGS`; keep `--network=host` as the Crush extra).
-2. Replace the Python rule with the distro-first rule.
-3. Add the nested-gates section.
-4. grep the delivered conventions, commands and `tasks/reference/` for cites of runClaude docs not here; copy those into `tasks/reference/` as byte mirrors with the banner; note in `architecture.md`.
+A scan of the delivered `CLAUDE.md`, `commands/`, `tasks/reference/` and the baked reference dir for
+every runClaude reference-doc name found exactly those four cited without a copy here; each copy
+`cmp`s equal to runClaude's.

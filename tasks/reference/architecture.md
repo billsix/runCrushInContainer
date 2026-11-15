@@ -381,5 +381,13 @@ The full working-method machinery is **ported and in use** (Phases 0–4, 2026-0
 
 **Deliberately NOT ported:** auth plumbing (local keyless llama-server behind SSH — nothing to sign
 into), interactive GUI/Wayland + gamepad passthrough (headless Xvfb still works), and a dedicated
-`crush-config-layering.md` (optional — covered by `architecture.md` + `crush-capabilities.md`). Fork
-guidance is in `FORKING.md`.
+`crush-config-layering.md` (optional — covered by `architecture.md` + `crush-capabilities.md`), and the
+"Blocked tasks" convention with `/recheck-blocked` (being ported by `tasks/port-blocked-task-convention.md`).
+Fork guidance is in `FORKING.md`.
+
+**Copied from runClaudeInContainer because something here cites them** (byte mirrors in
+`tasks/reference/`, repo-only, not baked; 2026-11-15): `nested-run-and-gates.md`,
+`codegen-conventions.md`, `minimal-nested-images.md`, `claude-config-layering.md`. The rest of
+runClaude's reference docs that are not here (code-style/communication/git-workflow/task-doc/
+reference-doc conventions, the diversion-stack doc, and others) are cited by nothing here and stay
+unported; they are read from github.com/billsix/runClaudeInContainer when needed.

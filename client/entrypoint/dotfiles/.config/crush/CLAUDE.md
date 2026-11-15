@@ -517,6 +517,20 @@ hand-transcribe it. Hand-instrumentation (print/trace) recipes per language, on 
 
 **Integer types / conversions:** don't eyeball them — build under `-Wconversion -Wsign-conversion` for a per-site worklist (from→to types), and use `clang -Xclang -ast-dump` / `clang-query` (`implicitCastExpr`, `CastKind`) to see every subexpression's type and the invisible implicit casts. Hits usually collapse into a few type-pair boundaries — decide a policy per boundary, not per site.
 
+## Verification gates in nested containers
+
+When nested podman is available, "done" for a code change means **the project's own containerized
+gate passed** (`make image`/`test`/`dist` — whatever its CLAUDE.md names), not just an in-container
+build. **Flag coverage is part of the gate:** trimming a feature flag to speed it up is legitimate
+only when the diff can't affect the trimmed paths — if the change touches an input a flag-gated
+feature consumes, that flag must be ON. **Before ending a session, run one gate with the repo's
+default flags** (or say which flag-gated paths went unexercised). **Gotcha: a gate target declared
+`: image` can re-run the whole `podman build` when nested.** Host-built layers serve as build cache
+through the read-only host store only while that store is in use and the `FROM` resolves to the
+same base image the host built from; a newer base pulled inside the container shadows it and misses
+every step. Run the gate's own `podman run` line against the existing image instead. Detail: the
+nested-run-and-gates.md reference doc of github.com/billsix/runClaudeInContainer.
+
 ## A multi-step check script must propagate every step's failure
 
 A `format`/`lint`/`check` script that chains tools should run **every** step (report all the red) yet
@@ -567,9 +581,12 @@ itself lacks nested support.
 **Every inner `podman run`/`docker run`
 needs BOTH `--cgroups=disabled`** (the sandbox `/sys/fs/cgroup` is read-only, else
 `cgroup.subtree_control: Read-only file system`) **and `--network=host`** (bridged netavark fails
-nested with `setns: Operation not permitted`; host networking sidesteps it). A project's Makefile
-won't have those flags — **don't silently edit their build files**; add them to a one-off run, or
-propose the edit and wait. **A nested `podman build` whose `RUN` needs the network** fails with `pasta
+nested with `setns: Operation not permitted`; host networking sidesteps it). A project Makefile
+converted to the `PODMAN_RUN_FLAGS` convention applies `--cgroups=disabled` itself (it keys off the
+exported `NESTED_PODMAN=1`), and converting an unconverted Makefile to that convention is
+pre-authorized. `--network=host` is this client's extra: no project Makefile carries it, so add it
+to a one-off run (or `make … PODMAN_RUN_FLAGS='--cgroups=disabled --network=host'`), and **don't
+silently edit a project's build files for it**; propose the edit and wait. **A nested `podman build` whose `RUN` needs the network** fails with `pasta
 failed … Couldn't open network namespace` unless the session has `BUILDAH_ISOLATION=chroot` (check
 `echo $BUILDAH_ISOLATION`); if it is unset, run that one build with `--network=host` (print it with
 `make -n image`) and tell me to relaunch with `EXTRA_PODMAN_FLAGS="-e BUILDAH_ISOLATION=chroot"`. The inner image store is disk-backed and ephemeral by default (RAM tmpfs
