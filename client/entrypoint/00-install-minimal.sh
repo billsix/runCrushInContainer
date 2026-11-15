@@ -6,7 +6,7 @@
 # to build Crush from source (at any PATCH_OUT_<X> flag combination, online or from the
 # vendored tree), run it against the local model, run `make vendor` inside the image,
 # and host a runtime egress check. This ALWAYS runs (both the full and the minimal
-# image start from it); the ~430-package full toolchain (01-install-base.sh) is layered
+# image start from it); the ~460-package full toolchain (01-install-base.sh) is layered
 # on top only when FULL_TOOLCHAIN=1.
 #
 # Every package here is a strict subset of 01-install-base.sh, installed first, so the

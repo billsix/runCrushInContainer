@@ -24,7 +24,7 @@ a template for the codebases you build with it are in `tasks/reference/architect
   and autodiscovered by the client. Full design: `tasks/reference/model-registry-country-gate-and-checksums.md`.
   (`make serve MODEL=<m>`; ports are deliberately not knobs.)
 - **`client/` — Linux, containerized.** A Podman image = the full runClaudeInContainer toolchain
-  (~430 packages) plus **Crush built from source at a pinned tag**. It reaches the Mac through an
+  (~460 packages) plus **Crush built from source at a pinned tag**. It reaches the Mac through an
   **SSH port-forward** (`ssh -L`, run on the Linux host), with `podman run --network=host` so
   `127.0.0.1:8080`–`8084` in the container are the forwarded ports (one tunnel forwards all five).
   Opt-in `make shell LOCALHOST_ONLY=1` instead runs `--network=none` + a unix-socket/`socat` bridge so the
@@ -58,7 +58,7 @@ Three environments are in play; label instructions so it's unambiguous:
   `client/entrypoint/shell.sh`), and server `CTX` ↔ the crushrc `--context-window`. Rationale + the
   quant/serve lore: `tasks/reference/architecture.md`.
 - **The client is always the full toolchain; `NESTED_PODMAN` is run-time only.** `make image` (on the
-  host) builds the full ~430-package image with all the language servers the crushrc declares — there
+  host) builds the full ~460-package image with all the language servers the crushrc declares — there
   is no `FULL_TOOLCHAIN` flag. `NESTED_PODMAN` is purely a run-time launch capability, decoupled from
   image content, and deliberately not baked (`ENV NESTED_PODMAN=1`). Why they must be decoupled (and
   the LSP-broke-when-nested history): `tasks/reference/nested-podman-vs-image-content.md`.

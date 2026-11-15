@@ -93,7 +93,7 @@ for its own `client/` image, but that's incidental to its purpose.
   `make -C client manifest`; also baked at `~/.config/crush/reference/container-file-layout.md`
   so the agent can read it in-container). Consult it before citing a container path.
 - **One image, always the full toolchain (2026-09-12):** `make image` (on the host) builds the full
-  ~430-package image with all the language servers the crushrc declares. There is no `FULL_TOOLCHAIN`
+  ~460-package image with all the language servers the crushrc declares. There is no `FULL_TOOLCHAIN`
   flag — image content is fixed, and `NESTED_PODMAN` is purely run-time launch capability, decoupled
   from the build. The full image is large (~22 GB), so build it on the host, not nested. (Until
   2026-09-12 `FULL_TOOLCHAIN` auto-defaulted to a ~1.65 GB minimal, language-server-less image when

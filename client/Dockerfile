@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
     --mount=type=cache,target=/var/lib/dnf \
     /usr/local/bin/00-install-minimal.sh
 
-# The full runClaudeInContainer toolchain (~430 packages) — same host-runnable install
+# The full runClaudeInContainer toolchain (~460 packages) — same host-runnable install
 # script, copied verbatim from the sibling repo. ALWAYS installed (a superset of the base
 # above), so the client is always the batteries-included dev image with the language servers
 # the crushrc declares. Formerly gated behind FULL_TOOLCHAIN (auto-minimal when nested), which

@@ -23,7 +23,7 @@ CONTAINER_NAME = crushcontainer
 # Latest stable Crush release (decision 2026-08-18). Override: make image CRUSH_TAG=vX.Y.Z
 CRUSH_TAG ?= v0.89.0
 
-# FULL_TOOLCHAIN was removed 2026-09-12: the client is ALWAYS the full ~430-package toolchain
+# FULL_TOOLCHAIN was removed 2026-09-12: the client is ALWAYS the full ~460-package toolchain
 # (built on the host), and NESTED_PODMAN is purely run-time launch capability — the two are no
 # longer coupled. The old auto-minimal-when-nested default silently produced a language-server-less
 # image whenever `make shell NESTED_PODMAN=1` was typed. Rationale/history:
@@ -163,7 +163,7 @@ MUSE_SOCK_DIR ?= $(HOME)/.cache/runcrush-muse-sockets
 ifeq ($(LOCALHOST_ONLY),1)
 NET_FLAGS := --network=none
 $(shell mkdir -p $(MUSE_SOCK_DIR))
-LOCALHOST_ONLY_MOUNT := -v $(MUSE_SOCK_DIR):/run/muse:Z
+LOCALHOST_ONLY_MOUNT := -v $(MUSE_SOCK_DIR):/run/muse:z
 else
 LOCALHOST_ONLY_MOUNT :=
 endif
@@ -192,21 +192,21 @@ SELINUX_OPT ?= --security-opt label=disable
 # symlinks; the `[ -f ]` / `[ -d ]` test skips a missing file so the run still works without it.
 TMUX_FILE := $(HOME)/.tmux.conf
 TMUX_REAL_PATH := $(shell readlink -f $(TMUX_FILE))
-TMUX_MOUNT := $(shell if [ -f $(TMUX_REAL_PATH) ]; then echo "-v $(TMUX_REAL_PATH):/root/.tmux.conf:Z" ; fi)
+TMUX_MOUNT := $(shell if [ -f $(TMUX_REAL_PATH) ]; then echo "-v $(TMUX_REAL_PATH):/root/.tmux.conf:z" ; fi)
 
 GITCONFIG_FILE := $(HOME)/.gitconfig
 GITCONFIG_REAL_PATH := $(shell readlink -f $(GITCONFIG_FILE))
-GITCONFIG_MOUNT := $(shell if [ -f $(GITCONFIG_REAL_PATH) ]; then echo "-v $(GITCONFIG_REAL_PATH):/root/.gitconfig:Z" ; fi)
+GITCONFIG_MOUNT := $(shell if [ -f $(GITCONFIG_REAL_PATH) ]; then echo "-v $(GITCONFIG_REAL_PATH):/root/.gitconfig:z" ; fi)
 
 GNUPG_FILE := $(HOME)/.gnupg
 GNUPG_REAL_PATH := $(shell readlink -f $(GNUPG_FILE))
-GNUPG_MOUNT := $(shell if [ -d $(GNUPG_REAL_PATH) ]; then echo "-v $(GNUPG_REAL_PATH):/root/.gnupg:Z" ; fi)
+GNUPG_MOUNT := $(shell if [ -d $(GNUPG_REAL_PATH) ]; then echo "-v $(GNUPG_REAL_PATH):/root/.gnupg:z" ; fi)
 
 # Host ~/.vimrc shadows the baked entrypoint/dotfiles/.vimrc when present (2026-09-10); conditional
 # like tmux/gitconfig — a vim user without a dotfile gets the baked defaults, nothing breaks.
 VIMRC_FILE := $(HOME)/.vimrc
 VIMRC_REAL_PATH := $(shell readlink -f $(VIMRC_FILE))
-VIMRC_MOUNT := $(shell if [ -f $(VIMRC_REAL_PATH) ]; then echo "-v $(VIMRC_REAL_PATH):/root/.vimrc:Z" ; fi)
+VIMRC_MOUNT := $(shell if [ -f $(VIMRC_REAL_PATH) ]; then echo "-v $(VIMRC_REAL_PATH):/root/.vimrc:z" ; fi)
 
 # Personal-overlay mount (UNCONDITIONAL): the baked conventions CLAUDE.md `@`-imports
 # ai-coding-conventions.personal.md, so that path must always resolve. `touch` the host file at
@@ -214,7 +214,7 @@ VIMRC_MOUNT := $(shell if [ -f $(VIMRC_REAL_PATH) ]; then echo "-v $(VIMRC_REAL_
 # host overlay layers in while the tracked default stays generic. Host file is dotted; container
 # path is un-dotted (matches runClaudeInContainer).
 PERSONAL_FILE := $(HOME)/.ai-coding-conventions.personal.md
-PERSONAL_MOUNT := $(shell touch $(PERSONAL_FILE) 2>/dev/null; echo "-v $(PERSONAL_FILE):/root/.config/crush/ai-coding-conventions.personal.md:Z")
+PERSONAL_MOUNT := $(shell touch $(PERSONAL_FILE) 2>/dev/null; echo "-v $(PERSONAL_FILE):/root/.config/crush/ai-coding-conventions.personal.md:z")
 
 # Diversion stack: intentionally NOT mounted or created on the host. It is IN-SESSION only
 # (a within-session depth gauge), so it lives on the ephemeral --rm overlay at
@@ -303,7 +303,7 @@ vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/cr
 		$(PODMAN_RUN_FLAGS) \
 		$(SELINUX_OPT) \
 		-e CRUSH_TAG=$(CRUSH_TAG) \
-		-v $(VENDOR_DIR):/vendor:Z \
+		-v $(VENDOR_DIR):/vendor:z \
 		$(CONTAINER_NAME) \
 		-c '/usr/local/bin/vendor/vendor-crush.sh /vendor/crush'
 	@# The RHEL 9 `ty` wheel (see TY_VERSION). `--only-binary` refuses a source build — ty is a prebuilt
@@ -312,7 +312,7 @@ vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/cr
 	$(CONTAINER_CMD) run --rm --entrypoint /bin/bash \
 		$(PODMAN_RUN_FLAGS) \
 		$(SELINUX_OPT) \
-		-v $(VENDOR_DIR):/vendor:Z \
+		-v $(VENDOR_DIR):/vendor:z \
 		$(CONTAINER_NAME) \
 		-c 'python3 -m pip download --only-binary=:all: --python-version 3.11 -d /vendor/wheels ty==$(TY_VERSION)'
 	@# elan + the stable Lean 4 toolchain, for an OFFLINE Lean install: install-lean.sh copies
@@ -320,7 +320,7 @@ vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/cr
 	$(CONTAINER_CMD) run --rm --entrypoint /bin/bash \
 		$(PODMAN_RUN_FLAGS) \
 		$(SELINUX_OPT) \
-		-v $(VENDOR_DIR):/vendor:Z \
+		-v $(VENDOR_DIR):/vendor:z \
 		$(CONTAINER_NAME) \
 		-c '/usr/local/bin/vendor/vendor-lean.sh /vendor/elan'
 	@echo "vendored Crush into $(VENDOR_DIR)/crush + the ty $(TY_VERSION) wheel into $(VENDOR_DIR)/wheels + elan/Lean into $(VENDOR_DIR)/elan — carry the repo (with ./vendor and server/) to the airgap box, then: make image CRUSH_VENDORED=1"
@@ -331,7 +331,7 @@ vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/cr
 SHELL_RUN_FLAGS = \
 		--entrypoint /bin/bash \
 		$(PODMAN_RUN_FLAGS) \
-		-v ./entrypoint/shell.sh:/shell.sh:Z \
+		-v ./entrypoint/shell.sh:/shell.sh:z \
 		-e NESTED_PODMAN=$(NESTED_PODMAN) \
 		-e LOCALHOST_ONLY=$(LOCALHOST_ONLY) \
 		-e MUSE_SOCK_DIR=$(MUSE_SOCK_DIR) \
@@ -381,7 +381,7 @@ shell: ## run Crush in an ephemeral container; mounts PROJECT at /work (NESTED_P
 	      [ -e "$$STORE" ] && echo "== LEFTOVER: $$STORE" || echo "== clean"; \
 	    } 2>&1 | tee -a "$$LOG"' EXIT INT TERM HUP; \
 	fi; \
-	$(CONTAINER_CMD) run -it --rm $${STORE:+-v "$$STORE":/var/lib/containers:Z} $(SHELL_RUN_FLAGS) $(CONTAINER_NAME) /shell.sh
+	$(CONTAINER_CMD) run -it --rm $${STORE:+-v "$$STORE":/var/lib/containers:z} $(SHELL_RUN_FLAGS) $(CONTAINER_NAME) /shell.sh
 
 .PHONY: shell-exec
 shell-exec: ## run a script/command in the container env (no TTY): make shell-exec SCRIPT=path | CMD='...' (run 'make image' first)
@@ -396,7 +396,7 @@ shell-exec: ## run a script/command in the container env (no TTY): make shell-ex
 	      [ -e "$$STORE" ] && echo "== LEFTOVER: $$STORE" || echo "== clean"; \
 	    } 2>&1 | tee -a "$$LOG"' EXIT INT TERM HUP; \
 	fi; \
-	$(CONTAINER_CMD) run --rm $${STORE:+-v "$$STORE":/var/lib/containers:Z} $(SHELL_RUN_FLAGS) $(CONTAINER_NAME) /shell.sh $(SHELL_EXEC_ARGS)
+	$(CONTAINER_CMD) run --rm $${STORE:+-v "$$STORE":/var/lib/containers:z} $(SHELL_RUN_FLAGS) $(CONTAINER_NAME) /shell.sh $(SHELL_EXEC_ARGS)
 
 .PHONY: format
 format: image ## format the client shell scripts with shfmt (runs in the built image)

@@ -2,7 +2,7 @@
 # Copyright (c) 2026 William Emerison Six
 # SPDX-License-Identifier: Apache-2.0
 #
-# 01-install-base.sh -- install the full toolchain this sandbox image ships (~430
+# 01-install-base.sh -- install the full toolchain this sandbox image ships (~460
 # Fedora packages: compilers/runtimes for a couple dozen languages, build tooling,
 # debuggers/profilers, graphics dev libraries, the scientific-Python stack, databases,
 # networking/security tools, editors).

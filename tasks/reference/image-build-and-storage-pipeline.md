@@ -87,7 +87,8 @@ podman run … -v "$STORE":/var/lib/containers:Z …
 
 Every nested layer the inner podman **writes** lands in that per-session temp dir under `~/.cache/`
 and is deleted on exit — **not** the host store `~/.local/share/containers/storage`, and **not** a
-tmpfs. A hard-killed session can leak the dir → `rm -rf ~/.cache/crush-nested.*`.
+tmpfs. A hard-killed session can leak the dir → `podman unshare rm -rf ~/.cache/crush-nested.*` (a bare
+`rm` cannot delete the layers' read-only dirs).
 
 **Why a dedicated real-fs dir?** The sandbox rootfs is itself an **overlay** mount; layering the
 inner `fuse-overlayfs` on top is **overlay-on-overlay under a nested userns, which the kernel
@@ -116,19 +117,18 @@ client Dockerfile therefore also installs our file as the drop-in
 the store is mounted but unused. Detail: `tasks/reference/nested-podman-design.md` ("Which storage
 config the nested podman reads").
 
-### (c) A tmpfs over the host runtime dir's `libpod` state
+### (c) No tmpfs over the host runtime dir's `libpod` state
 
-`NESTED_PODMAN_RUNTIME_TMPFS` shadows `$XDG_RUNTIME_DIR/libpod` with an empty tmpfs so the inner
-podman doesn't trip over the *host* podman's leftover runtime state. Runtime state, not image
-storage. (Nested inner runs also need `--cgroups=disabled` and, for networking, `--network=host` —
-see `tasks/reference/nested-podman-design.md`.)
+Unlike runClaudeInContainer, the client mounts no tmpfs over `$XDG_RUNTIME_DIR/libpod`
+(`tasks/reference/nested-podman-design.md`). Nested inner runs need `--cgroups=disabled` and, for
+networking, `--network=host` — see that doc.
 
 ## Disk-management cheat-sheet
 
 | Place | What's there | Lifetime | Reclaim it with |
 |---|---|---|---|
 | `~/.local/share/containers/storage` (host) | `crushcontainer` (~22 GB) + anything built/pulled on the host | Persistent | `podman rmi` / `podman system prune -a` / delete the dir |
-| `~/.cache/crush-nested.XXXXXX` | the nested session's *writable* layers | Ephemeral (rm'd on exit) | auto; leaked dirs → `rm -rf ~/.cache/crush-nested.*` |
+| `~/.cache/crush-nested.XXXXXX` | the nested session's *writable* layers | Ephemeral (rm'd on exit) | auto; leaked dirs → `podman unshare rm -rf ~/.cache/crush-nested.*` |
 | `/var/lib/shared-images` (in-sandbox) | a read-only *view* of the host store | Mount only (writes nothing) | n/a — it's the host store above, read-only |
 | `crushcontainer-*.tar` (repo root) | `make image-export` archives | Persistent, gitignored | delete the tar |
 

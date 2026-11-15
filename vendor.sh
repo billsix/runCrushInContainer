@@ -66,7 +66,7 @@ echo ">> [server] vendoring llama.cpp + both models -> server/ (inside the clien
 if [ "${FULL:-0}" = "1" ]; then echo "   FULL=1: all Glimmer quant GGUFs + full-precision weights (plus the Gemma 4 default)"; fi
 podman run --rm \
 	--security-opt label=disable \
-	-v "$here/server":/server:Z \
+	-v "$here/server":/server:z \
 	-w /server \
 	${model_env[@]+"${model_env[@]}"} \
 	"$name" \

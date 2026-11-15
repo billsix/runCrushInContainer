@@ -1,17 +1,17 @@
 # Nested podman in the Crush client — design & operating notes
 
 **Reference document** — how `make shell NESTED_PODMAN=1` lets the Crush client run `podman` inside
-itself (to build/run a project's own containers), and the gotchas. Not a task; update in place. Last
-updated 2026-08-21 by William Emerison Six <billsix@gmail.com>. Adapted from runClaudeInContainer's
+itself (to build/run a project's own containers), and the gotchas. Not a task; update in place. Adapted from runClaudeInContainer's
 `tasks/reference/nested-podman-design.md` — see that for the full rationale, declined alternatives,
 and deeper lore; this doc covers what differs for the Crush client.
 
 ## Why
 
-The Crush client is a full dev sandbox (the ~430-package runClaudeInContainer toolchain). When Crush
+The Crush client is a full dev sandbox (the ~460-package runClaudeInContainer toolchain). When Crush
 drives work on a container-per-project repo (mvp, gacalc, spimulator, …), building/testing it means
 running that project's `make image`/`make run`/`make shell` — i.e. **podman inside the client**. Opt
-in with `make shell NESTED_PODMAN=1` (default off, so a normal session stays minimal).
+in with `make shell NESTED_PODMAN=1` (off by default for a bare `make shell`; both
+`client/runCrush*.sh` launchers turn it on, `NESTED_PODMAN=0` before a launcher turns it off).
 
 ## The flag set (`client/Makefile`, applied only when `NESTED_PODMAN=1`)
 
