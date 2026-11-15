@@ -413,3 +413,12 @@ The runClaudeInContainer record's answers apply here too where §0 mirrors them:
 (F1), the Python-deps rule (the personal overlay's distro-first rule), "never `:Z`" for host trees,
 and the RAM store kept behind the `NESTED_PODMAN_STORE=tmpfs` toggle with README, `CLAUDE.md` and
 launcher documentation.
+
+## Correction (William Emerison Six <billsix@gmail.com>, 2026-11-15)
+
+Dated note correcting a reviewer error. **§1.1 is wrong, and F4 needs no change.** The review read
+the personal overlay at `~/.claude/ai-coding-conventions.personal.md`, a copy mounted at session
+start. The overlay itself (github.com/billsix/dotfiles `.ai-coding-conventions.personal.md`) had
+already been revised on 2026-11-12, in "Python deps — every package in the venv (the venv copy
+wins)", and agrees with the shared `CLAUDE.md` and `python-coding-standard.md`. The answer to open
+question 2 ("the newer one") therefore means the venv-wins rule, which every file already states.
