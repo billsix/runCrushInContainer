@@ -156,7 +156,7 @@ def parse_follow_ups(lines: Sequence[str]) -> list[FollowUp]:
             continue
         if line.startswith("#"):
             break
-        tier_match: re.Match[str] | None = re.match(r"^- \*\*([A-Za-z]+):\*\*", line)
+        tier_match: re.Match[str] | None = re.match(r"^- \*\*([^*:]+):\*\*", line)
         bullet_match: re.Match[str] | None = re.match(r"^\s{2,}- (.*)$", line)
         match (tier_match, bullet_match, line.strip()):
             case (re.Match() as found, _, _):
@@ -189,15 +189,32 @@ def citations(repo: pathlib.Path, record: str) -> list[Citation]:
         for line in task.read_text(encoding="utf-8").splitlines():
             match: re.Match[str] | None = SOURCE_RE.match(line)
             if match is not None and record in match.group(1):
+                refs: str = refs_for(match.group(1), record)
                 found.append(
                     Citation(
                         task.relative_to(repo),
                         done,
-                        section_refs(match.group(1)),
-                        tuple(dict.fromkeys(FOLLOW_UP_ID_RE.findall(match.group(1)))),
+                        section_refs(refs),
+                        tuple(dict.fromkeys(FOLLOW_UP_ID_RE.findall(refs))),
                     )
                 )
     return found
+
+
+def refs_for(source: str, record: str) -> str:
+    """The part of a ``**Source:**`` line that belongs to ``record``.
+
+    A Source line may cite several records; each record's sections and follow-up
+    IDs run from its path to the next ``tasks/review/`` path.
+
+    >>> refs_for(" tasks/review/a.md §1 F1; tasks/review/b.md §2 F2", "tasks/review/b.md")
+    ' §2 F2'
+    >>> refs_for(" tasks/review/a.md §1 F1; tasks/review/b.md §2", "tasks/review/a.md")
+    ' §1 F1; '
+    """
+    after: str = source[source.index(record) + len(record) :]
+    following: int = after.find("tasks/review/")
+    return after if following == -1 else after[:following]
 
 
 def state_of(matching: Sequence[Citation]) -> str:
@@ -268,8 +285,15 @@ def follow_up_status(
 
 
 def latest_record(repo: pathlib.Path) -> pathlib.Path:
-    """The newest record under ``tasks/review/`` (its path sorts by date)."""
-    records: list[pathlib.Path] = sorted((repo / "tasks" / "review").rglob("*.md"))
+    """The newest dated record, ``tasks/review/<YYYY>/<MM>/<DD>/*.md`` (sorts by date).
+
+    Other files under ``tasks/review/`` (a README, notes) are not records.
+    """
+    records: list[pathlib.Path] = sorted(
+        record
+        for record in (repo / "tasks" / "review").glob("*/*/*/*.md")
+        if re.fullmatch(r"\d{4}/\d{2}/\d{2}", "/".join(record.parts[-4:-1]))
+    )
     if not records:
         raise SystemExit("review_status: no records under tasks/review/")
     return records[-1]

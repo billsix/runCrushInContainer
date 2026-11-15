@@ -46,8 +46,11 @@ destructors, no references, and no templates to lean on.
   `-suspicious-memory-comparison`, `-sizeof-expression`, `-integer-division`,
   `-misplaced-widening-cast`); `cert-*` (the CERT rules below, e.g. `cert-err33-c` = check the
   return value, `cert-dcl*`, `cert-str*`); `misc-*`; `readability-*` (`-braces-around-statements`,
-  `-else-after-return`, `-isolate-declaration`, `-non-const-parameter`); and `clang-analyzer-*` (the
-  static analyzer: leaks, use-after-free, null deref, uninitialized reads). Run Cppcheck too
+  `-isolate-declaration`, `-non-const-parameter`); and `clang-analyzer-*` (the
+  static analyzer: leaks, use-after-free, null deref, uninitialized reads). Leave
+  `readability-else-after-return` off: it flags exactly the `if`/`else if`/`else` return chains that
+  "Dispatch" below requires, the same conflict the Python standard resolves by leaving ruff's
+  RET505/RET506 off. Run Cppcheck too
   (`--enable=warning,style,performance,portability`) — it catches different bugs. Diff and build
   after every `-fix` run; never let it touch vendored code (`-header-filter` scoped to your
   sources).
@@ -136,7 +139,9 @@ destructors, no references, and no templates to lean on.
     // create the temp file
     {
       const int fd = mkstemp(template);
-      if (fd < 0) die("can't create temp file");
+      if (fd < 0) {
+        die("can't create temp file");
+      }
       printf("temp name = %s\n", template);
       close(fd);
     }

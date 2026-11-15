@@ -1,24 +1,38 @@
-# Re-sync every mirror and baked copy, and fix the layout map
+# Re-synced every mirror and baked copy, baked two cited docs, and fixed the layout map
 
-**Status:** proposed — in the 2026-11-15 audit batch
+**Status:** complete
+**Completed:** 2026-11-15
 **Priority:** 2
 **Difficulty:** 2
 **Created:** 2026-11-15 (William Emerison Six <billsix@gmail.com>)
 **Source:** tasks/review/2026/11/15/repo-review.md §0.1, §0.4, §1.3, §3.4 F4 F10
 
-## BLUF
+## What this did
 
-Re-copy the shared tools fixed in github.com/billsix/runClaudeInContainer (`tasks/archive/2026/11/15/shared-checker-gate-fixes.md`) and every drifted mirror, re-sync the stale baked copies, bake the two docs the baked standards cite (maintainer decision 2026-11-15), and bring `container-file-layout.md` up to date. Done means every claimed mirror `cmp`s clean and the layout map matches the Dockerfile and Makefile.
+- **Mirrors.** A file here was treated as a byte mirror of github.com/billsix/runClaudeInContainer's
+  when it equalled runClaude's `master` (pre-batch) copy, or was one of the review's known drifts;
+  each got the current canonical. 24 files: in `tasks/reference/` the four shared tools (with
+  runClaude's 2026-11-15 exit-2 fixes; `check_local_annotations.py` now executable), the C, C++,
+  Python standards, `cpp-build-modernization.md`, `doctests-by-default.md`, `print-debugging.md`,
+  `rust-gui-tui-and-ecosystem.md`, `token-and-context-economy.md`; in the baked
+  `client/entrypoint/dotfiles/.config/crush/reference/` the same standards and docs plus
+  `llm-overused-phrases.md`, `recursive-design.md`, `rust-coding-standard.md`,
+  `sandbox-capability-map.md` and `review_status.py`. Left as deliberate adaptations: both
+  `nested-podman-design.md` copies, `image-build-and-storage-pipeline.md`, the baked
+  `bluf-bottom-line-up-front.md` and the baked portable subset of `shell-and-gate-scripts.md` (whose
+  one bare-name stamp became `Name <email>`).
+- **Baked two docs** (maintainer decision 2026-11-15): `doctests-by-default.md` and
+  `code-style-conventions.md`, which the baked standards cite, are now in the baked reference dir.
+- **`tasks/reference/container-file-layout.md`** (and its baked twin): lists the `01b` and
+  `install-lean.sh` COPYs, both storage drop-ins and the `containers.conf` drop-in, the nested
+  `dir` store and `/var/lib/shared-images` mounts, 30 baked reference files, and table rows for
+  every one of them; "Last verified 2026-11-15".
 
-## Context
+This also completes runClaudeInContainer's `tasks/mirror-fixes-to-runcrush.md` (its F14).
 
-- §0.4: drift in `token-and-context-economy.md` (repo and baked), baked `recursive-design.md`, `rust-coding-standard.md`, `sandbox-capability-map.md`.
-- §3.4: bake `doctests-by-default.md` and `code-style-conventions.md`.
-- §1.3: `container-file-layout.md` lacks the `01b` COPY, the storage COPYs, the dir-store and shared-images mounts; says 27 files; table omits three.
+## Verification
 
-## Plan
-
-1. Copy the canonical files over each mirror (repo `tasks/reference/` and baked `crush/reference/`).
-2. Bake the two docs (Dockerfile COPY list + layout table).
-3. Fix `container-file-layout.md`; `make manifest` prints it.
-4. `cmp` every claimed mirror.
+A classifier compared each runCrush copy with runClaude's current and `master` versions: after the
+copy, every mirror equals its canonical and only the five adaptations differ. `cmp` of the four
+shared tools against runClaude: identical. Every file in the baked reference dir appears in the
+layout table (checked by name). `make -C client manifest` prints the new table.

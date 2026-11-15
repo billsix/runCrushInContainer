@@ -79,7 +79,7 @@ breaks, often several commits later.
 
 **A `format.sh` (or `lint.sh` / any `make format` gate script) should be PORTABLE — runnable
 inside the container *and* on the host from the repo root — so I can format without spinning a
-container (Bill, 2026-08-14).** Exactly two things make a format script container-only; avoid
+container (William Emerison Six <billsix@gmail.com>, 2026-08-14).** Exactly two things make a format script container-only; avoid
 both:
 
 1. **An unguarded `source /venv/bin/activate`.** On the host there is no `/venv`, so the bare

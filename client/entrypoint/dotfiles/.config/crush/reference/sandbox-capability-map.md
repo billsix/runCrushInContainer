@@ -1,13 +1,14 @@
 # Sandbox capability map — what the image and run flags actually provide
 
 **What this is:** an inventory of what a `make shell` sandbox can do, for
-answering "can the sandbox do X?" without re-reading the Dockerfile's ~300
-package names and the Makefile's flag blocks. Compiled 2026-07-30. The
-Dockerfile is the authority; this maps it by capability.
+answering "can the sandbox do X?" without re-reading the ~460 package names in
+`entrypoint/01-install-base.sh` (plus the upstream binaries `entrypoint/01b-install-binary-tools.sh`
+fetches: shfmt and procs; and Lean via `entrypoint/install-lean.sh`) and the Makefile's flag blocks.
+Those scripts are the authority; this maps them by capability.
 
 ## Base
 
-Fedora 44, everything runs as container-root (= host UID 1000 under the
+Fedora 45, everything runs as container-root (= host UID 1000 under the
 rootless host podman). Ephemeral `--rm` containers; persistent state only in
 host mounts (see `claude-config-layering.md`). Claude Code installed as the
 native binary via the official installer, updated at image build.
@@ -16,7 +17,7 @@ native binary via the official installer, updated at image build.
 `vim-default-editor`, so `$EDITOR`/`git commit` open vim; plugins as Fedora rpms — fugitive,
 commentary, nerdtree, ale, gitgutter — driven by the baked `~/.vimrc`, shadowed by the host's
 `~/.vimrc` when `make shell` finds one; no clipboard/X11 build, so `"+y` is unavailable), neovim
-(unconfigured), nano. Added 2026-09-10 (`tasks/vim-user-toolkit-in-base-image.md`).
+(unconfigured), nano. Added 2026-09-10 (`tasks/archive/2026/09/10/vim-user-toolkit-in-base-image.md`).
 
 ## Language toolchains (compilers/interpreters in the image)
 
@@ -24,7 +25,7 @@ C/C++ (gcc, clang + analyzer/tools-extra, lld/mold/gold, ccache/distcc/bear),
 Rust (+ rust-analyzer, rustfmt), Go (+ gopls), Python 3 (with scientific stack:
 numpy/scipy/pandas/matplotlib/sympy, ipython, notebook, pytest(+xdist), mypy,
 pylint, black, ruff, ty, uv, cython, nanobind), Java (OpenJDK 25 + latest,
-ant/maven), .NET SDK 8, Node.js/npm, Ruby, PHP, Perl, R, Julia, Octave,
+ant/maven), .NET SDK 10, Node.js/npm, Ruby, PHP, Perl, R, Julia, Octave,
 Haskell (ghc, cabal, hlint, ormolu), OCaml (+ dune, opam), Erlang, Elixir, Clojure, Racket,
 Common Lisp (sbcl, clisp), Lua (+ luarocks), Zig, Swift, assembly (nasm, yasm),
 shells (bash, zsh, fish, ksh), TeX Live (with dvipng/dvisvgm/standalone),
@@ -113,8 +114,8 @@ Opt-in `NESTED_PODMAN=1` (podman, buildah, skopeo are in the image). The
 design, flags, constraints (the PODMAN_RUN_FLAGS convention for inner runs, the
 disk-backed inner store — RAM tmpfs is opt-in) and operating lore live in
 **`nested-podman-design.md`** — read that
-before nested work. Which project images fit the nested store, and the lean-image-when-nested
-standard (2026-09-10): **`minimal-nested-images.md`**.
+before nested work. Which project images fit the nested store, and the opt-in `MINIMAL_IMAGE` lean build:
+**`minimal-nested-images.md`**.
 
 ## Hard limits (what the sandbox can NOT do)
 

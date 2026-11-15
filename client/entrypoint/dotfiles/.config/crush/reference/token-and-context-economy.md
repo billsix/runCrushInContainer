@@ -36,6 +36,13 @@ always-loaded docs lean**, then **not reading files you don't need to read**.
 - **If you do spawn, brief tightly with pointers, not context.** A fresh agent needs the goal + the
   file/line pointers + what's already ruled out — not a re-derivation. The tighter the brief, the less it
   reads.
+- **Save a subagent's report into the repo as soon as it arrives.** A report lives only in the
+  conversation, and so does anything in the session scratchpad, so a compaction or a new session would
+  force re-running the reads to get it back. Write each report under the task (e.g. `derived/` or
+  `tasks/adhoc/<slug>/data/`) as soon as it lands. Its final text is the `SubagentHandback` tool
+  input in the agent's JSONL transcript, so a script can extract it without retyping. On 2026-11-10 a
+  five-way journal read cost about 800K tokens, and saving the reports meant the five topic-doc agents
+  that came next could build on them without re-reading the 3088 entries.
 - **Say whether the agent may spawn agents of its own, and give it a budget.** An agent with a big
   task will fan out unless told otherwise, and its children's cost never shows in its report
   (William Emerison Six <billsix@gmail.com>, 2026-11-09): a gacalc archive pass briefed without that line spawned nine workers. Write "do the

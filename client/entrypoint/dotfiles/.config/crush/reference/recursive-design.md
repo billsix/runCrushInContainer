@@ -93,31 +93,85 @@ before it), **maps** its rejection over the tail, and recurses on the mapped tai
 
 ```python
 # AFTER — nil/cons structural recursion; the per-element work is a map (comprehension)
-# over the tail; no accumulator, no reduce, no reversed arguments; a real base case.
+# over the tail; no accumulator, no reduce, no reversed arguments; every data shape is
+# its own case, and each comment names the OPERATION, not a mid-recursion invariant.
 def orthogonalize(remaining):
     match list(remaining):
-        case [v, *rest]:
+        case []:                 # base case: no vectors, nothing to orthogonalize
+            return []
+        case [v]:                # one vector is already an orthogonal frame on its own
+            return [v]
+        case [v, *rest]:         # two or more: remove from each later vector its
+            # component parallel to the first (reject the first out of the rest),
+            # keep the first, and recurse on the rest
             rest_orthogonal_to_v = [w.rejected_away_from(v) for w in rest]
             return [v, *orthogonalize(rest_orthogonal_to_v)]
-        case _:                       # the empty list -- base case
+        case _:                  # unreachable total default (see the note below)
             return []
 return orthogonalize(vectors)
 ```
 
 The `after` is Modified Gram–Schmidt and the `before` is Classical; in exact arithmetic they
 produce identical results, so the behavior is unchanged. What improved is the *design*: the
-recursion follows the list's nil/cons shape, the per-element work is a named map, there is no
-accumulator to place or reverse, and the base case is a real, reachable branch (the empty list)
-instead of a `case _` labelled "unreachable."
+recursion follows the list's nil/cons shape, the per-element work is a named map, and there is no
+accumulator to place or reverse. **Spell each data shape its own case** — the empty list, the single
+element, and two-or-more — rather than folding several into one wildcard; a reader sees the
+exhaustiveness at a glance. And **write each per-case comment to describe the operation it performs,
+standalone** — "remove each later vector's component parallel to the first" — not an invariant that
+only parses once you are already inside the recursion ("by the time a vector becomes the head, every
+earlier one has been rejected out of it"). A branch should be readable without simulating the call
+stack.
 
-**A note on the base case and type-checkers.** In principle `case []` + `case [v, *rest]` is the
-exhaustive nil/cons split, so you might expect to spell the base case `case []` and omit any
-wildcard. But some type-checkers (e.g. gacalc's `ty`) do **not** prove a list-pattern match
-exhaustive, and warn that the function can implicitly return `None`. Spell the base case as the
-wildcard **`case _`** (as above) — it is still reachable and meaningful (the empty list), not a
-dead "unreachable" branch — or add an explicit fallback. This keeps the "total dispatch"
-convention (a complete match, no silent fall-through) *and* satisfies the checker; it is the same
-reason the sibling "Prefer total dispatch" rule says to always write the default branch.
+**A note on the default case and type-checkers.** `case []` + `case [v, *rest]` is already the
+exhaustive nil/cons split, so the trailing `case _` above is *unreachable*. Keep it anyway: some
+type-checkers (as of 2026-10, gacalc's `ty`) do **not** prove a structural `match` exhaustive, so
+without a catch-all they treat the function as able to fall through — the exact diagnostic is
+`error[invalid-return-type]: Function can implicitly return None, which is not assignable to return
+type <T>`. The `case _` is **load-bearing for the checker even when it is logically unreachable.**
+
+Two kinds of exhaustiveness `ty` does not currently reason about, and both need the `case _`:
+
+- **list / tuple patterns** — it does not infer that `case []` + `case [v, *rest]` (or
+  `case ()` + `case (_,)` + `case (a, c, *rest)`) covers every value;
+- **guarded cases** — it cannot see that a guard set like `if a == c` / `if a > c` / `if a < c`
+  is a total trichotomy, so a `match` made exhaustive only by guards still looks partial to it.
+
+So prefer spelling the real data shapes as their own cases (`case []`, `case [v]`, `case [v, *rest]`)
+and letting `case _` be the **total default** — a `raise` or a commented no-op — rather than
+overloading the wildcard to *mean* the base case. This keeps the "total dispatch" convention (a
+complete match, no silent fall-through) *and* satisfies the checker; it is the same reason the
+sibling "Prefer total dispatch" rule says to always write the default branch. If a future `ty`
+version proves these exhaustive, the `case _`s can be revisited together. (Verified in gacalc,
+2026-10-27: deleting the `case _` from `frame.orthogonalize` (list patterns) and from the geometric
+product's `decrease_grade` (tuple + guard trichotomy) each produced the implicit-`None` error. Earlier
+revisions of this doc used `case _` as the base case itself; the refinement is to make each data
+shape explicit and keep `_` as the default — William Emerison Six <billsix@gmail.com>.)
+
+## A function is a value — pick it with an expression, not a helper or a one-guard match
+
+A two-outcome dispatch between **doing nothing** (the identity) and **recursing** is a plain `if`
+expression — not an extracted procedure, and not a `match`. Because a function is itself a value, you
+can **select the function with an `if`-expression and then apply it**, the most direct spelling of
+"in one case do X, in the other do Y":
+
+```python
+# the branch picks the function; then it is applied to the value
+return (identity if already_in_place else reduce_again)(value)
+```
+
+This is the functional reading of the cross-project **"prefer total dispatch"** caveat — *a `match`
+whose every case is a boolean guard is an `if`/`elif` chain in disguise; don't convert every
+two-branch conditional*. Keep `match` for **structural** patterns on the data (the nil/cons shapes
+above); collapse a two-outcome **boolean** test to an `if`, choosing between `identity` and the
+recursive call.
+
+**The smell to catch:** a named local helper whose whole body is "if the value is already in place,
+return it unchanged; otherwise recurse" earns nothing over the inline `(identity if … else
+recurse)(…)` — it is a binary test wearing a procedure's clothes. (Worked example, gacalc 2026-10-29:
+`insert_into_canonical`, extracted from `Gn._geometric_product`'s `decrease_grade` during a recursion
+audit, was folded back to `(identity() if … else decrease_grade)(…)` inline — identity in one branch,
+recursion in the other. Here `identity` is gacalc's composable-function factory, hence `identity()`;
+with a bare `def identity(x): return x` it would be just `identity`.)
 
 ## Accumulator-passing style: only when warranted, and name it
 

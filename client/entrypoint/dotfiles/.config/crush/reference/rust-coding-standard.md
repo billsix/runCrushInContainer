@@ -248,6 +248,11 @@ repo it is:**
   `cargo clippy -D warnings` gate.
 - `print-debugging.md` — the instrumentation-driven method (compiler, clippy, `cargo test`,
   `RUST_BACKTRACE`, `dbg!`, Miri for `unsafe`) that tier (a) relies on.
+- `doctests-by-default.md` — **prefer a ` ```rust ` doc-comment example (a doctest) over a plain
+  `#[test]` by default**; `cargo test` runs them for free (`cargo test --doc`). Its `## Rust` section
+  plus the language-agnostic core (keep-as-`#[test]` exceptions, migration/consolidation hazards,
+  doctest-authoring traps) — read before migrating tests to doctests or wiring `cargo test` into a
+  `make test`/`make check` gate.
 - `rust-gui-tui-and-ecosystem.md` — the practical companion: writing Rust **GUIs** (wxDragon /
   wxWidgets, incl. the `wxGTK-devel` + `libSM/libICE-devel` build deps and the DC-not-GraphicsContext
   limitation), **TUIs** (ratatui / crossterm), CLI line-editing (rustyline), the `Rc<RefCell>`
