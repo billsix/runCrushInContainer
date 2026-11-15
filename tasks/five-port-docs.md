@@ -1,22 +1,32 @@
-# Rewrite the two-model text to the five-port autodiscovery design
+# Rewrote the two-model text to the five-port autodiscovery design
 
-**Status:** proposed — in the 2026-11-15 audit batch
+**Status:** complete
+**Completed:** 2026-11-15
 **Priority:** 3
 **Difficulty:** 2
 **Created:** 2026-11-15 (William Emerison Six <billsix@gmail.com>)
 **Source:** tasks/review/2026/11/15/repo-review.md §1.1, §1.6 F7
 
-## BLUF
+## What this did
 
-The code serves five models on fixed ports 8080–8084 and the crushrc autodiscovers them, but many docs still describe two models on 8080/8081. Done means every doc matches the code, and the port coupling `CLAUDE.md` names holds.
+The code serves five models on fixed ports (8080 glimmer, 8081 gemma, 8082 granite, 8083 devstral,
+8084 qwen; `server/Makefile`), the launchers forward all five (`client/runCrush-common.sh`), and the
+crushrc registers a provider for each port that answers and preselects the first. Docs still
+described two models on 8080/8081. Rewritten:
 
-## Context
+- `CLAUDE.md`: the `MODEL=` list, the one-tunnel-forwards-all-five line, and probe-based
+  preselection.
+- `README.md`: the hand-run tunnel commands (TCP and the unix-socket form) forward all five ports;
+  the verify step, the "Network modes" text, the fixed-ports note; `vendor.sh`'s default (one GGUF per
+  active model, ~53 GB for the default US set); "12 slash commands".
+- `tasks/reference/architecture.md` (diagram and the provider paragraph), `FORKING.md`,
+  `tasks/reference/new-hardware-bringup.md`, `tasks/reference/crush-capabilities.md`, `vendor.sh`'s
+  and `client/Makefile`'s comments, `client/entrypoint/00-install-minimal.sh`'s curl note.
+- Left as written: `tasks/reference/gemma-4-alongside-glimmer.md`, a dated decision record of the
+  two-model step.
 
-- §1.1 lists each site (`CLAUDE.md:11,29,75`; `README.md:154,168,173,185,290-294,335-351`; `architecture.md:15-18,122-128`; `FORKING.md:8,33`; `new-hardware-bringup.md:20,37`; `crush-capabilities.md:175-177`).
-- §1.6: `vendor.sh:7,15,65` and `README.md:379-388` ("BOTH models", ~31 GB); "8 slash commands" (12).
+## Verification
 
-## Plan
-
-1. Rewrite each site; tunnel lines forward 8080–8084.
-2. Leave `gemma-4-alongside-glimmer.md` as a decision record.
-3. grep `8081` / `both` to confirm.
+`git grep` outside the archive and review records for "8080/8081", "both model ports", "probes
+both", "exactly two", "two serving ports" and `glimmer|gemma)` finds only the crushrc comment that
+names the old scheme it replaced.

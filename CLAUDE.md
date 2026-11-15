@@ -8,7 +8,7 @@ conventions, and follows them. Remaining work is tracked in `tasks/`.
 running a coding assistant in a disposable container to develop your *other* codebases** — here the
 assistant is **Crush** (Charm's terminal agent, `github.com/charmbracelet/crush`) driving a **local
 coding LLM** (Meta's **Muse Glimmer 30B**, or Google's **Gemma 4 26B-A4B** — both Apache-2.0,
-`make serve MODEL=glimmer|gemma`) served on the Mac. Its job is two-fold: **run the agent** (in a
+`make serve MODEL=glimmer|gemma|granite|devstral|qwen`, gated by `MODEL_COUNTRIES`) served on the Mac. Its job is two-fold: **run the agent** (in a
 throwaway container, pointed at the project mounted at `/work`), and **deliver to the agent the
 conventions** that teach it how your projects are structured and built. It is fork-friendly (model,
 quant, pinned tool versions are Makefile variables); the template/fork rationale and why it is *not*
@@ -26,7 +26,7 @@ a template for the codebases you build with it are in `tasks/reference/architect
 - **`client/` — Linux, containerized.** A Podman image = the full runClaudeInContainer toolchain
   (~430 packages) plus **Crush built from source at a pinned tag**. It reaches the Mac through an
   **SSH port-forward** (`ssh -L`, run on the Linux host), with `podman run --network=host` so
-  `127.0.0.1:8080` / `:8081` in the container are the forwarded ports (one tunnel forwards both).
+  `127.0.0.1:8080`–`8084` in the container are the forwarded ports (one tunnel forwards all five).
   Opt-in `make shell LOCALHOST_ONLY=1` instead runs `--network=none` + a unix-socket/`socat` bridge so the
   container reaches **only** the model (no other egress); default stays `--network=host`. **The one-command
   way in is `client/runCrushNoInternet.sh` / `runCrushWithInternet.sh`** (image → per-run `mktemp -d` →
@@ -72,8 +72,8 @@ Three environments are in play; label instructions so it's unambiguous:
   broken crushrc means Crush refuses to start. Use `--filetypes a --filetypes b`, never
   `--filetypes a b`. The cheap pre-`make image` gate (build the vendored tree + run `crush models`):
   `tasks/reference/crush-capabilities.md` (Config system) and `tasks/reference/crush-lsp-integration.md` §4.
-- **Model preselection is probe-based.** The crushrc `curl`s `127.0.0.1:8080`/`8081` at load and
-  preselects the model that answers (Crush never health-checks a pinned provider). A `ctrl+l` switch
+- **Model preselection is probe-based.** The crushrc `curl`s `127.0.0.1:8080`–`8084` at load,
+  registers a provider for each port that answers, and preselects the first (Crush never health-checks a pinned provider). A `ctrl+l` switch
   outranks it for the life of that container. Mechanism: `tasks/reference/crush-capabilities.md`
   § "Which model is active at startup".
 - **Language servers: dnf only, declared explicitly in the crushrc.** Six `lsp add`s (python `ty`, go,

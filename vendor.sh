@@ -37,7 +37,7 @@ name="$(sed -n 's/^CONTAINER_NAME *[:?]*= *//p' "$here/client/Makefile" | head -
 : "${name:?could not read CONTAINER_NAME from client/Makefile}"
 
 # Model selection for the server vendor step. FULL=1 is the easy "everything" switch; otherwise the
-# server/Makefile defaults apply (one GGUF per model: Glimmer Q4_K_M + Gemma 4 Q4_0). Explicit
+# server/Makefile defaults apply (one GGUF per active model; MODEL_COUNTRIES=US gives Glimmer, Gemma 4, Granite). Explicit
 # MODEL_FILES/FULL_MODEL_FILES/FULL_MODEL_REPO in the env still win over the FULL=1 presets.
 if [ "${FULL:-0}" = "1" ]; then
 	MODEL_FILES="${MODEL_FILES:-*.gguf}"                               # all Glimmer quant GGUFs (MODEL=glimmer is the Makefile default)

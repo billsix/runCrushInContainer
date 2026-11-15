@@ -28,7 +28,7 @@ fi
 
 # Keep alphabetical. What each is for:
 #   ca-certificates  - TLS roots, so the ONLINE build's `git clone` + `go mod` reach GitHub/proxy
-#   curl             - the baked crushrc probes 127.0.0.1:8080/8081 at load to preselect whichever
+#   curl             - the baked crushrc probes 127.0.0.1:8080-8084 at load to preselect whichever
 #                      model is being served (2026-09-10); without curl it falls back to Glimmer
 #   git              - clone Crush at CRUSH_TAG; git apply the patches
 #   git-lfs          - Crush's go deps / some repos use LFS; harmless and cheap

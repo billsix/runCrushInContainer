@@ -172,10 +172,10 @@ Four facts a two-pinned-provider setup runs into (all read from the vendored tag
 
 - **No startup probe, no startup picker.** A pinned model is never health-checked; the onboarding
   picker appears only when `IsConfigured()` is false, i.e. **zero** enabled providers
-  (`config.go:720`, `ui.go:491`). With two providers configured Crush silently starts on whatever
+  (`config.go:720`, `ui.go:491`). With providers configured Crush silently starts on whatever
   `models.large` resolves to, and a wrong choice surfaces only as `connection refused` on the first
-  message. That is why the baked crushrc probes `127.0.0.1:8080`/`8081` itself at load
-  (`curl -sf -m 2 …/v1/models`) and picks the one that answers — legal because the crushrc runs
+  message. That is why the baked crushrc probes `127.0.0.1:8080`–`8084` itself at load
+  (`curl -sf -m 2 …/v1/models`), registers each one that answers and preselects the first — legal because the crushrc runs
   through the same shell interpreter as the bash tool (`internal/shellconfig/load.go`: `$(cmd)` and
   external commands work, 30 s `loadTimeout`).
 - **Mid-session switching is supported.** `ctrl+l` → `handleSelectModel` (`ui.go:2241`) refuses only

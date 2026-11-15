@@ -147,7 +147,7 @@ NET_FLAGS ?= --network=host
 # --network=host above (full host network). When on, the container gets ONLY its own
 # loopback (--network=none) and reaches the model through unix sockets bind-mounted from
 # $(MUSE_SOCK_DIR) -> /run/muse, which a socat bridge in shell.sh re-exposes as
-# 127.0.0.1:8080/8081 -- so Crush's config is unchanged, but the container can reach
+# 127.0.0.1:8080-8084 -- so Crush's config is unchanged, but the container can reach
 # NOTHING but the model (no internet, no other host). Requires the host to SSH-forward the
 # model to those unix sockets instead of TCP (the shell.sh banner + README show both forms).
 # Combined with NESTED_PODMAN=1 (the launchers' default), nested builds have no network: a

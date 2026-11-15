@@ -16,8 +16,8 @@ that wires it into the README is `tasks/new-hardware-bringup-runbook.md`. Comman
 
 Run them in this order, every time, on every new box: `probe` first (cheap, catches wrong
 port/alias/tunnel), then `smoke` (catches a model that lists but cannot run — an over-committed KV
-cache fails *here*, not at `probe`). Both take `MODEL=glimmer|gemma` (default `glimmer`; the
-port follows the model — 8080 / 8081).
+cache fails *here*, not at `probe`). Both take `MODEL=<m>` (default `glimmer`; the port follows
+the model — 8080 glimmer, 8081 gemma, 8082 granite, 8083 devstral, 8084 qwen).
 
 ## 1. The bring-up sequence
 
@@ -34,8 +34,8 @@ From the client host, the simplest end-to-end check is the launcher itself —
 `client/runCrushNoInternet.sh you@mac-studio ""` from a project dir opens the forward, waits for it, and
 drops you in the container, where `curl http://127.0.0.1:<port>/v1/models` is the `probe` through the
 tunnel (`tasks/reference/client-network-modes-and-launchers.md`). By hand, the tunnel is one command
-even for several models — `ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac-studio` (add an
-`-L` per served port; an unserved port's forward is harmless).
+even for several models — `ssh -N -L 8080:127.0.0.1:8080 … -L 8084:127.0.0.1:8084 you@mac-studio` (one
+`-L` per port; an unserved port's forward is harmless).
 
 Then read the **`llama-server` log** from `make serve` — three lines decide everything below:
 the `load_tensors: … offloaded N/N layers to GPU` line (did all layers fit?), the KV-cache size

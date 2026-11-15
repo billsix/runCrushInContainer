@@ -12,10 +12,10 @@ developing your codebases with a private local assistant, and a fork-friendly si
 SSH tunnel:
 
 ```
-[MAC]  llama.cpp (Metal) → llama-server on 127.0.0.1:8080 (Glimmer) or :8081 (Gemma 4), OpenAI /v1
-          ▲  ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac   (run ON the Linux host)
-[LINUX HOST]  localhost:8080 / :8081
-[CONTAINER]  crush → http://127.0.0.1:8080 | :8081  (podman run --network=host)
+[MAC]  llama.cpp (Metal) → llama-server for ONE model on its fixed port 127.0.0.1:8080–8084, OpenAI /v1
+          ▲  ssh -N -L 8080:127.0.0.1:8080 … -L 8084:127.0.0.1:8084 you@mac   (run ON the Linux host)
+[LINUX HOST]  localhost:8080–8084
+[CONTAINER]  crush → http://127.0.0.1:808x for each port that answers  (podman run --network=host)
 ```
 
 **Not a template for the codebases you build with it.** It *is* a template for the assistant-runner
@@ -119,13 +119,12 @@ for its own `client/` image, but that's incidental to its purpose.
   Python. Rule: **dnf only** (the airgap mirror is dnf); toolchains Fedora ships no server for get
   none. Capability table + the RHEL 9 venv variant: `crush-lsp-integration.md` §4 and § RHEL 9.
 - **Crush config is `crushrc`, NOT `crush.json`** (`client/entrypoint/crushrc`; global path
-  `~/.config/crush/crushrc`). `crush.json` is deprecated. The baked config declares exactly two
-  **`llamacpp`**-type providers — `muse-glimmer` on `8080` and `gemma-4` on `8081` (2026-09-10).
-  At load the crushrc **probes both ports with `curl` and preselects the model that answers** in the
-  `large`/`small` slots — Gemma only when 8081 answers and 8080 does not; Glimmer otherwise
-  (both/neither/no curl) — because Crush never probes a pinned provider itself and shows no picker
-  with two providers configured (decided 2026-09-10; mechanism and precedence in
-  `crush-capabilities.md` § "Provider & model selection"). The other model is one `ctrl+l` away.
+  `~/.config/crush/crushrc`). `crush.json` is deprecated. At load the crushrc **probes all five model ports with `curl`** (8080 muse-glimmer, 8081 gemma-4,
+  8082 granite-code, 8083 devstral, 8084 qwen3-coder), registers a **`llamacpp`**-type provider for each
+  port that answers, and **preselects the first live one** in the `large`/`small` slots; if none
+  answers (tunnel not up yet) it pins Muse Glimmer on 8080 so Crush never falls into onboarding.
+  Crush never probes a pinned provider itself (mechanism and precedence in `crush-capabilities.md`
+  § "Provider & model selection"). The other live models are one `ctrl+l` away.
   **`base_url` is the bare root** (`http://127.0.0.1:8080`, no `/v1`) —
   Crush appends `/v1/models` itself (`internal/discover/llamacpp.go`). A trailing `/v1` would
   double-path.
