@@ -13,10 +13,10 @@ Steps:
    ```markdown
    # <Title>
 
-   **Status:** in-progress
+   **Status:** proposed — needs go-ahead
    **Priority:** <1–10, 1=highest>
    **Difficulty:** <1–10, 1=easiest>
-   **Started:** <today, YYYY-MM-DD>
+   **Created:** <today, YYYY-MM-DD> (<Name> <<email>>, from `git config`)
 
    ## BLUF
 

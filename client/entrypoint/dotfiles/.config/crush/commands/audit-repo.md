@@ -21,8 +21,9 @@ A full read of the current repo, cross-referencing the docs (`CLAUDE.md`, `READM
 - internal inconsistencies;
 - paths and commands that don't exist.
 - deviations from the shared coding standard that its checkers list (for C,
-  `c_dispatch_check.py` and `c_designated_init_check.py`; see `c-coding-standard.md`), each a
-  finding even where the code works.
+  `c_dispatch_check.py` and `c_designated_init_check.py`, see `c-coding-standard.md`; for Python,
+  `check_local_annotations.py`, see `python-coding-standard.md`), each a finding even where the
+  code works.
 
 Report in chat:
 
