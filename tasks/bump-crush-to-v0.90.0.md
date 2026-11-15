@@ -1,7 +1,7 @@
 # Bump Crush v0.89.0 → v0.90.0 (and re-verify the `@`-import patch)
 
-**Status:** proposed — **BLOCKED on `tasks/verify-vendored-airgap-rebuild.md`.** Do NOT implement this bump
-until offline rebuild is **verified working** on the airgap box (maintainer, 2026-08-22). The vendoring
+**Status:** blocked — on the airgap offline-rebuild verification (`tasks/verify-vendored-airgap-rebuild.md`).
+Do NOT implement this bump until offline rebuild is **verified working** on the airgap box (maintainer, 2026-08-22). The vendoring
 itself is now implemented (`tasks/archive/2026/08/22/vendor-build-sources-for-airgap-rebuild.md`); what
 remains before a bump is safe is confirming the airgapped rebuild actually works. Investigation is complete
 (the `@`-import patch ports to v0.90.0 unchanged, builds + tests pass), but the actual upgrade is not done
@@ -15,7 +15,18 @@ working on the real airgap box), and the airgap box's Go being ≥ 1.26.6 (v0.90
 **Recheck:** `ls tasks/verify-vendored-airgap-rebuild.md` — absent (archived) = half cleared; on the
 airgap box `go version` ≥ 1.26.6 = the other half. Both = unblocked; re-rate Priority and start the plan.
 
-## Goal
+## BLUF
+
+Move the client's pinned Crush (`CRUSH_TAG` in `client/Makefile`) from v0.89.0 to v0.90.0 and re-verify
+the local `@`-import patch on it. The investigation is done (the patch ports unchanged; build + tests
+pass); the bump itself waits until the vendored offline rebuild is verified on the airgap box. "Done" =
+`CRUSH_TAG` is v0.90.0, re-vendored, with the patch re-verified, per the Plan below.
+
+## Context
+
+Read first: "Investigation findings" and "Dependency — the airgap-vendoring task must land FIRST" below,
+then `tasks/verify-vendored-airgap-rebuild.md` (the gate). Current state: `client/Makefile` still pins
+`CRUSH_TAG ?= v0.89.0`; nothing in the repo has been changed by this task except this doc.
 
 Move the client's pinned Crush from **v0.89.0** to the new stable **v0.90.0** (released 2026-08-19),
 confirming our local `@`-import patch still ports and works.

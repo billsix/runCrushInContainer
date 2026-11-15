@@ -111,7 +111,7 @@ builds lean only on an explicit opt-in.**
 > build-content meaning was split out of `NESTED_PODMAN` fleet-wide, and it is NOT inferred
 > from being nested (a nested `make image` builds FULL now that the inner store is disk-backed;
 > pass `MINIMAL_IMAGE=1` for a lean export/airgap image). See runClaudeInContainer
-> `tasks/reference/minimal-nested-images.md` and `tasks/archive/2026/09/27/decouple-minimal-image-from-nested-podman.md`.
+> github.com/billsix/runClaudeInContainer `tasks/reference/minimal-nested-images.md` and `tasks/archive/2026/09/27/decouple-minimal-image-from-nested-podman.md`.
 > The 2026-09-12 design below stands except that the downstream signal is `MINIMAL_IMAGE`, not
 > a nested-inferred `NESTED_PODMAN`.
 

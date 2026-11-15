@@ -22,6 +22,12 @@ lean. So Lever 2 is mostly a runClaude job plus the shared overlay, and it is **
 like Lever 1**: it partly reverses the maintainer's deliberate "auto-load conventions so they're never
 skipped" design, so it needs explicit decisions before any edit.
 
+## Context
+
+Read first: `tasks/reference/crush-context-assembly.md` (how the Crush system prompt is assembled, and the
+re-measure procedure), then "Decisions needed" below. Current state: Lever 1 and decisions 1–2 are done
+(see Status); only decision 3, the personal-overlay split, remains, and the maintainer has deferred it.
+
 ## The always-loaded set, measured (2026-09-14)
 
 **runClaudeInContainer — mounted every Claude Code session (`~/.claude/`):**
@@ -95,6 +101,6 @@ the client side.
 
 ## Related
 
-- `tasks/investigate-context-bloat-geometricalgebra.md` (archived) — the diagnosis + method.
+- `tasks/archive/2026/09/14/investigate-context-bloat-geometricalgebra.md` (archived) — the diagnosis + method.
 - `tasks/reference/crush-context-assembly.md` — how the system prompt is assembled; the re-measure procedure.
 - Lever 1 work records: `tasks/archive/2026/09/{13,14}/trim-claude-md.md` (this repo) and the same in every project repo.

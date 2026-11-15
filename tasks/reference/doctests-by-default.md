@@ -1,4 +1,4 @@
-# Doctests by default (Python and Rust)
+# Doctests by default (Python, Rust and C++)
 
 > **SHARED doc.** Canonical copy: github.com/billsix/runClaudeInContainer
 > `tasks/reference/doctests-by-default.md`; kept **byte-identical** in the runCrushInContainer

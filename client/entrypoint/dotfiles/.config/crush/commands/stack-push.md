@@ -2,7 +2,8 @@ We are about to divert from what we're working on. Push the CURRENT work onto th
 so it isn't lost, then start on `$DIVERSION`.
 
 The stack file is `~/.config/crush/stack.md`. Create it if missing, with the header
-`# Work stack` and nothing else.
+`# Work stack` and one section, `## Active diversion chain` (the stack lives for this session
+only, so it holds no cross-session handoff sections).
 
 Steps:
 
@@ -10,8 +11,8 @@ Steps:
    conversation, the current repo's `tasks/`, and `git status`. If genuinely ambiguous,
    ask once.
 
-2. **Push a new entry onto the TOP of the stack** (newest first, so the top of the file is
-   the top of the stack). Entry format — every field required:
+2. **Push a new entry onto the top of the "Active diversion chain" section** (newest first,
+   so the top of the section is the top of the stack). Entry format — every field required:
 
    ```markdown
    ## <one-line description of the PAUSED work>

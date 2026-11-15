@@ -40,12 +40,12 @@ CRUSH_TAG="${CRUSH_TAG:?set CRUSH_TAG (e.g. v0.89.0)}"
 CRUSH_REPO="${CRUSH_REPO:-https://github.com/charmbracelet/crush}"
 
 command -v git >/dev/null 2>&1 || {
-	echo "vendor-crush: git not found" >&2
-	exit 1
+    echo "vendor-crush: git not found" >&2
+    exit 1
 }
 command -v go >/dev/null 2>&1 || {
-	echo "vendor-crush: go not found" >&2
-	exit 1
+    echo "vendor-crush: go not found" >&2
+    exit 1
 }
 
 # Start from a clean destination so the script reproduces its own output when re-run

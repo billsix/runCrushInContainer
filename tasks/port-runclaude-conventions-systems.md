@@ -10,6 +10,18 @@ appear under the `/` dialog's **"User" tab** (press `Tab`), and only after `make
 **Difficulty:** 5
 **Started:** 2026-08-18 · **Researched:** 2026-08-19 · **Phases 0–2:** 2026-08-21
 
+## BLUF
+
+Reimplement runClaudeInContainer's working-method machinery (conventions body, task/reference docs, the
+diversion stack, the personal overlay, slash commands, Makefile polish) for Crush. Phases 0–4 are
+implemented; the task stays open only for the end-to-end Testing phase (Phase T), which the maintainer
+deferred. "Done" = every Phase T checkbox passes on the real setup.
+
+## Context
+
+Read first: `tasks/reference/crush-capabilities.md` (the verified Crush capability map), then "Phase T"
+below for what is left. The implementation record follows; "Goal" onward is the original plan.
+
 ## Implementation of Phases 0–2 (2026-08-21)
 
 Delivery uses the **`@`-import patch** (now proven working), so the port is near-verbatim to
@@ -239,8 +251,9 @@ commands, the updated crushrc), and **`[MAC] make serve`** at `CTX=65536`.
 - [ ] **A command with an arg runs:** `/new-task` → the dialog prompts for `$SLUG` → it scaffolds
       `tasks/<slug>.md`. Try `/stack-push` (prompts `$DIVERSION`) and `/stack` (no prompt, prints the
       stack).
-- [ ] **Stack persists across `--rm`:** push something with `/stack-push`, exit the container, `make
-      shell` again, `/stack` — the entry is still there (it's mounted from host `~/.config/crush/stack.md`).
+- [ ] **Stack is in-session only:** push something with `/stack-push`, exit the container, `make
+      shell` again, `/stack` — the stack is empty (superseded 2026-09-03: the stack lives on the `--rm`
+      overlay and is not mounted; `tasks/archive/2026/09/03/stack-in-session-only-harvest-at-sweep.md`).
 - [ ] **Personal overlay:** put a line in host `~/.ai-coding-conventions.personal.md`, `make shell`,
       and confirm the agent knows it (it's `@`-imported into the conventions).
 - [ ] **Makefile polish:** `make format` runs shfmt clean; `make image-export` writes a tar (gitignored)

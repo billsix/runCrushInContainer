@@ -46,8 +46,11 @@ features (initialization, scope, integer types, naming, comments).
   `bugprone-use-after-move`, `-dangling-handle`, `-narrowing-conversions`, `-integer-division`,
   `-too-small-loop-variable`, `-exception-escape`, `-unique-ptr-array-mismatch`;
   `performance-unnecessary-copy-initialization`, `-for-range-copy`, `-unnecessary-value-param`,
-  `-move-const-arg`; `readability-qualified-auto`, `-else-after-return`,
-  `-implicit-bool-conversion`, `-redundant-smartptr-get`, `-braces-around-statements`. **On
+  `-move-const-arg`; `readability-qualified-auto`,
+  `-implicit-bool-conversion`, `-redundant-smartptr-get`, `-braces-around-statements`. Leave
+  `readability-else-after-return` off: it flags the `if`/`else if`/`else` chains that the shared
+  total-dispatch rule asks for (always write the final branch), the conflict the C and Python
+  standards resolve the same way. **On
   2000s-era code several "safe" checks misfire** (`-use-equals-default` on a copy ctor with an init
   list, `-loop-convert`'s container-derived names) — the catalog of warts and the tier-by-tier
   method are in `cpp-ownership-migration.md` and `cpp-build-modernization.md`. Diff and build after

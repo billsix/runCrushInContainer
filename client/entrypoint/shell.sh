@@ -26,7 +26,7 @@ if [ "${LOCALHOST_ONLY:-0}" = "1" ]; then
     for port in 8080 8081 8082 8083 8084; do
         if [ -S "/run/muse/$port.sock" ]; then
             socat "TCP-LISTEN:$port,bind=127.0.0.1,reuseaddr,fork" \
-                  "UNIX-CONNECT:/run/muse/$port.sock" &
+                "UNIX-CONNECT:/run/muse/$port.sock" &
         fi
     done
 fi
@@ -58,13 +58,31 @@ fi
 if [ "$#" -eq 0 ] && [ -d /var/lib/shared-images/overlay-images ] && command -v podman >/dev/null; then
     stores=$(timeout 10 podman info --format '{{json .Store.GraphOptions.additionalImageStores}}' 2>/dev/null || true)
     case "$stores" in
-        *'"/var/lib/shared-images"'*) ;;
-        *)
-            printf '\n\033[33m[nested podman]\033[0m The host image store is mounted at /var/lib/shared-images,\n'
-            printf '  but podman is not using it (additional stores: %s).\n' "${stores:-unknown}"
-            printf '  Nested builds will not reuse host images. See ~/.config/crush/reference/nested-podman-design.md.\n\n'
-            ;;
+    *'"/var/lib/shared-images"'*) ;;
+    *)
+        printf '\n\033[33m[nested podman]\033[0m The host image store is mounted at /var/lib/shared-images,\n'
+        printf '  but podman is not using it (additional stores: %s).\n' "${stores:-unknown}"
+        printf '  Nested builds will not reuse host images. See ~/.config/crush/reference/nested-podman-design.md.\n\n'
+        ;;
     esac
+fi
+
+# Nested podman: buildah keeps its temp files (each build's context mount) in
+# /var/lib/containers/tmp, on the store volume, because the kernel refuses a native overlay on
+# this container's own overlay root (containers.conf.d/50-crush-nested.conf). Create it for
+# interactive and batch runs alike. Then, interactively, warn when podman does not report a
+# native overlay diff: an image built before the switch from fuse-overlayfs walks the whole
+# image on every layer commit. Rebuild it (`make image` on the host).
+if [ "${NESTED_PODMAN:-0}" = 1 ]; then
+    mkdir -p /var/lib/containers/tmp
+    if [ "$#" -eq 0 ] && command -v podman >/dev/null; then
+        native=$(timeout 10 podman info --format '{{index .Store.GraphStatus "Native Overlay Diff"}}' 2>/dev/null || true)
+        if [ "$native" != true ]; then
+            printf '\n\033[33m[nested podman]\033[0m podman reports no native overlay diff (%s), so every\n' "${native:-unknown}"
+            printf '  nested layer commit walks the whole image. Rebuild the client image on the host\n'
+            printf '  (`make -C client image`). See ~/.config/crush/reference/nested-podman-design.md.\n\n'
+        fi
+    fi
 fi
 
 # No args -> interactive shell (as before). Args (a `-c '...'` payload from

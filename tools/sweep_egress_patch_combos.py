@@ -16,7 +16,9 @@ Method, per combination:
     1. forward-apply the selected patches in the canonical order (the same order
        entrypoint/03-build-crush.sh uses), with ``git apply --unidiff-zero`` (several patches
        use zero-context hunks because they edit the same files);
-    2. optionally ``GOPROXY=off go build -mod=vendor`` (the build combos below);
+    2. optionally ``GOPROXY=off go build -mod=vendor`` (the build combos below), and for
+       the shipped (DEFAULT) combination also ``go test`` of the packages whose tests the
+       patches add (``PATCH_TEST_PACKAGES``);
     3. reverse-apply in reverse order (``git apply --unidiff-zero -R``);
     4. assert the tree is byte-identical to the pristine baseline (sha256 manifest over every
        file any patch touches).
@@ -53,6 +55,9 @@ PATCHES: Path = REPO_ROOT / "client" / "patches"
 ALL: list[str] = [
     "crush-at-import.patch",
     "crush-shell-history.patch",
+    "crush-lsp-async.patch",
+    "crush-lsp-router-notif.patch",
+    "crush-context-debug.patch",
     "crush-no-update-check.patch",
     "no-telemetry.patch",
     "no-update-providers-cmd.patch",
@@ -67,11 +72,14 @@ ALL: list[str] = [
     "no-copilot.patch",
 ]
 
-# The audit-default set (flags at their defaults: the two feature patches -- at-import and
-# shell-history -- ON via Makefile, web-tools + sourcegraph kept, everything else patched out).
+# The audit-default set, i.e. the shipped image (flags at their defaults: the two feature
+# patches -- at-import and shell-history -- ON via Makefile, the two LSP bugfix patches ON via
+# CRUSH_LSP_ASYNC, context-debug OFF, web-tools + sourcegraph kept, everything else patched out).
 DEFAULT: list[str] = [
     "crush-at-import.patch",
     "crush-shell-history.patch",
+    "crush-lsp-async.patch",
+    "crush-lsp-router-notif.patch",
     "crush-no-update-check.patch",
     "no-telemetry.patch",
     "no-update-providers-cmd.patch",
@@ -87,6 +95,14 @@ DEFAULT: list[str] = [
 # Combinations that also get compiled.
 BUILD_COMBOS: list[str] = [" ".join(DEFAULT), " ".join(ALL), ""]
 
+# The Go packages whose tests the patches add (at_import_test.go, history_test.go x2,
+# session_busy_test.go). They run against the DEFAULT combination, the shipped image.
+PATCH_TEST_PACKAGES: list[str] = [
+    "./internal/agent/prompt/",
+    "./internal/ui/model/",
+    "./internal/ui/dialog/",
+]
+
 
 def run(cmd: list[str], *, cwd: Path, env_extra: dict[str, str] | None = None) -> None:
     """Run ``cmd`` in ``cwd`` and raise ``subprocess.CalledProcessError`` on failure (abort-on-error)."""
@@ -100,7 +116,8 @@ def run(cmd: list[str], *, cwd: Path, env_extra: dict[str, str] | None = None) -
 def touched_files() -> list[str]:
     """Return every file any patch touches, sorted and deduped (the sha256-manifest scope).
 
-    Reads the ``diff --git a/<p> b/<p>`` headers, the same set the former bash grepped out.
+    Reads the ``diff --git a/<p> b/<p>`` headers and, for patches written without them (the two
+    LSP patches are plain ``diff -u`` output), the ``+++ b/<p>`` lines.
     """
     files: set[str] = set()
     for patch in sorted(PATCHES.glob("*.patch")):
@@ -108,7 +125,27 @@ def touched_files() -> list[str]:
             if line.startswith("diff --git "):
                 rest: str = line[len("diff --git ") :].removeprefix("a/")
                 files.add(rest.split(" b/", 1)[0])
+            elif line.startswith("+++ b/"):
+                files.add(line[len("+++ b/") :].split("\t", 1)[0].strip())
     return sorted(files)
+
+
+def check_setup() -> str | None:
+    """Why the sweep cannot run meaningfully, or None when it can.
+
+    ``ALL`` must name exactly the patches in ``client/patches/``, so a new patch cannot be left
+    out of the sweep; and the vendored tree must be its own git repo, because ``git apply``
+    run inside the runCrush work tree silently skips paths outside it and every combination
+    would then "pass".
+    """
+    on_disk: set[str] = {patch.name for patch in PATCHES.glob("*.patch")}
+    if set(ALL) != on_disk:
+        missing: list[str] = sorted(on_disk - set(ALL))
+        extra: list[str] = sorted(set(ALL) - on_disk)
+        return f"ALL does not match client/patches/: not in ALL {missing}, not on disk {extra}"
+    if not (CRUSH / ".git").exists():
+        return f"{CRUSH} is not its own git repo; `git apply` there would silently skip every patch"
+    return None
 
 
 def manifest(touched: list[str]) -> str:
@@ -180,6 +217,13 @@ class Sweep:
                 cwd=CRUSH,
                 env_extra={"GOPROXY": "off", "GOFLAGS": ""},
             )
+            if combo == " ".join(DEFAULT):
+                # The patches' own tests, offline against the vendored tree.
+                run(
+                    ["go", "test", "-mod=vendor", *PATCH_TEST_PACKAGES],
+                    cwd=CRUSH,
+                    env_extra={"GOPROXY": "off", "GOFLAGS": ""},
+                )
         self.reverse_combo(combo)
         self.check_clean(combo)
 
@@ -215,7 +259,7 @@ class Sweep:
 
         # 4. pseudo-random mixes (fixed seeds -> reproducible), apply/reverse only
         for seed in (3, 7, 11, 19, 42, 57, 99, 123, 200, 255):
-            selected = {
+            selected: set[str] = {
                 p for j, p in enumerate(ALL) if (seed * (j + 3) * 2654435761 >> 7) & 1
             }
             self.run_combo(in_order(selected), build=False)
@@ -230,7 +274,12 @@ class Sweep:
 
 
 def main(argv: list[str]) -> int:
+    """Run the sweep (or, with ``--list``, print its combinations); return the exit status."""
     list_only: bool = "--list" in argv
+    problem: str | None = check_setup()
+    if problem is not None and not (list_only and problem.endswith("skip every patch")):
+        print(f"sweep: {problem}", file=sys.stderr)
+        return 2
     return Sweep(list_only).run_all()
 
 

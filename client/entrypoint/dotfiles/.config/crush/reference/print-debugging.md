@@ -4,7 +4,7 @@
 then removing them cleanly, with a correct per-language recipe. The hand-instrumentation
 sibling of the cross-project `CLAUDE.md` **"Instrumentation-driven debugging"** section
 (which is about compilers/linters/tracers as oracles); read them together. Agent-facing;
-markdown on purpose. Last updated 2026-08-13.
+markdown on purpose.
 
 When a debugger isn't handy or the bug is timing/ordering-dependent, a few well-placed
 prints often localize it faster: they survive across runs, need no ceremony, and show
@@ -157,9 +157,8 @@ Temporary prints ship nothing but noise and risk. Before calling the work done:
 
 ## Instrumentation-driven debugging — the oracle-driven half
 
-(Relocated verbatim from the cross-project `CLAUDE.md`, 2026-09-14; it kept only the terse
-rule and a pointer here. This is the tools-as-oracles complement to the hand-instrumentation
-recipes above.)
+(The cross-project `CLAUDE.md` keeps the terse rule and points here. This is the tools-as-oracles
+complement to the hand-instrumentation recipes above.)
 
 This is the working method the user wants applied to any "I can't figure out why this won't work / where to even start" problem — build fights, upgrades, ports, migrations, flaky behavior, unfamiliar codebases. It's language- and tool-agnostic; the examples below are just whatever tool happens to be in front of you. The through-line: **make the machine tell you the truth, and make being wrong cheap.** Don't reason abstractly about what's probably wrong — instrument it so the tools *emit* the answer, then let their output *be* the plan.
 

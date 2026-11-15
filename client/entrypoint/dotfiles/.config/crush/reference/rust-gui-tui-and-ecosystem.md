@@ -21,10 +21,9 @@ are what resolved at that time; re-check with `cargo add`/docs.rs before pinning
 ## The Rust toolchain in the sandbox
 
 - **Present in both sandbox base lists** (`entrypoint/01-install-base.sh`): `rust`, `cargo`,
-  `rustfmt`, `rust-analyzer` (the LSP). `cargo`/`rustc` were 1.99.0 (Fedora). **`clippy` is NOT
-  installed by default** — the standard's lint gate (`cargo clippy -- -D warnings`) needs the
-  `clippy` package added to the base list(s); until then `cargo build`/`cargo test`/`cargo fmt` are
-  the gates you can run.
+  `rustfmt`, `rust-analyzer` (the LSP) and `clippy`, so the standard's lint gate
+  (`cargo clippy -- -D warnings`) runs alongside `cargo build`/`cargo test`/`cargo fmt`.
+  `cargo`/`rustc` were 1.99.0 (Fedora).
 - **Network:** `cargo` can reach crates.io here (crate fetches succeed). A **std-only crate builds
   fully offline** — add no dependency and `cargo build`/`test` need no network, which is the cheapest
   way to land a verified first milestone before pulling heavy crates.

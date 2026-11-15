@@ -1,13 +1,28 @@
 # Verify the vendored offline rebuild on a real airgapped system
 
-**Status:** proposed — real-machine verification, cannot be done in the dev sandbox (22 GB image; no
+**Status:** blocked — real-machine verification, cannot be done in the dev sandbox (22 GB image; no
 airgapped box here). Split out 2026-08-22 from the now-implemented vendoring work
 (`tasks/archive/2026/08/22/vendor-build-sources-for-airgap-rebuild.md`).
 **Priority:** 3
 **Difficulty:** 3
 **Started:** 2026-08-22
+**Blocked on:** the maintainer running the vendored rebuild on a real airgapped box.
+**Recheck:** the maintainer runs the Steps below on the airgap box; cleared = `cd client && make image
+CRUSH_VENDORED=1` succeeds with no network, `crush --version` reports the pinned tag, and `server/llama.cpp`
+builds offline.
 
-## Goal
+## BLUF
+
+Prove on a real airgapped box that the vendored sources suffice: the client image rebuilds with no network
+from `client/vendor/`, and the vendored `server/llama.cpp` + GGUF are present and build offline. "Done" =
+the "Done when" bullets below hold, or any network reach is captured as a vendoring gap.
+`tasks/bump-crush-to-v0.90.0.md` waits on this.
+
+## Context
+
+Read first: `tasks/archive/2026/08/22/vendor-build-sources-for-airgap-rebuild.md` (the implementation) and
+"Offline / airgap rebuild — vendoring" in `tasks/reference/architecture.md`. The online default-flag build
+was verified 2026-08-29; only the offline path is new.
 
 Confirm the **vendoring is complete and offline-buildable** on a real airgapped box: the client image
 rebuilds with no network, and the vendored server sources (llama.cpp + GGUF) are present and buildable

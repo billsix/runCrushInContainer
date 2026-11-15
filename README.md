@@ -33,7 +33,7 @@ you're working on, and it **delivers to the agent the conventions** that teach i
 are structured and built (the ported working-method machinery — see "What's in use").
 
 It's **fork-friendly** — the models, quants, and agent version are Makefile variables you can swap
-(the two serving ports are deliberately fixed) — so it's a starting point for *your own
+(the five serving ports are deliberately fixed) — so it's a starting point for *your own
 assistant-runner*. That is **not** the same as a
 template for the codebases you build with it: those follow the container-per-project conventions the
 agent is taught, which live in your personal overlay (`ai-coding-conventions.personal.md`), not here.
@@ -147,17 +147,19 @@ make pull MODEL=gemma MODEL_FILES="*mmproj*"
 
 ## Connecting — the SSH port-forward
 
-From the **Linux host**, open the tunnel to the Mac and leave it running — forward **both** model
+From the **Linux host**, open the tunnel to the Mac and leave it running — forward **all five** model
 ports in one command (`-L` repeats), so switching models later never means touching the tunnel:
 
 ```sh
-ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac-studio.local
+ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 -L 8082:127.0.0.1:8082 \
+       -L 8083:127.0.0.1:8083 -L 8084:127.0.0.1:8084 you@mac-studio.local
 ```
 
 - `-N` — don't run a remote command, just forward.
 - `-L 8080:127.0.0.1:8080` — forward **Linux-host** port `8080` → over SSH → the Mac's
-  `127.0.0.1:8080`, where `llama-server` serves Muse Glimmer; `-L 8081:127.0.0.1:8081` does the same
-  for Gemma 4. A forward to a port nothing is serving costs nothing until something uses it.
+  `127.0.0.1:8080`, where `llama-server` serves Muse Glimmer; the other four do the same for gemma
+  (8081), granite (8082), devstral (8083) and qwen (8084). A forward to a port nothing is serving
+  costs nothing until something uses it.
 
 **This command looks like it hangs — that is correct.** `-N` runs the tunnel in the
 foreground with no output and no prompt; that terminal *is* the tunnel now. Leave it open and
@@ -165,12 +167,14 @@ use another terminal for everything else. To get your prompt back instead, add `
 the background after authentication):
 
 ```sh
-ssh -fN -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac-studio.local   # returns immediately; runs in background
+ssh -fN -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 -L 8082:127.0.0.1:8082 \
+        -L 8083:127.0.0.1:8083 -L 8084:127.0.0.1:8084 you@mac-studio.local   # returns immediately; runs in background
 pkill -f 'ssh -fN -L 8080'                                                    # ...tear it down later with this
 ```
 
-**Verify the tunnel** from a *second* terminal on the Linux host — a JSON model listing means
-you're wired end-to-end (`8080` for Glimmer, `8081` for Gemma 4 — whichever you `make serve`d):
+**Verify the tunnel** from a *second* terminal on the Linux host — a JSON model listing on the port
+of the model you `make serve`d means you're wired end-to-end (8080 glimmer, 8081 gemma, 8082 granite,
+8083 devstral, 8084 qwen):
 
 ```sh
 curl -s http://127.0.0.1:8080/v1/models     # Muse Glimmer  -> {"data":[{"id":"muse-glimmer",...
@@ -182,8 +186,9 @@ only connects to the Mac's port when something (this `curl`, or Crush) actually 
 which is why the `ssh` command sits there quietly even before anything hits it, and why forwarding
 the port of a model you aren't serving is harmless.
 
-Now `localhost:8080` / `localhost:8081` on the Linux host reach the models on the Mac. The client's
-crushrc reaches each provider on its own port; Crush's models dialog (`ctrl+l`) picks between them.
+Now `localhost:8080`–`8084` on the Linux host reach the models on the Mac. The client's crushrc
+probes each port at startup and registers a provider for each one that answers; Crush's models
+dialog (`ctrl+l`) picks between them.
 (Replace `you@mac-studio.local` with your Mac's user and hostname/IP.)
 
 ## Client — the container (on Linux)
@@ -226,14 +231,21 @@ podman images --format '{{.Repository}}:{{.Tag}} R/O {{.ReadOnly}}'
 > using it; rebuild the image (`make image`). The cause and fix are in
 > `tasks/reference/nested-podman-design.md` ("Which storage config the nested podman reads").
 
-> **Build large images on the host first.** Inside the sandbox every layer commit is slow: the inner
-> podman stores layers with `fuse-overlayfs`, which has no native overlay diff, so each commit walks
-> the whole image. On a big image (TeX Live, toolchains) a one-line `RUN` step took 4 minutes to
-> commit, and one commit ran over 40 minutes and looked like a hang. On the host a commit takes
-> seconds. So run
-> `make image` for the project on the host, then launch the sandbox; it reuses that image read-only.
-> No launch flag avoids this. Detail: `tasks/reference/nested-podman-design.md` ("Build big images on
-> the host").
+> **Nested builds commit layers at native speed.** The inner podman uses the kernel's own overlay,
+> so a layer commit costs what it does on the host (13 s against 62 s under the old fuse-overlayfs
+> setup). If the shell prints `[nested podman] … no native overlay diff` at start, your client
+> image predates that: rebuild it (`[LINUX] make -C client image`) and relaunch. Detail:
+> `tasks/reference/nested-podman-design.md` ("Storage driver").
+>
+> **Keep the inner store in RAM instead** (`NESTED_PODMAN_STORE=tmpfs`, sized by
+> `NESTED_PODMAN_TMPFS_SIZE`, default `8g`). The default store is a disk directory; RAM is bounded by
+> memory and vanishes at exit like the disk store:
+>
+> ```sh
+> make -C client shell NESTED_PODMAN=1 NESTED_PODMAN_STORE=tmpfs NESTED_PODMAN_TMPFS_SIZE=16g PROJECT=/path/to/your/project   # RAM store
+> make -C client shell NESTED_PODMAN=1 PROJECT=/path/to/your/project                                                         # disk store (default)
+> # the launchers take the same variables: NESTED_PODMAN_STORE=tmpfs /path/to/runCrushInContainer/client/runCrushNoInternet.sh you@mac-studio.local ""
+> ```
 
 ### By hand — the SSH forward, `make image` and `make shell` as separate steps
 
@@ -288,10 +300,11 @@ Mac either way; "Connecting" above explains the forward in depth):
 # NO-internet mode: forward to UNIX SOCKETS in a directory the container will mount
 mkdir -p ~/.cache/runcrush-muse-sockets
 ssh -N -L ~/.cache/runcrush-muse-sockets/8080.sock:127.0.0.1:8080 \
-        -L ~/.cache/runcrush-muse-sockets/8081.sock:127.0.0.1:8081 you@mac-studio.local
+        -L ~/.cache/runcrush-muse-sockets/8081.sock:127.0.0.1:8081 you@mac-studio.local   # add 8082-8084 the same way
 
 # WITH-internet mode: forward to TCP ports on this host's loopback
-ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac-studio.local
+ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 -L 8082:127.0.0.1:8082 \
+       -L 8083:127.0.0.1:8083 -L 8084:127.0.0.1:8084 you@mac-studio.local
 ```
 
 > `-N` makes ssh look hung — that's correct; it *is* the tunnel. Add `-f` to background it
@@ -332,7 +345,7 @@ instead of dropping you into an interactive shell — for ad-hoc/CI use.
 
 ### Network modes
 
-Two ways the container reaches the model — both land on `127.0.0.1:8080`/`:8081`, so Crush's config is
+Two ways the container reaches the model — both land on `127.0.0.1:8080`–`8084`, so Crush's config is
 identical either way. The launchers above set up the matching forward for you (into a per-run temp
 dir, torn down on exit); what follows is the manual equivalent. Design and gotchas:
 `tasks/reference/client-network-modes-and-launchers.md`.
@@ -340,15 +353,15 @@ dir, torn down on exit); what follows is the manual equivalent. Design and gotch
 - **Localhost-only (`make shell LOCALHOST_ONLY=1`, recommended) — no internet.** The container runs
   `--network=none`, so it has ONLY its own loopback and can reach **nothing but the model** (no internet,
   no other host). The model arrives as unix sockets bind-mounted at `/run/muse` (from a unix-socket SSH
-  forward), which a `socat` bridge re-exposes as `127.0.0.1:8080`/`:8081`. On the host, forward to those
+  forward), which a `socat` bridge re-exposes as `127.0.0.1:8080`–`8084`. On the host, forward to those
   sockets instead of TCP (into `$MUSE_SOCK_DIR`, default `~/.cache/runcrush-muse-sockets`) **before**
   launching:
   ```sh
   ssh -N -L ~/.cache/runcrush-muse-sockets/8080.sock:127.0.0.1:8080 \
-          -L ~/.cache/runcrush-muse-sockets/8081.sock:127.0.0.1:8081 you@mac-studio.local
+          -L ~/.cache/runcrush-muse-sockets/8081.sock:127.0.0.1:8081 you@mac-studio.local   # add 8082-8084 the same way
   ```
 - **Full internet (`make shell`, the bare default) — `--network=host`.** The container shares the host's
-  network, so `127.0.0.1:8080`/`:8081` hits the TCP SSH-forwarded ports (the `ssh -N -L 8080:… -L 8081:…`
+  network, so `127.0.0.1:8080`–`8084` hit the TCP SSH-forwarded ports (the `ssh -N -L 8080:… … -L 8084:…`
   from "Connecting" above). Use this when Crush needs the internet.
 
 The baked `crushrc` **autodiscovers the local models**: at startup it probes each model's fixed port
@@ -376,13 +389,14 @@ is the maintainer's dev setup, not a requirement.)
 **1. Vendor — on the ONLINE box** (needs only `podman` + `make`):
 
 ```sh
-./vendor.sh            # DEFAULT: Crush + llama.cpp source + BOTH models, one GGUF each (~31 GB)
+./vendor.sh            # DEFAULT: Crush + llama.cpp source + one GGUF per active model (MODEL_COUNTRIES, default US)
 FULL=1 ./vendor.sh     # FULL:    the above + ALL Glimmer quant GGUFs + Glimmer's full-precision weights
 ```
 
 Builds the client image and runs all vendoring inside it, producing `client/vendor/crush`,
-`server/llama.cpp` (full history), and `server/models/`. **Default vendors one GGUF per model —
-Glimmer Q4_K_M and Gemma 4 Q4_0; `FULL=1` adds every Glimmer quant plus the unquantized weights.** For
+`server/llama.cpp` (full history), and `server/models/`. **Default vendors one GGUF per active
+model — with the default `MODEL_COUNTRIES=US`, Glimmer, Gemma 4 and Granite (~53 GB); `FULL=1` adds
+every Glimmer quant plus the unquantized weights.** For
 a specific set instead, pass `MODEL_FILES="…"` / `FULL_MODEL_FILES="…"` (same meaning as in
 `server/Makefile` — run `make -C server check-repo [MODEL=gemma]` to list a repo's real filenames; verify
 the repo on HF). Override the Crush version with `CRUSH_TAG=vX.Y.Z ./vendor.sh`.
@@ -457,7 +471,7 @@ The first cut was just "get it running"; the client has since grown a few things
 The runClaudeInContainer working-method machinery is now **ported** — the cross-project conventions
 (a lean, always-loaded `CLAUDE.md`), the task-doc and reference-doc systems, the diversion stack
 (in-session only; the session-end sweep preserves what's still in flight), the personal-overlay
-layering, the 8 slash commands, and nested-podman support (`make shell NESTED_PODMAN=1`). See
+layering, the 13 slash commands, and nested-podman support (`make shell NESTED_PODMAN=1`). See
 `tasks/port-runclaude-conventions-systems.md`.
 
 **Customize it for yourself — the personal overlay (`ai-coding-conventions.personal.md`).** The baked, always-loaded

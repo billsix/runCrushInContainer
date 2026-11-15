@@ -16,7 +16,12 @@ defaults to `glimmer` (a US model) — it does **not** consult the country allow
 despite a China-only filter, quietly bypassing the gate. "Done" = the extras path respects
 `MODEL_COUNTRIES` (or explicitly, loudly requires an override to bypass it).
 
-## Background (so this is understandable cold)
+## Context
+
+Read first: `tasks/reference/model-registry-country-gate-and-checksums.md` ("Known gap") and the
+`pull` target in `server/Makefile`. Current state: the gap is open; `MODEL_FILES ?=` (empty) and
+`FULL_MODEL_REPO ?= $(MODEL_REPO_glimmer)` in `server/Makefile`; the Options below are undecided.
+
 
 The country gate works like this: `server/Makefile` tags each model with `MODEL_COUNTRY_<m>` (US/FR/CN);
 `MODEL_COUNTRIES` (default `US`) is an allowlist; `ACTIVE_MODELS` is the models whose country is allowed;

@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
     --mount=type=cache,target=/var/lib/dnf \
     /usr/local/bin/00-install-minimal.sh
 
-# The full runClaudeInContainer toolchain (~430 packages) — same host-runnable install
+# The full runClaudeInContainer toolchain (~460 packages) — same host-runnable install
 # script, copied verbatim from the sibling repo. ALWAYS installed (a superset of the base
 # above), so the client is always the batteries-included dev image with the language servers
 # the crushrc declares. Formerly gated behind FULL_TOOLCHAIN (auto-minimal when nested), which
@@ -31,6 +31,18 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
 # install them from upstream release binaries (own layer, own host-runnable script).
 COPY entrypoint/01b-install-binary-tools.sh /usr/local/bin/
 RUN /usr/local/bin/01b-install-binary-tools.sh
+
+# Lean 4 (theorem prover) via elan. install-lean.sh installs OFFLINE from the vendored
+# /vendor/elan when CRUSH_VENDORED=1 (airgap; the elan volume is mounted by the Makefile
+# when `make vendor` produced it), else ONLINE via the official curl installer. The
+# Versions are pinned (ELAN_VERSION, LEAN_TOOLCHAIN; client/Makefile). This sits right after
+# the toolchain layers, before the Crush build and its many ARGs, so a CRUSH_TAG bump or a
+# patch-flag flip does not re-download Lean.
+ARG ELAN_VERSION=v4.2.4
+ARG LEAN_TOOLCHAIN=leanprover/lean4:v4.35.0
+COPY entrypoint/install-lean.sh /usr/local/bin/
+RUN ELAN_VERSION="$ELAN_VERSION" LEAN_TOOLCHAIN="$LEAN_TOOLCHAIN" /usr/local/bin/install-lean.sh
+ENV PATH="/root/.elan/bin:${PATH}"
 
 # --- RHEL 9 variant (UBI 9 / CentOS Stream 9 base): the Python language server from a /venv ---
 # Kept COMMENTED OUT on purpose: this image is Fedora, where `ty` comes from dnf (01-install-base.sh)
@@ -52,17 +64,6 @@ RUN /usr/local/bin/01b-install-binary-tools.sh
 # RUN python3.11 -m venv --system-site-packages /venv && \
 #     /venv/bin/pip install --no-index --find-links /vendor/wheels ty
 # ENV PATH=/venv/bin:$PATH
-
-# Vendoring-only tools (the `hf` CLI), gated behind VENDOR_TOOLS (default 0 — Makefile turns it
-# ON only for `make vendor`). These are needed ONLY to run `make vendor` inside this image while
-# ONLINE; the image itself and the OFFLINE airgap rebuild do not use them, so a normal/airgap
-# build never installs them and the airgap dnf mirror never needs them. See
-# tasks/vendor-via-client-image.md.
-ARG VENDOR_TOOLS=0
-COPY entrypoint/02-install-vendor-tools.sh /usr/local/bin/
-RUN --mount=type=cache,target=/var/cache/libdnf5 \
-    --mount=type=cache,target=/var/lib/dnf \
-    if [ "$VENDOR_TOOLS" = "1" ]; then /usr/local/bin/02-install-vendor-tools.sh; fi
 
 # Silence podman's RHEL subscription-secrets mount. containers-common ships
 # /usr/share/containers/mounts.conf = "/usr/share/rhel/secrets:/run/secrets", which podman tries to
@@ -95,8 +96,10 @@ ARG CRUSH_AT_IMPORT=0
 ARG CRUSH_SHELL_HISTORY=0
 # DEBUG-only: 1 applies crush-context-debug.patch (per-source system-prompt token
 # breakdown logged to <data-dir>/logs/crush.log). Default 0; keep it 0 in shipped
-# images. See tasks/investigate-context-bloat-geometricalgebra.md.
+# images. See tasks/archive/2026/09/14/investigate-context-bloat-geometricalgebra.md.
 ARG CRUSH_CONTEXT_DEBUG=0
+# The powernap LSP bugfix patches; default 1 even for a bare `podman build` (they are fixes).
+ARG CRUSH_LSP_ASYNC=1
 ARG CRUSH_VENDORED=0
 ARG PATCH_OUT_UPDATE_CHECK=1
 ARG PATCH_OUT_TELEMETRY=1
@@ -130,6 +133,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     CRUSH_TAG="$CRUSH_TAG" CRUSH_VENDORED="$CRUSH_VENDORED" CRUSH_AT_IMPORT="$CRUSH_AT_IMPORT" \
     CRUSH_SHELL_HISTORY="$CRUSH_SHELL_HISTORY" \
     CRUSH_CONTEXT_DEBUG="$CRUSH_CONTEXT_DEBUG" \
+    CRUSH_LSP_ASYNC="$CRUSH_LSP_ASYNC" \
     PATCH_OUT_UPDATE_CHECK="$PATCH_OUT_UPDATE_CHECK" \
     PATCH_OUT_TELEMETRY="$PATCH_OUT_TELEMETRY" \
     PATCH_OUT_UPDATE_PROVIDERS_CMD="$PATCH_OUT_UPDATE_PROVIDERS_CMD" \
@@ -144,31 +148,41 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     PATCH_OUT_COPILOT="$PATCH_OUT_COPILOT" \
     /usr/local/bin/03-build-crush.sh
 
-# Lean 4 (theorem prover) via elan. install-lean.sh installs OFFLINE from the vendored
-# /vendor/elan when CRUSH_VENDORED=1 (airgap; the elan volume is mounted by the Makefile
-# when `make vendor` produced it), else ONLINE via the official curl installer. The
-# vendor/vendor-lean.sh helper is already COPY'd into /usr/local/bin/vendor/ above.
-COPY entrypoint/install-lean.sh /usr/local/bin/
-RUN /usr/local/bin/install-lean.sh
-ENV PATH="/root/.elan/bin:${PATH}"
+# Vendoring-only tools (the `hf` CLI), gated behind VENDOR_TOOLS (default 0 — Makefile turns it
+# ON only for `make vendor`). These are needed ONLY to run `make vendor` inside this image while
+# ONLINE; the image itself and the OFFLINE airgap rebuild do not use them, so a normal/airgap
+# build never installs them and the airgap dnf mirror never needs them. See
+# tasks/archive/2026/08/22/vendor-via-client-image.md.
+# After the Crush build, so `make vendor` (VENDOR_TOOLS=1) and a normal build share every
+# layer above.
+ARG VENDOR_TOOLS=0
+COPY entrypoint/02-install-vendor-tools.sh /usr/local/bin/
+RUN --mount=type=cache,target=/var/cache/libdnf5 \
+    --mount=type=cache,target=/var/lib/dnf \
+    if [ "$VENDOR_TOOLS" = "1" ]; then /usr/local/bin/02-install-vendor-tools.sh; fi
+
+
 
 # Baked dotfiles (prompt, ls alias, GPG_TTY): /root/.extrabashrc, sourced from ~/.bashrc.
 # Host ~/.tmux.conf / ~/.gitconfig / ~/.gnupg are mounted conditionally by the Makefile.
 COPY entrypoint/dotfiles/ /root/
 RUN echo "source ~/.extrabashrc" >> ~/.bashrc
 
-# Store config for the nested podman (fuse-overlayfs, plus the read-only host image store at
+# Store config for the nested podman (native kernel overlay, plus the read-only host image store at
 # /var/lib/shared-images). podman loads ONE main storage.conf, the highest-precedence one that
 # exists (~/.config, then /etc, then /usr/share), and then every storage.conf.d/ and
 # storage.rootful.conf.d/ drop-in, sorted by file name, each overriding what came before.
 # containers-common ships /usr/share/containers/storage.rootful.conf.d/00-vendor-rootful.conf,
 # which sets additionalimagestores to /usr/lib/containers/storage, so a main file alone loses
 # the host store. The same file is therefore also installed as a drop-in whose name sorts after
-# the vendor's. The /etc main-file copy serves an older podman without the vendor drop-in.
+# the vendor's; the main file is the ~/.config copy the dotfiles COPY above brings in.
 # Detail: tasks/reference/nested-podman-design.md ("Which storage config the nested podman reads").
-COPY entrypoint/dotfiles/.config/containers/storage.conf /etc/containers/storage.conf
 COPY entrypoint/dotfiles/.config/containers/storage.conf \
      /etc/containers/storage.conf.d/50-crush-nested.conf
+# buildah's temp dir on the store volume, so native overlay can mount build contexts; see
+# the file's header.
+COPY entrypoint/dotfiles/.config/containers/containers.conf \
+     /etc/containers/containers.conf.d/50-crush-nested.conf
 
 # Baked default Crush config: a local llama.cpp provider with the model pinned explicitly and
 # the built-in catalog suppressed (see tasks/archive/2026/08/20/suppress-embedded-provider-catalog.md).

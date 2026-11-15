@@ -1,77 +1,29 @@
 # Decide whether the dependency-egress audit needs an enforced verification check
 
-**Status:** DONE — decided 2026-09-22 (William Emerison Six <billsix@gmail.com>): **enforced by
-construction, no standing runtime check.** See "Decision" below. Archived 2026-09-22.
-Pre-decision status, kept for the record: proposed — **askable now**: the audit landed and was implemented 2026-08-29
-(`tasks/reference/dependency-network-audit.md` — findings, D1–D12, flag index), so the decision has
-its numbers. Deferred originally by the maintainer (William Emerison Six <billsix@gmail.com>,
+**Status:** complete
+**Completed:** 2026-09-22
+Started 2026-08-29.
+
+Decided whether the dependency network audit (`tasks/archive/2026/08/29/audit-dependency-network-egress.md`,
+durable findings in `tasks/reference/dependency-network-audit.md`) should be enforced by a standing
+runtime egress check. Answer: **no; enforcement exists by construction** in the no-internet mode. The
+maintainer had deferred the question when the audit landed (William Emerison Six <billsix@gmail.com>,
 2026-08-29: "no verification needed for now … a follow up task, to decide if we even need to").
-Note: the client is now always the full toolchain (strace+tcpdump present), but the sandbox-buildable
-*minimal* image that once made an in-sandbox runtime egress check practical was **removed 2026-09-12**
-(`tasks/reference/nested-podman-vs-image-content.md`) — the full image is ~22 GB and won't build in the
-nested RAM store. So if an in-sandbox egress check is wanted, its environment needs rethinking (a
-purpose-built lean egress image, or run the watch on the host).
-**Priority:** 6
-**Difficulty:** 3
-**Started:** 2026-08-29
 
-## BLUF
+## Inputs to the decision
 
-Decide whether the dependency network audit (`tasks/archive/2026/08/29/audit-dependency-network-egress.md`) should be
-*enforced* by a runtime egress check — and if yes, design and run it. "Done" = a recorded yes/no
-decision from the maintainer; if yes, additionally a working check (strace/tcpdump trace or a
-firewall rule set) that asserts Crush contacts **no host other than the local model endpoint**,
-run on the real machine.
-
-## Context
-
-Read first:
-
-- `tasks/archive/2026/08/29/audit-dependency-network-egress.md` — the audit this would verify. Its
-  "Verification / hardening idea" section holds the full design discussion; this task was split out
-  of it on 2026-08-29 (the maintainer deferred verification: decide *whether* before building *what*).
-- `tasks/disable-crush-telemetry.md` — the prior two-host egress check idea this would supersede/extend.
-- `tasks/reference/architecture.md` — the local-model topology (`127.0.0.1:8080` over an SSH tunnel,
-  `--network=host`).
-
-Decisions already made, with rationale:
-
-- ~~**`--network=none` is the WRONG mechanism** — under `--network=host` it severs the container's path
-  to the host's `127.0.0.1:8080`, killing the essential local-model link, so it proves nothing.~~
-  **Superseded 2026-09-20:** true only when the model arrives over TCP. With the model forwarded to
-  a *unix socket* bind-mounted into the container and a `socat` bridge inside (`LOCALHOST_ONLY=1`),
-  `--network=none` keeps the model link and *is* the mechanism —
-  `tasks/reference/client-network-modes-and-launchers.md`.
-- The candidate mechanisms, if we do build a check (from the audit task):
-  1. **Observe:** run Crush normally under `strace -f -e trace=connect,sendto` (or `tcpdump`),
-     exercise startup + a chat + each KEPT online feature, assert every destination is
-     loopback/the local model.
-  2. **Enforce:** an `nftables`/`iptables` rule set allowing only the local model endpoint, DROP the
-     rest; confirm Crush still works and blocked attempts fail gracefully.
-- Originally judged **real-machine only** (the ~22 GB client image + a live local model). Partly
-  superseded 2026-08-29, now real: the minimal image landed (`tasks/archive/2026/09/10/minimal-client-image.md`; a sandbox-buildable minimal
-  image with strace+tcpdump baked in), the observe-mode check can run **in-sandbox** against a
-  stub OpenAI endpoint on loopback; only a check against the real Mac-served model stays
-  real-machine.
-- The alternative to a runtime check is relying on the audit's source-level findings alone (every
-  network-capable dep documented `file:line`, phone-home patched out by default) — a legitimate
-  outcome; that is exactly the "do we even need it" question this task exists to answer.
-
-## Goal
-
-Answer, with the maintainer: is the source-level audit + default-on patches sufficient, or do we
-want a runtime egress check as a standing gate? If wanted: pick observe-vs-enforce, decide
-`make`-target vs documented manual procedure, and run it once on the real machine.
-
-## Plan
-
-- [x] Wait for the audit reference doc (`tasks/reference/dependency-network-audit.md`) — landed
-      and implemented 2026-08-29. The numbers: zero unsolicited egress with default flags; the
-      remaining intentional surface is the web tools (D1), sourcegraph (D2), and operator-
-      configured MCP servers.
-- [x] Put the yes/no to the maintainer with the audit's numbers in hand — asked and answered
-      2026-09-22 (see Decision).
-- [x] ~~If yes: pick mechanism …~~ Not needed: enforcement exists by construction.
+- The audit's numbers: zero unsolicited egress with default flags; the remaining intentional surface
+  is the web tools (D1), sourcegraph (D2), and operator-configured MCP servers.
+- Candidate mechanisms had been an observe mode (`strace -f -e trace=connect,sendto` or `tcpdump`
+  over startup, a chat and each kept online feature) and an enforce mode (an `nftables` rule set
+  allowing only the model endpoint).
+- An in-sandbox check had once been practical on the minimal client image, which was removed
+  2026-09-12 (`tasks/reference/nested-podman-vs-image-content.md`); the full image could not build in
+  the then nested RAM store.
+- Earlier reasoning that `--network=none` was the wrong mechanism (it would sever the TCP path to the
+  model) was superseded 2026-09-20: with the model forwarded to a bind-mounted unix socket and a
+  `socat` bridge inside (`LOCALHOST_ONLY=1`), `--network=none` keeps the model link
+  (`tasks/reference/client-network-modes-and-launchers.md`).
 
 ## Decision (2026-09-22, William Emerison Six <billsix@gmail.com>)
 
@@ -89,11 +41,5 @@ landed (2026-09-20) and its one-command launcher made it the recommended way in 
   `data.charm.land` / `api.github.com` — stays tracked in `tasks/disable-crush-telemetry.md`
   (re-scoped 2026-09-22); it is a targeted watch, not the standing gate this task asked about.
 
-## Notes / decisions
-
-- 2026-09-22 — the archived-verify path (`tasks/archive/2026/09/22/verify-localhost-only-network-mode.md`)
-  and the launcher task are where the enforcement is exercised; this doc records only the decision.
-
-## Open questions
-
-None — the one question (runtime check needed at all?) is answered above.
+The enforcement itself is exercised in `tasks/archive/2026/09/22/verify-localhost-only-network-mode.md`
+and the launcher task; this doc records only the decision.

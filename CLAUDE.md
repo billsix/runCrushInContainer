@@ -8,7 +8,7 @@ conventions, and follows them. Remaining work is tracked in `tasks/`.
 running a coding assistant in a disposable container to develop your *other* codebases** — here the
 assistant is **Crush** (Charm's terminal agent, `github.com/charmbracelet/crush`) driving a **local
 coding LLM** (Meta's **Muse Glimmer 30B**, or Google's **Gemma 4 26B-A4B** — both Apache-2.0,
-`make serve MODEL=glimmer|gemma`) served on the Mac. Its job is two-fold: **run the agent** (in a
+`make serve MODEL=glimmer|gemma|granite|devstral|qwen`, gated by `MODEL_COUNTRIES`) served on the Mac. Its job is two-fold: **run the agent** (in a
 throwaway container, pointed at the project mounted at `/work`), and **deliver to the agent the
 conventions** that teach it how your projects are structured and built. It is fork-friendly (model,
 quant, pinned tool versions are Makefile variables); the template/fork rationale and why it is *not*
@@ -24,9 +24,9 @@ a template for the codebases you build with it are in `tasks/reference/architect
   and autodiscovered by the client. Full design: `tasks/reference/model-registry-country-gate-and-checksums.md`.
   (`make serve MODEL=<m>`; ports are deliberately not knobs.)
 - **`client/` — Linux, containerized.** A Podman image = the full runClaudeInContainer toolchain
-  (~430 packages) plus **Crush built from source at a pinned tag**. It reaches the Mac through an
+  (~460 packages) plus **Crush built from source at a pinned tag**. It reaches the Mac through an
   **SSH port-forward** (`ssh -L`, run on the Linux host), with `podman run --network=host` so
-  `127.0.0.1:8080` / `:8081` in the container are the forwarded ports (one tunnel forwards both).
+  `127.0.0.1:8080`–`8084` in the container are the forwarded ports (one tunnel forwards all five).
   Opt-in `make shell LOCALHOST_ONLY=1` instead runs `--network=none` + a unix-socket/`socat` bridge so the
   container reaches **only** the model (no other egress); default stays `--network=host`. **The one-command
   way in is `client/runCrushNoInternet.sh` / `runCrushWithInternet.sh`** (image → per-run `mktemp -d` →
@@ -58,7 +58,7 @@ Three environments are in play; label instructions so it's unambiguous:
   `client/entrypoint/shell.sh`), and server `CTX` ↔ the crushrc `--context-window`. Rationale + the
   quant/serve lore: `tasks/reference/architecture.md`.
 - **The client is always the full toolchain; `NESTED_PODMAN` is run-time only.** `make image` (on the
-  host) builds the full ~430-package image with all the language servers the crushrc declares — there
+  host) builds the full ~460-package image with all the language servers the crushrc declares — there
   is no `FULL_TOOLCHAIN` flag. `NESTED_PODMAN` is purely a run-time launch capability, decoupled from
   image content, and deliberately not baked (`ENV NESTED_PODMAN=1`). Why they must be decoupled (and
   the LSP-broke-when-nested history): `tasks/reference/nested-podman-vs-image-content.md`.
@@ -72,8 +72,8 @@ Three environments are in play; label instructions so it's unambiguous:
   broken crushrc means Crush refuses to start. Use `--filetypes a --filetypes b`, never
   `--filetypes a b`. The cheap pre-`make image` gate (build the vendored tree + run `crush models`):
   `tasks/reference/crush-capabilities.md` (Config system) and `tasks/reference/crush-lsp-integration.md` §4.
-- **Model preselection is probe-based.** The crushrc `curl`s `127.0.0.1:8080`/`8081` at load and
-  preselects the model that answers (Crush never health-checks a pinned provider). A `ctrl+l` switch
+- **Model preselection is probe-based.** The crushrc `curl`s `127.0.0.1:8080`–`8084` at load,
+  registers a provider for each port that answers, and preselects the first (Crush never health-checks a pinned provider). A `ctrl+l` switch
   outranks it for the life of that container. Mechanism: `tasks/reference/crush-capabilities.md`
   § "Which model is active at startup".
 - **Language servers: dnf only, declared explicitly in the crushrc.** Six `lsp add`s (python `ty`, go,
@@ -92,8 +92,8 @@ Three environments are in play; label instructions so it's unambiguous:
 ## What's ported / in use
 
 The full runClaudeInContainer working-method machinery is ported and in use (task/reference-doc
-systems, always-loaded conventions + personal overlay, in-session diversion stack, 12 slash commands,
-`make shell-exec`, nested podman, fourteen local Crush patches, no-telemetry/no-phone-home). The full
+systems, always-loaded conventions + personal overlay, in-session diversion stack, 13 slash commands,
+`make shell-exec`, nested podman, seventeen local Crush patches, no-telemetry/no-phone-home). The full
 inventory with per-item detail, and what was deliberately NOT ported, is in
 `tasks/reference/architecture.md` § "Conventions machinery — ported" / "Ported machinery inventory".
 The egress patch/flag system and the 213-Go-dep dependency network audit are in
@@ -126,8 +126,10 @@ runClaudeInContainer's `tools/` copy.
 - `tasks/reference/nested-podman-vs-image-content.md` — why `NESTED_PODMAN` (run-time) and image
   content are decoupled, and the LSP-broke-when-nested post-mortem.
 - `tasks/reference/nested-podman-design.md` — nested-podman design/flags for the client (inner runs
-  use the PODMAN_RUN_FLAGS convention + `--network=host`), and why big images should be built on the
-  host: nested layer commits use fuse-overlayfs's slow naive diff.
+  use the PODMAN_RUN_FLAGS convention + `--network=host`), and the storage driver: native kernel
+  overlay on a real-filesystem store, so nested layer commits run at host speed.
+  The inner store is a disk dir by default; `NESTED_PODMAN_STORE=tmpfs` (sized by
+  `NESTED_PODMAN_TMPFS_SIZE`, default 8g) puts it in RAM instead.
 - `tasks/reference/image-build-and-storage-pipeline.md` — the two podman levels (host `make image`
   building `crushcontainer` vs nested podman inside the sandbox), where every image layer is written,
   and how to reclaim disk.

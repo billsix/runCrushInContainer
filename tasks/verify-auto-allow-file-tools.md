@@ -1,12 +1,26 @@
 # Verify the file-tool auto-allow on a rebuilt client image
 
-**Status:** proposed — real-machine check; needs a client-image rebuild (baked crushrc). Split out
+**Status:** blocked — a hands-on maintainer check on a rebuilt client image (baked crushrc). Split out
 2026-08-22 from the implemented `tasks/archive/2026/08/22/auto-allow-local-file-tools.md`.
 **Priority:** 3
 **Difficulty:** 2
 **Started:** 2026-08-22
+**Blocked on:** the maintainer rebuilding the ~22 GB client image on the real machine and driving Crush
+interactively (not buildable in the nested sandbox store).
+**Recheck:** the maintainer runs `cd client && make image && make shell`, then the Steps below; cleared =
+file tools run with no prompt while `bash`/fetch/MCP still prompt (or a captured mismatch to reconcile).
 
-## Goal
+## BLUF
+
+A hands-on check that the `permissions allow` policy baked into `client/entrypoint/crushrc` behaves as
+intended in a rebuilt client image. "Done" = file view/list/edit/write tools run without prompting, and
+`bash`, network and MCP tools still prompt.
+
+## Context
+
+Read first: `tasks/archive/2026/08/22/auto-allow-local-file-tools.md` (the implementation) and the
+"Permissions" bullet in `tasks/reference/architecture.md`. The policy is implemented; only this
+real-image check is outstanding.
 
 Confirm the permission policy behaves as intended once baked into a rebuilt image: **file read/write
 flows without prompts; everything else still prompts.**

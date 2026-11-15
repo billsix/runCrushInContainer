@@ -12,10 +12,10 @@ developing your codebases with a private local assistant, and a fork-friendly si
 SSH tunnel:
 
 ```
-[MAC]  llama.cpp (Metal) → llama-server on 127.0.0.1:8080 (Glimmer) or :8081 (Gemma 4), OpenAI /v1
-          ▲  ssh -N -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 you@mac   (run ON the Linux host)
-[LINUX HOST]  localhost:8080 / :8081
-[CONTAINER]  crush → http://127.0.0.1:8080 | :8081  (podman run --network=host)
+[MAC]  llama.cpp (Metal) → llama-server for ONE model on its fixed port 127.0.0.1:8080–8084, OpenAI /v1
+          ▲  ssh -N -L 8080:127.0.0.1:8080 … -L 8084:127.0.0.1:8084 you@mac   (run ON the Linux host)
+[LINUX HOST]  localhost:8080–8084
+[CONTAINER]  crush → http://127.0.0.1:808x for each port that answers  (podman run --network=host)
 ```
 
 **Not a template for the codebases you build with it.** It *is* a template for the assistant-runner
@@ -93,7 +93,7 @@ for its own `client/` image, but that's incidental to its purpose.
   `make -C client manifest`; also baked at `~/.config/crush/reference/container-file-layout.md`
   so the agent can read it in-container). Consult it before citing a container path.
 - **One image, always the full toolchain (2026-09-12):** `make image` (on the host) builds the full
-  ~430-package image with all the language servers the crushrc declares. There is no `FULL_TOOLCHAIN`
+  ~460-package image with all the language servers the crushrc declares. There is no `FULL_TOOLCHAIN`
   flag — image content is fixed, and `NESTED_PODMAN` is purely run-time launch capability, decoupled
   from the build. The full image is large (~22 GB), so build it on the host, not nested. (Until
   2026-09-12 `FULL_TOOLCHAIN` auto-defaulted to a ~1.65 GB minimal, language-server-less image when
@@ -119,13 +119,12 @@ for its own `client/` image, but that's incidental to its purpose.
   Python. Rule: **dnf only** (the airgap mirror is dnf); toolchains Fedora ships no server for get
   none. Capability table + the RHEL 9 venv variant: `crush-lsp-integration.md` §4 and § RHEL 9.
 - **Crush config is `crushrc`, NOT `crush.json`** (`client/entrypoint/crushrc`; global path
-  `~/.config/crush/crushrc`). `crush.json` is deprecated. The baked config declares exactly two
-  **`llamacpp`**-type providers — `muse-glimmer` on `8080` and `gemma-4` on `8081` (2026-09-10).
-  At load the crushrc **probes both ports with `curl` and preselects the model that answers** in the
-  `large`/`small` slots — Gemma only when 8081 answers and 8080 does not; Glimmer otherwise
-  (both/neither/no curl) — because Crush never probes a pinned provider itself and shows no picker
-  with two providers configured (decided 2026-09-10; mechanism and precedence in
-  `crush-capabilities.md` § "Provider & model selection"). The other model is one `ctrl+l` away.
+  `~/.config/crush/crushrc`). `crush.json` is deprecated. At load the crushrc **probes all five model ports with `curl`** (8080 muse-glimmer, 8081 gemma-4,
+  8082 granite-code, 8083 devstral, 8084 qwen3-coder), registers a **`llamacpp`**-type provider for each
+  port that answers, and **preselects the first live one** in the `large`/`small` slots; if none
+  answers (tunnel not up yet) it pins Muse Glimmer on 8080 so Crush never falls into onboarding.
+  Crush never probes a pinned provider itself (mechanism and precedence in `crush-capabilities.md`
+  § "Provider & model selection"). The other live models are one `ctrl+l` away.
   **`base_url` is the bare root** (`http://127.0.0.1:8080`, no `/v1`) —
   Crush appends `/v1/models` itself (`internal/discover/llamacpp.go`). A trailing `/v1` would
   double-path.
@@ -202,9 +201,11 @@ for its own `client/` image, but that's incidental to its purpose.
     `hyper.charm.land` (guarded out by `PATCH_OUT_HYPER ?= 1`).
 - **The egress patch/flag system (2026-08-29):** the dependency network audit
   (`tasks/reference/dependency-network-audit.md`, decisions D1–D12) produced twelve `PATCH_OUT_<X>`
-  patches; with the two feature patches (`CRUSH_AT_IMPORT`, and `CRUSH_SHELL_HISTORY` added
-  2026-09-09) `client/patches/` holds **fourteen build-time patches**, each behind its own defaulted
-  flag. Defaults encode the audit's disposition: phone-home
+  patches. With the two feature patches (`CRUSH_AT_IMPORT`, `CRUSH_SHELL_HISTORY`), the two powernap
+  LSP bugfix patches (`crush-lsp-router-notif.patch` and `crush-lsp-async.patch`, both under
+  `CRUSH_LSP_ASYNC ?= 1`; `tasks/reference/crush-lsp-integration.md`) and the debug-only
+  `crush-context-debug.patch` (`CRUSH_CONTEXT_DEBUG ?= 0`; `tasks/reference/crush-context-assembly.md`),
+  `client/patches/` holds **seventeen build-time patches**, each behind a defaulted flag. Defaults encode the audit's disposition: phone-home
   (telemetry, update check), the ungated catwalk command, and the out-of-design cloud providers
   (Google/Vertex, Bedrock/AWS, Azure, OpenRouter, Vercel, Hyper, Copilot) are **patched out by
   default**; the web tools and sourcegraph are **kept by default**. `entrypoint/03-build-crush.sh`
@@ -218,8 +219,10 @@ for its own `client/` image, but that's incidental to its purpose.
   deleted import lines are replaced by unique marker comments** so every hunk is anchored in both
   directions (a bare-deletion's reverse is an unanchored insertion; that mis-ordered re-added
   imports until fixed, 2026-08-29). Verified by
-  `tools/sweep_egress_patch_combos.sh`: 42 flag combinations applied,
-  reversed, byte-identical, and the interacting-group combinations compiled. Re-verify all patches
+  `tools/sweep_egress_patch_combos.sh` (a shim for the `.py`): 46 flag combinations over all 17 patches
+  applied, reversed, byte-identical, the interacting-group combinations compiled, and the patches' Go
+  tests run on the shipped (default) combination. It refuses to run if its patch list and
+  `client/patches/` differ, or if `client/vendor/crush` is not its own git repo. Re-verify all patches
   on each `CRUSH_TAG` bump.
 
 ## Offline / airgap rebuild — vendoring (2026-08-22)
@@ -354,20 +357,21 @@ The full working-method machinery is **ported and in use** (Phases 0–4, 2026-0
   project→URL mapping / mount layout / instructions** without editing anything tracked; the agent loads
   it every session and the tracked conventions stay maintainer-agnostic. Example to copy:
   `client/entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md`; see `FORKING.md`;
-- **12 slash commands** (`/new-task`, `/new-reference`, `/new-reference-set`, `/archive-task`,
-  `/stack` and `/stack-*`, `/audit-repo`, `/findings-to-tasks`, `/review-status`, `/spell-out-names` — in Crush's `/` dialog under the **User** tab);
+- **13 slash commands** (`/new-task`, `/new-reference`, `/new-reference-set`, `/archive-task`, `/recheck-blocked`,
+  `/stack` and `/stack-*`, `/audit-repo`, `/findings-to-tasks`, `/review-status`, `/spell-out-names` — in Crush's `/` dialog under the **User** tab). Each is a port of runClaudeInContainer's, not a byte mirror: no YAML frontmatter, `$UPPERCASE` argument tokens instead of `$ARGUMENTS`, `~/.config/crush` paths;
 - **nested-podman** (`make shell NESTED_PODMAN=1`; inner runs: `--network=host` needed at this depth, and the cgroups flag auto-applies via the PODMAN_RUN_FLAGS convention — see `tasks/reference/nested-podman-design.md`);
 - **`make shell-exec`** (`client/Makefile`) — the batch twin of `make shell`: `make shell-exec
   SCRIPT=<path under the mounted PROJECT at /work> | CMD='...'` runs a script/command in the same
   container env and exits (no TTY) — for ad-hoc/CI use. `shell` + `shell-exec` share one
   `SHELL_RUN_FLAGS` variable so they can't drift; `client/entrypoint/shell.sh` ends `set -e … exec
-  bash "$@"`. Cross-project fan-out + design: `github.com/billsix/runClaudeInContainer`
-  `tasks/add-shell-exec-target.md` and `.../fan-out-shell-exec-to-projects.md`. The general template
+  bash "$@"`. Cross-project fan-out + design: github.com/billsix/runClaudeInContainer
+  `tasks/archive/2026/08/29/add-shell-exec-target.md` and `tasks/archive/2026/08/29/fan-out-shell-exec-to-projects.md`. The general template
   contract for this lives in the personal overlay (`ai-coding-conventions.personal.md`), not here.
-- **fourteen local Crush patches** (`client/patches/`), each behind its own defaulted build flag — the
+- **seventeen local Crush patches** (`client/patches/`), each behind a defaulted build flag — the
   two FEATURE patches (`crush-at-import.patch` / `CRUSH_AT_IMPORT ?= 1`, and `crush-shell-history.patch`
-  / `CRUSH_SHELL_HISTORY ?= 1`, see `tasks/reference/crush-prompt-history.md`) plus twelve `PATCH_OUT_<X>`
-  egress patches. Full detail: "The egress patch/flag system" above and
+  / `CRUSH_SHELL_HISTORY ?= 1`, see `tasks/reference/crush-prompt-history.md`), the two LSP bugfix
+  patches (`CRUSH_LSP_ASYNC ?= 1`), the debug-only `crush-context-debug.patch` (`CRUSH_CONTEXT_DEBUG ?= 0`),
+  and twelve `PATCH_OUT_<X>` egress patches. Full detail: "The egress patch/flag system" above and
   `tasks/reference/dependency-network-audit.md` §5.
 - **no telemetry / no phone-home** — see "No telemetry / no phone-home" above; the audit of the **213
   vendored Go deps** is DONE (2026-08-29, `tasks/reference/dependency-network-audit.md`; triage scanner
@@ -377,5 +381,13 @@ The full working-method machinery is **ported and in use** (Phases 0–4, 2026-0
 
 **Deliberately NOT ported:** auth plumbing (local keyless llama-server behind SSH — nothing to sign
 into), interactive GUI/Wayland + gamepad passthrough (headless Xvfb still works), and a dedicated
-`crush-config-layering.md` (optional — covered by `architecture.md` + `crush-capabilities.md`). Fork
-guidance is in `FORKING.md`.
+`crush-config-layering.md` (optional — covered by `architecture.md` + `crush-capabilities.md`).
+Fork guidance is in `FORKING.md`. (The "Blocked tasks" convention and `/recheck-blocked` were ported
+2026-11-15; a URL `Recheck:` needs the with-internet launcher.)
+
+**Copied from runClaudeInContainer because something here cites them** (byte mirrors in
+`tasks/reference/`, repo-only, not baked; 2026-11-15): `nested-run-and-gates.md`,
+`codegen-conventions.md`, `minimal-nested-images.md`, `claude-config-layering.md`. The rest of
+runClaude's reference docs that are not here (code-style/communication/git-workflow/task-doc/
+reference-doc conventions, the diversion-stack doc, and others) are cited by nothing here and stay
+unported; they are read from github.com/billsix/runClaudeInContainer when needed.

@@ -19,11 +19,12 @@ logged 11 clean exits (2026-10-04 to 2026-11-08), but no client exit has been ob
 `~/.cache/crush-nested-cleanup.log` did not exist on the host, because no nested client session
 (`make shell NESTED_PODMAN=1`) had been exited since the log was added. The maintainer chose to run
 that test later rather than close on the runClaude evidence.
-**Blocked on:** the maintainer exiting one `make -C client shell NESTED_PODMAN=1` session on the Linux
+**Blocked on:** the maintainer exiting one nested client session (`make -C client shell NESTED_PODMAN=1`, or any launcher session) on the Linux
 host (a session launched after 2026-10-04, left with `exit`).
 **Recheck:** `[LINUX HOST] cat ~/.cache/crush-nested-cleanup.log; ls -d ~/.cache/crush-nested.* 2>/dev/null`
 — cleared when the log has at least one `==` block; a `== clean` block with no leftover dir means done.
-**Priority:** 8 (blocked; the fix is in and the shared trap is verified). **Difficulty:** 1.
+**Priority:** 8 (blocked; the fix is in and the shared trap is verified).
+**Difficulty:** 1
 **Created:** 2026-10-02 (William Emerison Six <billsix@gmail.com>). **Owner:** William Emerison Six
 <billsix@gmail.com>.
 **See also:** the substantive twin on the runClaude side,
@@ -40,8 +41,9 @@ Everything except one observation is done. The trap in both `client/Makefile` re
 
 1. **[LINUX HOST] (maintainer)** Launch and exit one nested client session:
    `make -C <runCrushInContainer checkout>/client shell NESTED_PODMAN=1`, then type `exit`.
-   - The `runCrushNoInternet.sh` / `runCrushWithInternet.sh` launchers do **not** exercise this path:
-     they never set `NESTED_PODMAN=1`, and `NESTED_PODMAN` defaults to `0`.
+   - Any launcher session exercises this path too: since `e87b68a` the `runCrushNoInternet.sh` /
+     `runCrushWithInternet.sh` launchers default `NESTED_PODMAN=1`, and `NESTED_PODMAN_STORE` defaults to
+     `dir`. So the Recheck may already be satisfied by an ordinary launcher exit.
    - Leave with `exit` (or ctrl-D). Closing the terminal window kills the shell before the trap runs;
      that leak is by design, not a fix failure.
    - `NESTED_PODMAN_STORE_BASE` defaults to `~/.cache`; if you pass another base, read the log there.

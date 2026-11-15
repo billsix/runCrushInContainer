@@ -226,7 +226,12 @@ sentences: what the task IS and what "done" means, the point first; from US-Army
 write-up `~/.config/crush/reference/bluf-bottom-line-up-front.md`) and **`## Context`** (cold-start
 orientation: what to read first, current state, decisions-with-rationale) — then Goal / Plan / Notes /
 Open questions. Priority & Difficulty are 1–10 (1 = highest priority / easiest); pick next work by
-lowest-priority-number then lowest-difficulty-number. Update as work progresses. When complete, **move**
+lowest-priority-number then lowest-difficulty-number. **Blocked tasks** — gated on something
+outside our control (an upstream release, a hands-on check only I can do) — set `**Status:** blocked`
+plus `**Blocked on:**` (the condition) and `**Recheck:**` (a cheap runnable check + the signal that
+means cleared), get a high priority-number, stay out of the easy-wins ranking, and are listed
+separately at session start and session end. Blocked ≠ parked (a testable gate vs. not-now).
+`/recheck-blocked` tests them on demand, never automatically. Update as work progresses. When complete, **move**
 to `tasks/archive/<YYYY>/<MM>/<DD>/<slug>.md` — **yours to do proactively at the moment of completion,
 no go/no-go question (2026-08-31; timing corrected 2026-09-07)**: done-state met + gates green = the
 archive is *owed* (harvest durable knowledge to reference docs, **rewrite the task doc into a lean
@@ -517,6 +522,20 @@ hand-transcribe it. Hand-instrumentation (print/trace) recipes per language, on 
 
 **Integer types / conversions:** don't eyeball them — build under `-Wconversion -Wsign-conversion` for a per-site worklist (from→to types), and use `clang -Xclang -ast-dump` / `clang-query` (`implicitCastExpr`, `CastKind`) to see every subexpression's type and the invisible implicit casts. Hits usually collapse into a few type-pair boundaries — decide a policy per boundary, not per site.
 
+## Verification gates in nested containers
+
+When nested podman is available, "done" for a code change means **the project's own containerized
+gate passed** (`make image`/`test`/`dist` — whatever its CLAUDE.md names), not just an in-container
+build. **Flag coverage is part of the gate:** trimming a feature flag to speed it up is legitimate
+only when the diff can't affect the trimmed paths — if the change touches an input a flag-gated
+feature consumes, that flag must be ON. **Before ending a session, run one gate with the repo's
+default flags** (or say which flag-gated paths went unexercised). **Gotcha: a gate target declared
+`: image` can re-run the whole `podman build` when nested.** Host-built layers serve as build cache
+through the read-only host store only while that store is in use and the `FROM` resolves to the
+same base image the host built from; a newer base pulled inside the container shadows it and misses
+every step. Run the gate's own `podman run` line against the existing image instead. Detail: the
+nested-run-and-gates.md reference doc of github.com/billsix/runClaudeInContainer.
+
 ## A multi-step check script must propagate every step's failure
 
 A `format`/`lint`/`check` script that chains tools should run **every** step (report all the red) yet
@@ -567,9 +586,12 @@ itself lacks nested support.
 **Every inner `podman run`/`docker run`
 needs BOTH `--cgroups=disabled`** (the sandbox `/sys/fs/cgroup` is read-only, else
 `cgroup.subtree_control: Read-only file system`) **and `--network=host`** (bridged netavark fails
-nested with `setns: Operation not permitted`; host networking sidesteps it). A project's Makefile
-won't have those flags — **don't silently edit their build files**; add them to a one-off run, or
-propose the edit and wait. **A nested `podman build` whose `RUN` needs the network** fails with `pasta
+nested with `setns: Operation not permitted`; host networking sidesteps it). A project Makefile
+converted to the `PODMAN_RUN_FLAGS` convention applies `--cgroups=disabled` itself (it keys off the
+exported `NESTED_PODMAN=1`), and converting an unconverted Makefile to that convention is
+pre-authorized. `--network=host` is this client's extra: no project Makefile carries it, so add it
+to a one-off run (or `make … PODMAN_RUN_FLAGS='--cgroups=disabled --network=host'`), and **don't
+silently edit a project's build files for it**; propose the edit and wait. **A nested `podman build` whose `RUN` needs the network** fails with `pasta
 failed … Couldn't open network namespace` unless the session has `BUILDAH_ISOLATION=chroot` (check
 `echo $BUILDAH_ISOLATION`); if it is unset, run that one build with `--network=host` (print it with
 `make -n image`) and tell me to relaunch with `EXTRA_PODMAN_FLAGS="-e BUILDAH_ISOLATION=chroot"`. The inner image store is disk-backed and ephemeral by default (RAM tmpfs
@@ -586,14 +608,13 @@ read `~/.config/crush/reference/container-file-layout.md`; the short version: th
 were pointed at is mounted at `/work`, and any other repo path you find yourself in came from
 `EXTRA_PODMAN_FLAGS` and is invisible to these docs.
 
-**Before building a large image nested, ask me to build it on the host instead.** Nested layer
-commits are slow: `fuse-overlayfs` has no native overlay diff, so each commit walks the whole image
-(on a TeX-sized image, 4 minutes for a one-line step and once over 40; 2026-11-15). Name the project
-and the command (`[HOST] make image` in that repo), then wait; the sandbox reuses the host-built
-image read-only. **Exception: when I've told you to work in the background or that I'm away
-(including any batch run under "The authorized-batch workflow"), don't ask: build it yourself,
-nested, and accept the wait.** A small image, or one whose steps will all hit the cache, just build.
-Detail: `~/.config/crush/reference/nested-podman-design.md` ("Build big images on the host").
+**Build images nested; a host-built image is reused, not required.** The nested podman uses
+native kernel overlay, so a layer commit costs about what it does on the host (13 s against 62 s
+under the old fuse-overlayfs, 2026-11-15), and the client reuses host-built images read-only. If
+the shell prints the `[nested podman] … no native overlay diff` warning, the client image predates
+that switch: every nested commit walks the whole image again, so ask me to rebuild it on the host
+(`[HOST] make -C client image`) before a large nested build. Detail:
+`~/.config/crush/reference/nested-podman-design.md` ("Storage driver").
 
 ## Ending a session — sweep the always-read docs
 

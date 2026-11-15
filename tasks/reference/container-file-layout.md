@@ -15,7 +15,7 @@ runCrushInContainer repo is not mounted.
 
 **Re-sync check:** compare `client/Dockerfile`'s `COPY` lines and the
 `client/Makefile` `SHELL_RUN_FLAGS` block against the tables below; a `COPY` or
-`-v` flag not listed here means this doc has rotted. Last verified 2026-08-30
+`-v` flag not listed here means this doc has rotted. Last verified 2026-11-15
 against the Crush `v0.89.0` build.
 
 **Origin:** an agent session inside the container was asked how it was built and
@@ -43,18 +43,21 @@ the session log alongside it).
 | --- | --- | --- |
 | `entrypoint/00-install-minimal.sh` | `/usr/local/bin/00-install-minimal.sh` | no (always run at build) |
 | `entrypoint/01-install-base.sh` | `/usr/local/bin/01-install-base.sh` | no (always run at build) |
-| `entrypoint/02-install-vendor-tools.sh` | `/usr/local/bin/02-install-vendor-tools.sh` | no (run iff `VENDOR_TOOLS=1`) |
+| `entrypoint/01b-install-binary-tools.sh` | `/usr/local/bin/01b-install-binary-tools.sh` | no (shfmt + procs from upstream binaries) |
+| `entrypoint/install-lean.sh` | `/usr/local/bin/install-lean.sh` | no (Lean 4 via elan, pinned `ELAN_VERSION` / `LEAN_TOOLCHAIN`; offline-copies /vendor/elan when it is mounted) |
 | `patches/` | `/patches/` | no |
 | `entrypoint/vendor/` | `/usr/local/bin/vendor/` (`chmod +x`) | no |
 | `entrypoint/03-build-crush.sh` | `/usr/local/bin/03-build-crush.sh` | no |
 | — (built by `03-build-crush.sh`) | `/usr/local/bin/crush` (via `GOBIN`) | no |
+| `entrypoint/02-install-vendor-tools.sh` | `/usr/local/bin/02-install-vendor-tools.sh` | no (run iff `VENDOR_TOOLS=1`) |
 | `entrypoint/install-lean.sh` | `/usr/local/bin/install-lean.sh` | no (Lean 4 via elan; offline-copies /vendor/elan iff `CRUSH_VENDORED=1`, else online) |
 | `entrypoint/dotfiles/.extrabashrc` | `/root/.extrabashrc` | no |
 | `entrypoint/dotfiles/.vimrc` | `/root/.vimrc` | yes — by the host's `~/.vimrc` when it exists (2026-09-10) |
-| `entrypoint/dotfiles/.config/containers/storage.conf` | `/root/.config/containers/storage.conf` | no (nested-podman fuse-overlayfs) |
+| `entrypoint/dotfiles/.config/containers/storage.conf` | `/root/.config/containers/storage.conf`, and again as `/etc/containers/storage.conf.d/50-crush-nested.conf` | no (nested podman: native overlay, host image store) |
+| `entrypoint/dotfiles/.config/containers/containers.conf` | `/root/.config/containers/containers.conf`, and again as `/etc/containers/containers.conf.d/50-crush-nested.conf` | no (buildah's temp dir on the store volume) |
 | `entrypoint/dotfiles/.config/crush/CLAUDE.md` | `/root/.config/crush/CLAUDE.md` | no (always-loaded conventions) |
-| `entrypoint/dotfiles/.config/crush/commands/` (12 files) | `/root/.config/crush/commands/` | no (slash commands) |
-| `entrypoint/dotfiles/.config/crush/reference/` (27 files) | `/root/.config/crush/reference/` | no (see doc mapping below) |
+| `entrypoint/dotfiles/.config/crush/commands/` (13 files) | `/root/.config/crush/commands/` | no (slash commands) |
+| `entrypoint/dotfiles/.config/crush/reference/` (30 files) | `/root/.config/crush/reference/` | no (see doc mapping below) |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.md` (blank default) | `/root/.config/crush/ai-coding-conventions.personal.md` | **YES — host overlay mounted over it** |
 | `entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md` | `/root/.config/crush/ai-coding-conventions.personal.example.md` | no |
 | `entrypoint/crushrc` | `/root/.config/crush/crushrc` | no (model pin, catalog off, file-tool auto-allow) |
@@ -78,6 +81,8 @@ GOBIN=/usr/local/bin GOFLAGS=-trimpath`.
 | `~/.ai-coding-conventions.personal.md` | `/root/.config/crush/ai-coding-conventions.personal.md` | always (`touch`ed blank if absent) — **overrides the baked blank**; note the dotted host name → un-dotted container name |
 | `EXTRA_PODMAN_FLAGS` | user-chosen | user-supplied; no doc covers these paths |
 | `$(MUSE_SOCK_DIR)` (default `~/.cache/runcrush-muse-sockets`; the launchers pass a per-run `mktemp -d`) | `/run/muse` | only under `LOCALHOST_ONLY=1` — the SSH-forwarded model unix sockets (`808x.sock`) that `shell.sh`'s socat bridge re-exposes as `127.0.0.1:808x`; carries `:Z` (harmless on a throwaway dir). See `client-network-modes-and-launchers.md` |
+| a per-session `mktemp -d` under `NESTED_PODMAN_STORE_BASE` (default `~/.cache/crush-nested.XXXXXX`) | `/var/lib/containers` | only under `NESTED_PODMAN=1` with the default `NESTED_PODMAN_STORE=dir` (`:z`; removed on exit) |
+| `NESTED_PODMAN_HOST_IMAGESTORE` (default the host's `~/.local/share/containers/storage`) | `/var/lib/shared-images` (read-only) | only under `NESTED_PODMAN=1`, when the path exists |
 
 > The **diversion stack** (`~/.config/crush/stack.md`) is **not** a host mount and is **not** baked (as of
 > 2026-09-03) — it is in-session only: created on the ephemeral `--rm` overlay inside the container and discarded
@@ -88,7 +93,9 @@ Non-mount run flags that also shape the environment: `--network=host`
 (`NET_FLAGS`; `--network=none` under `LOCALHOST_ONLY=1`, plus `-e LOCALHOST_ONLY -e MUSE_SOCK_DIR`),
 `--security-opt label=disable` (`SELINUX_OPT`),
 `-e NESTED_PODMAN=0|1`, and under `NESTED_PODMAN=1` the device/cap flags plus
-the tmpfs image store at `/var/lib/containers` — see `nested-podman-design.md`.
+the inner image store at `/var/lib/containers` (a per-session host disk dir by default, a tmpfs
+under `NESTED_PODMAN_STORE=tmpfs`) and the host image store read-only at
+`/var/lib/shared-images` — see `nested-podman-design.md`.
 
 ## Reference-doc mapping (repo ↔ baked)
 
@@ -128,6 +135,11 @@ the baked `~/.config/crush/reference/…` path**; in repo docs cite
 | `shell-and-gate-scripts.md` | no | yes (portable sections copied from runClaudeInContainer; added 2026-11-13) — **keep in sync** |
 | `repo-review-conventions.md` | yes | yes (copied from runClaudeInContainer; added 2026-11-08) — **keep in sync** |
 | `review_status.py` (a tool, not a doc) | yes | yes (copied from runClaudeInContainer; added 2026-11-09) — **keep the copies byte-identical** |
+| `javascript-coding-standard.md` | no | yes (copied from runClaudeInContainer) |
+| `reimplementing-third-party-libraries.md` | no | yes (copied from runClaudeInContainer) |
+| `token-and-context-economy.md` | yes | yes (copied from runClaudeInContainer) — **keep in sync** |
+| `doctests-by-default.md` | yes | yes (copied from runClaudeInContainer; baked 2026-11-15, the baked standards cite it) — **keep in sync** |
+| `code-style-conventions.md` | no | yes (copied from runClaudeInContainer; baked 2026-11-15, the baked C++ standard cites it) |
 
 Caveat: when the mounted project is runCrushInContainer itself, a filename
 search finds up to THREE copies of a baked doc (the baked one, the

@@ -50,6 +50,17 @@ stamp, identify me as `<Your Name> <you@example.com>` — never a bare first nam
 
 - I mount projects at `<e.g. /foo/opt/...>`; scan those and read each repo's CLAUDE.md.
 
+## Upstream-only checkouts (read-only)
+
+<!-- The shared commands (/audit-repo, /findings-to-tasks, /spell-out-names) skip
+     "upstream-only checkouts". Say how to recognise yours. A common rule: a repo is
+     yours if any `git remote -v` URL points at your own host or account; a repo whose
+     remotes all point at a third party is a read-only reference clone: read it, never
+     edit, stage, add tasks to, or sweep it. -->
+
+- A repo is mine if a remote points at `<your account / host>`; any other repo is an
+  upstream-only checkout: read it, never edit or stage it.
+
 ## Standing authorizations
 
 <!-- Any blanket permissions you want to grant the agent up front (things it may do

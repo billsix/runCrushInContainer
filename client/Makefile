@@ -23,7 +23,7 @@ CONTAINER_NAME = crushcontainer
 # Latest stable Crush release (decision 2026-08-18). Override: make image CRUSH_TAG=vX.Y.Z
 CRUSH_TAG ?= v0.89.0
 
-# FULL_TOOLCHAIN was removed 2026-09-12: the client is ALWAYS the full ~430-package toolchain
+# FULL_TOOLCHAIN was removed 2026-09-12: the client is ALWAYS the full ~460-package toolchain
 # (built on the host), and NESTED_PODMAN is purely run-time launch capability — the two are no
 # longer coupled. The old auto-minimal-when-nested default silently produced a language-server-less
 # image whenever `make shell NESTED_PODMAN=1` was typed. Rationale/history:
@@ -57,9 +57,18 @@ CRUSH_SHELL_HISTORY ?= 1
 # XML, git status, total) to <data-dir>/logs/crush.log. Default OFF — turn ON to diagnose
 # first-turn context bloat: `make image CRUSH_CONTEXT_DEBUG=1`, run, then read the CTXDBG lines
 # from the mounted project's .crush/logs/crush.log. Keep the patch; leave this 0 in shipped
-# images. See ../tasks/investigate-context-bloat-geometricalgebra.md and
+# images. See ../tasks/archive/2026/09/14/investigate-context-bloat-geometricalgebra.md and
 # ../tasks/reference/crush-context-assembly.md.
 CRUSH_CONTEXT_DEBUG ?= 0
+# The two powernap LSP bugfix patches (crush-lsp-router-notif.patch, crush-lsp-async.patch): without
+# them ty's workspace/configuration request goes unanswered and lsp_symbols times out. Default ON;
+# `make image CRUSH_LSP_ASYNC=0` builds without them (to re-test on a CRUSH_TAG bump). See
+# ../tasks/reference/crush-lsp-integration.md.
+CRUSH_LSP_ASYNC ?= 1
+# Lean 4 pins (install-lean.sh / vendor-lean.sh): the elan installer's git tag and the default
+# toolchain. Bump both together; the image layer re-runs only when they change.
+ELAN_VERSION ?= v4.2.4
+LEAN_TOOLCHAIN ?= leanprover/lean4:v4.35.0
 
 # ---- Egress patch flags: one per decision, defaults encode the audit's disposition ----
 # From the dependency network audit (../tasks/reference/dependency-network-audit.md, D1-D12).
@@ -98,7 +107,7 @@ PATCH_FLAGS = \
 	--build-arg PATCH_OUT_HYPER=$(PATCH_OUT_HYPER) \
 	--build-arg PATCH_OUT_COPILOT=$(PATCH_OUT_COPILOT)
 
-# Offline/airgap vendoring (see tasks/vendor-build-sources-for-airgap-rebuild.md). `make vendor`
+# Offline/airgap vendoring (see tasks/archive/2026/08/22/vendor-build-sources-for-airgap-rebuild.md). `make vendor`
 # (ONLINE) pre-fetches the Crush source + all its Go module deps into $(VENDOR_DIR)/crush; then
 # `make image CRUSH_VENDORED=1` rebuilds the image from that with NO network. VENDOR_DIR is the
 # host folder that gets zipped and carried to the airgap box. When CRUSH_VENDORED=1 the image build
@@ -147,7 +156,7 @@ NET_FLAGS ?= --network=host
 # --network=host above (full host network). When on, the container gets ONLY its own
 # loopback (--network=none) and reaches the model through unix sockets bind-mounted from
 # $(MUSE_SOCK_DIR) -> /run/muse, which a socat bridge in shell.sh re-exposes as
-# 127.0.0.1:8080/8081 -- so Crush's config is unchanged, but the container can reach
+# 127.0.0.1:8080-8084 -- so Crush's config is unchanged, but the container can reach
 # NOTHING but the model (no internet, no other host). Requires the host to SSH-forward the
 # model to those unix sockets instead of TCP (the shell.sh banner + README show both forms).
 # Combined with NESTED_PODMAN=1 (the launchers' default), nested builds have no network: a
@@ -158,7 +167,7 @@ MUSE_SOCK_DIR ?= $(HOME)/.cache/runcrush-muse-sockets
 ifeq ($(LOCALHOST_ONLY),1)
 NET_FLAGS := --network=none
 $(shell mkdir -p $(MUSE_SOCK_DIR))
-LOCALHOST_ONLY_MOUNT := -v $(MUSE_SOCK_DIR):/run/muse:Z
+LOCALHOST_ONLY_MOUNT := -v $(MUSE_SOCK_DIR):/run/muse:z
 else
 LOCALHOST_ONLY_MOUNT :=
 endif
@@ -187,21 +196,21 @@ SELINUX_OPT ?= --security-opt label=disable
 # symlinks; the `[ -f ]` / `[ -d ]` test skips a missing file so the run still works without it.
 TMUX_FILE := $(HOME)/.tmux.conf
 TMUX_REAL_PATH := $(shell readlink -f $(TMUX_FILE))
-TMUX_MOUNT := $(shell if [ -f $(TMUX_REAL_PATH) ]; then echo "-v $(TMUX_REAL_PATH):/root/.tmux.conf:Z" ; fi)
+TMUX_MOUNT := $(shell if [ -f $(TMUX_REAL_PATH) ]; then echo "-v $(TMUX_REAL_PATH):/root/.tmux.conf:z" ; fi)
 
 GITCONFIG_FILE := $(HOME)/.gitconfig
 GITCONFIG_REAL_PATH := $(shell readlink -f $(GITCONFIG_FILE))
-GITCONFIG_MOUNT := $(shell if [ -f $(GITCONFIG_REAL_PATH) ]; then echo "-v $(GITCONFIG_REAL_PATH):/root/.gitconfig:Z" ; fi)
+GITCONFIG_MOUNT := $(shell if [ -f $(GITCONFIG_REAL_PATH) ]; then echo "-v $(GITCONFIG_REAL_PATH):/root/.gitconfig:z" ; fi)
 
 GNUPG_FILE := $(HOME)/.gnupg
 GNUPG_REAL_PATH := $(shell readlink -f $(GNUPG_FILE))
-GNUPG_MOUNT := $(shell if [ -d $(GNUPG_REAL_PATH) ]; then echo "-v $(GNUPG_REAL_PATH):/root/.gnupg:Z" ; fi)
+GNUPG_MOUNT := $(shell if [ -d $(GNUPG_REAL_PATH) ]; then echo "-v $(GNUPG_REAL_PATH):/root/.gnupg:z" ; fi)
 
 # Host ~/.vimrc shadows the baked entrypoint/dotfiles/.vimrc when present (2026-09-10); conditional
 # like tmux/gitconfig — a vim user without a dotfile gets the baked defaults, nothing breaks.
 VIMRC_FILE := $(HOME)/.vimrc
 VIMRC_REAL_PATH := $(shell readlink -f $(VIMRC_FILE))
-VIMRC_MOUNT := $(shell if [ -f $(VIMRC_REAL_PATH) ]; then echo "-v $(VIMRC_REAL_PATH):/root/.vimrc:Z" ; fi)
+VIMRC_MOUNT := $(shell if [ -f $(VIMRC_REAL_PATH) ]; then echo "-v $(VIMRC_REAL_PATH):/root/.vimrc:z" ; fi)
 
 # Personal-overlay mount (UNCONDITIONAL): the baked conventions CLAUDE.md `@`-imports
 # ai-coding-conventions.personal.md, so that path must always resolve. `touch` the host file at
@@ -209,7 +218,7 @@ VIMRC_MOUNT := $(shell if [ -f $(VIMRC_REAL_PATH) ]; then echo "-v $(VIMRC_REAL_
 # host overlay layers in while the tracked default stays generic. Host file is dotted; container
 # path is un-dotted (matches runClaudeInContainer).
 PERSONAL_FILE := $(HOME)/.ai-coding-conventions.personal.md
-PERSONAL_MOUNT := $(shell touch $(PERSONAL_FILE) 2>/dev/null; echo "-v $(PERSONAL_FILE):/root/.config/crush/ai-coding-conventions.personal.md:Z")
+PERSONAL_MOUNT := $(shell touch $(PERSONAL_FILE) 2>/dev/null; echo "-v $(PERSONAL_FILE):/root/.config/crush/ai-coding-conventions.personal.md:z")
 
 # Diversion stack: intentionally NOT mounted or created on the host. It is IN-SESSION only
 # (a within-session depth gauge), so it lives on the ephemeral --rm overlay at
@@ -219,7 +228,7 @@ PERSONAL_MOUNT := $(shell touch $(PERSONAL_FILE) 2>/dev/null; echo "-v $(PERSONA
 
 # Nested podman (opt-in: `make shell NESTED_PODMAN=1`): run podman INSIDE the client so Crush can
 # build/run a project's own containers nested (make image/run/shell for container-per-project repos).
-# Inner storage uses fuse-overlayfs (entrypoint/dotfiles/.config/containers/storage.conf). Every
+# Inner storage uses native kernel overlay (entrypoint/dotfiles/.config/containers/storage.conf). Every
 # INNER `podman run` still needs `--cgroups=disabled` (the sandbox /sys/fs/cgroup is read-only).
 # See tasks/reference/nested-podman-design.md. NOTE the client is often itself run nested, so a
 # project build inside it is podman-in-podman-in-podman — run the client on the host (or an
@@ -234,11 +243,11 @@ NESTED_PODMAN ?= 0
 #                      `rm`'d when `make shell` exits (a trap). No RAM ceiling: the old
 #                      tmpfs filled RAM and OOM'd on big images and at layer-commit
 #                      (the 22.3 GB client image itself needed size=50g); disk is plentiful.
-#   tmpfs           -- the old RAM-backed store (fastest, bounded by RAM). Select with
+#   tmpfs           -- a RAM-backed store (bounded by RAM; gone at exit). Select with
 #                      `make shell NESTED_PODMAN=1 NESTED_PODMAN_STORE=tmpfs`; size it
 #                      with NESTED_PODMAN_TMPFS_SIZE.
-# A dir on the host's real fs (like the tmpfs) is not overlay, so fuse-overlayfs runs on
-# it -- unlike the sandbox's own overlay rootfs (overlay-on-overlay is kernel-rejected).
+# A dir on the host's real fs (like the tmpfs) is not overlay, so native kernel overlay runs
+# on it -- unlike the sandbox's own overlay rootfs (overlay-on-overlay is kernel-rejected).
 # One sandbox per store dir at a time. Design + host-verification checklist:
 # runClaudeInContainer tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md.
 NESTED_PODMAN_STORE ?= dir
@@ -253,7 +262,7 @@ NESTED_PODMAN_HOST_IMAGESTORE ?= $(HOME)/.local/share/containers/storage
 ifeq ($(NESTED_PODMAN),1)
 # label=disable is already always-on via SELINUX_OPT. unmask=ALL lets the inner rootful netavark
 # write per-interface sysctls (bridged networking); net_admin is for its veth/bridge over netlink;
-# /dev/fuse backs fuse-overlayfs; the store is the inner image store. No libpod-shadow
+# /dev/fuse is kept for fuse-based tools; the store is the inner image store. No libpod-shadow
 # tmpfs is needed here (unlike runClaudeInContainer) because the client does NOT mount the host's
 # $XDG_RUNTIME_DIR, so there's no host podman state to collide with.
 # Store mount: tmpfs mode adds the RAM tmpfs here; dir mode's ephemeral disk bind mount is
@@ -286,6 +295,9 @@ image: ## build the client image: full toolchain + Crush built from source (pinn
 		--build-arg CRUSH_AT_IMPORT=$(CRUSH_AT_IMPORT) \
 		--build-arg CRUSH_SHELL_HISTORY=$(CRUSH_SHELL_HISTORY) \
 		--build-arg CRUSH_CONTEXT_DEBUG=$(CRUSH_CONTEXT_DEBUG) \
+		--build-arg CRUSH_LSP_ASYNC=$(CRUSH_LSP_ASYNC) \
+		--build-arg ELAN_VERSION=$(ELAN_VERSION) \
+		--build-arg LEAN_TOOLCHAIN=$(LEAN_TOOLCHAIN) \
 		--build-arg VENDOR_TOOLS=$(VENDOR_TOOLS) \
 		$(PATCH_FLAGS) \
 		$(CRUSH_VENDOR_FLAGS) .
@@ -297,7 +309,7 @@ vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/cr
 		$(PODMAN_RUN_FLAGS) \
 		$(SELINUX_OPT) \
 		-e CRUSH_TAG=$(CRUSH_TAG) \
-		-v $(VENDOR_DIR):/vendor:Z \
+		-v $(VENDOR_DIR):/vendor:z \
 		$(CONTAINER_NAME) \
 		-c '/usr/local/bin/vendor/vendor-crush.sh /vendor/crush'
 	@# The RHEL 9 `ty` wheel (see TY_VERSION). `--only-binary` refuses a source build — ty is a prebuilt
@@ -306,7 +318,7 @@ vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/cr
 	$(CONTAINER_CMD) run --rm --entrypoint /bin/bash \
 		$(PODMAN_RUN_FLAGS) \
 		$(SELINUX_OPT) \
-		-v $(VENDOR_DIR):/vendor:Z \
+		-v $(VENDOR_DIR):/vendor:z \
 		$(CONTAINER_NAME) \
 		-c 'python3 -m pip download --only-binary=:all: --python-version 3.11 -d /vendor/wheels ty==$(TY_VERSION)'
 	@# elan + the stable Lean 4 toolchain, for an OFFLINE Lean install: install-lean.sh copies
@@ -314,18 +326,18 @@ vendor: image ## [ONLINE] pre-fetch Crush source + Go deps into $(VENDOR_DIR)/cr
 	$(CONTAINER_CMD) run --rm --entrypoint /bin/bash \
 		$(PODMAN_RUN_FLAGS) \
 		$(SELINUX_OPT) \
-		-v $(VENDOR_DIR):/vendor:Z \
+		-v $(VENDOR_DIR):/vendor:z \
 		$(CONTAINER_NAME) \
 		-c '/usr/local/bin/vendor/vendor-lean.sh /vendor/elan'
 	@echo "vendored Crush into $(VENDOR_DIR)/crush + the ty $(TY_VERSION) wheel into $(VENDOR_DIR)/wheels + elan/Lean into $(VENDOR_DIR)/elan — carry the repo (with ./vendor and server/) to the airgap box, then: make image CRUSH_VENDORED=1"
 
 # --- shell / shell-exec share ONE container invocation, defined here so the two
 # targets can never drift. Scoped to this pair ONLY. See runClaudeInContainer
-# tasks/add-shell-exec-target.md for the design.
+# github.com/billsix/runClaudeInContainer tasks/archive/2026/08/29/add-shell-exec-target.md for the design.
 SHELL_RUN_FLAGS = \
 		--entrypoint /bin/bash \
 		$(PODMAN_RUN_FLAGS) \
-		-v ./entrypoint/shell.sh:/shell.sh:Z \
+		-v ./entrypoint/shell.sh:/shell.sh:z \
 		-e NESTED_PODMAN=$(NESTED_PODMAN) \
 		-e LOCALHOST_ONLY=$(LOCALHOST_ONLY) \
 		-e MUSE_SOCK_DIR=$(MUSE_SOCK_DIR) \
@@ -375,7 +387,7 @@ shell: ## run Crush in an ephemeral container; mounts PROJECT at /work (NESTED_P
 	      [ -e "$$STORE" ] && echo "== LEFTOVER: $$STORE" || echo "== clean"; \
 	    } 2>&1 | tee -a "$$LOG"' EXIT INT TERM HUP; \
 	fi; \
-	$(CONTAINER_CMD) run -it --rm $${STORE:+-v "$$STORE":/var/lib/containers:Z} $(SHELL_RUN_FLAGS) $(CONTAINER_NAME) /shell.sh
+	$(CONTAINER_CMD) run -it --rm $${STORE:+-v "$$STORE":/var/lib/containers:z} $(SHELL_RUN_FLAGS) $(CONTAINER_NAME) /shell.sh
 
 .PHONY: shell-exec
 shell-exec: ## run a script/command in the container env (no TTY): make shell-exec SCRIPT=path | CMD='...' (run 'make image' first)
@@ -390,7 +402,7 @@ shell-exec: ## run a script/command in the container env (no TTY): make shell-ex
 	      [ -e "$$STORE" ] && echo "== LEFTOVER: $$STORE" || echo "== clean"; \
 	    } 2>&1 | tee -a "$$LOG"' EXIT INT TERM HUP; \
 	fi; \
-	$(CONTAINER_CMD) run --rm $${STORE:+-v "$$STORE":/var/lib/containers:Z} $(SHELL_RUN_FLAGS) $(CONTAINER_NAME) /shell.sh $(SHELL_EXEC_ARGS)
+	$(CONTAINER_CMD) run --rm $${STORE:+-v "$$STORE":/var/lib/containers:z} $(SHELL_RUN_FLAGS) $(CONTAINER_NAME) /shell.sh $(SHELL_EXEC_ARGS)
 
 .PHONY: format
 format: image ## format the client shell scripts with shfmt (runs in the built image)
@@ -411,6 +423,7 @@ image-export: ## save the built image to a timestamped tar (podman save)
 
 .PHONY: image-import
 image-import: ## load an image from a tar: make image-import FILE=foo.tar
+	@[ -n "$(FILE)" ] || { echo 'usage: make image-import FILE=<image tar>'; exit 2; }
 	$(CONTAINER_CMD) load -i $(FILE)
 
 .PHONY: help

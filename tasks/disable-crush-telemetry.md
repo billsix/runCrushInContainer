@@ -20,7 +20,14 @@ Cleared = zero egress to those two hosts. Overlaps `tasks/archive/2026/09/22/dec
 decides whether a standing check is wanted at all — resolving that may clear or absorb this gate);
 the sandbox-buildable minimal image that once made this watch runnable in-sandbox was **removed 2026-09-12** (`tasks/reference/nested-podman-vs-image-content.md`); the full client image (~22 GB) won't build in the nested store, so run the egress watch on the host (or build a purpose-built lean egress image).
 
-## Goal
+## BLUF
+
+Turn off Crush's two unsolicited outbound calls (PostHog telemetry to `data.charm.land`, the GitHub update
+check to `api.github.com`) in the client image. Both are already disabled at build and config level (Plan,
+implemented 2026-08-27, since reworked into flag-driven patches); what remains is a runtime egress watch in
+with-internet mode. "Done" = that watch shows zero connections to those two hosts while the model answers.
+
+## Context
 
 Crush `v0.89.0` (the pinned `CRUSH_TAG`) makes two unsolicited outbound calls: (1) **PostHog
 usage telemetry** to `https://data.charm.land`, and (2) a **GitHub update check** to
@@ -42,6 +49,9 @@ vendored tree is complete + unpatched); and telemetry is now ALSO hard-disabled 
 `no-telemetry.patch` (`PATCH_OUT_TELEMETRY ?= 1`, forcing `shouldEnableMetrics` false) on top of
 this task's env + crushrc opt-outs. The Plan section below is the 2026-08-27 work record — read it
 as history.
+
+Read first: the "Findings" below and `tasks/reference/dependency-network-audit.md`; the patches apply in
+`client/entrypoint/03-build-crush.sh`.
 
 ## Findings (source-verified against v0.89.0, commit `ba531a4`, 2026-08-27)
 

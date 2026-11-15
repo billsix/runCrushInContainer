@@ -40,8 +40,8 @@ v0.89.0-specific (several absent features are on Crush's in-repo `docs/*/FUTURE.
    **Update (2026-08-27, revised 2026-08-29):** a second local patch,
    `client/patches/crush-no-update-check.patch`, removes the unconditional startup update check
    (`go app.checkForUpdates(ctx)`, `internal/app/app.go` → GET
-   `api.github.com/.../releases/latest`). As of 2026-09-09 it is one of **fourteen** build-time
-   patches, each behind its own defaulted flag (`PATCH_OUT_UPDATE_CHECK ?= 1` for this one) — see
+   `api.github.com/.../releases/latest`). It is one of **seventeen** build-time
+   patches, each behind a defaulted flag (`PATCH_OUT_UPDATE_CHECK ?= 1` for this one) — see
    the egress patch/flag system in `architecture.md` and the decisions in
    `dependency-network-audit.md`. Every build clones (or copies the vendored tree) + builds from
    source; `go install …@tag` is no longer used. Telemetry to `data.charm.land` is disabled separately via env
@@ -172,10 +172,10 @@ Four facts a two-pinned-provider setup runs into (all read from the vendored tag
 
 - **No startup probe, no startup picker.** A pinned model is never health-checked; the onboarding
   picker appears only when `IsConfigured()` is false, i.e. **zero** enabled providers
-  (`config.go:720`, `ui.go:491`). With two providers configured Crush silently starts on whatever
+  (`config.go:720`, `ui.go:491`). With providers configured Crush silently starts on whatever
   `models.large` resolves to, and a wrong choice surfaces only as `connection refused` on the first
-  message. That is why the baked crushrc probes `127.0.0.1:8080`/`8081` itself at load
-  (`curl -sf -m 2 …/v1/models`) and picks the one that answers — legal because the crushrc runs
+  message. That is why the baked crushrc probes `127.0.0.1:8080`–`8084` itself at load
+  (`curl -sf -m 2 …/v1/models`), registers each one that answers and preselects the first — legal because the crushrc runs
   through the same shell interpreter as the bash tool (`internal/shellconfig/load.go`: `$(cmd)` and
   external commands work, 30 s `loadTimeout`).
 - **Mid-session switching is supported.** `ctrl+l` → `handleSelectModel` (`ui.go:2241`) refuses only

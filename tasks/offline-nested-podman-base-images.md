@@ -8,17 +8,33 @@
 > that task's host verification; close this task if it no longer applies. The RAM-tmpfs mechanism
 > described below is no longer the default store.
 
-**Status:** proposed — needs go-ahead. Gap identified 2026-08-22; **not yet attempted on the offline
+**Status:** proposed — needs go-ahead. Narrowed 2026-11-15: approach (1) is in place (the host store is
+mounted read-only as an additional image store, `e87b68a`), so a nested build already finds any base the
+host has; what remains is the airgap case where the host itself lacks the base. Gap identified 2026-08-22; **not yet attempted on the offline
 system** (maintainer builds the client image offline fine, but has done no nested-podman work there).
 **Priority:** 4
 **Difficulty:** 5
 **Started:** 2026-08-22
 
-## Goal
+## BLUF
+
+Make a project's own container build work nested inside the Crush client on an airgapped system, where
+`FROM <base>` has no registry to pull from. Since 2026-11-12 a nested build already finds any base image
+the host has (the host store is mounted read-only); what remains is the case where the host itself lacks
+the base. "Done" = that case works with the chosen approach, or the task is closed as no longer applying.
+
+## Context
+
+Read first: the re-scope note above, `tasks/nested-podman-host-image-store-ignored.md` (the host-store
+reuse, still awaiting host verification) and `tasks/reference/nested-podman-design.md`. Current state:
+`client/Makefile` defaults `NESTED_PODMAN_STORE ?= dir` and mounts the host store via
+`NESTED_PODMAN_HOST_IMAGESTORE`; the two Open questions (approach, seed set) are unanswered.
+
+### Original goal
 
 Make a project's own container build/run work **nested inside the Crush client on an offline/airgapped
 system**. Today nested podman is verified only where a registry is reachable; offline, the first thing
-any project build does — `FROM registry.fedoraproject.org/fedora:44` (or whatever base it pins) — has
+any project build does — `FROM registry.fedoraproject.org/fedora:45` (or whatever base it pins) — has
 nothing to pull from and fails ("looked for it and couldn't find it", at the *image* level this time,
 not the doc level).
 
@@ -45,7 +61,7 @@ different missing artifacts.
 1. **Read-only additional image store baked into the client image (recommended).** At client
    image-build, `skopeo copy` / `podman pull` the base image(s) into a directory baked into a committed
    layer, e.g. `/var/lib/shared-images`; add `additionalimagestores = ["/var/lib/shared-images"]` to
-   the baked `storage.conf`. Inner podman then *sees* `fedora:44` with **zero pull and zero RAM copy**,
+   the baked `storage.conf`. Inner podman then *sees* `fedora:45` with **zero pull and zero RAM copy**,
    offline. Cleanest fit with the self-contained-image convention; the base rides in the image itself.
    - Caveat: `additionalimagestores` is read-only; new/built inner images still land in the RW tmpfs
      store (fine — those are the project's own build outputs, and are ephemeral by design).
@@ -57,11 +73,11 @@ different missing artifacts.
 
 ## Considerations
 
-- **Which bases to seed?** At minimum `fedora:44` (the template base every one of the maintainer's
+- **Which bases to seed?** At minimum `fedora:45` (the template base every one of the maintainer's
   container-per-project repos uses). Possibly others a specific project pins. Baking many bases inflates
   the client image — pick the common set, document how to add more.
 - **Image size / RAM budget.** The client image is already large (~22.3 GB per the nested-in-nested
-  note); baking base images adds to it. `fedora:44` is a few hundred MB — acceptable; a full toolchain
+  note); baking base images adds to it. `fedora:45` is a few hundred MB — acceptable; a full toolchain
   base would not be.
 - **The depth caveat still applies** (`nested-podman-design.md`): running the client *itself* nested
   makes project builds three-deep. Seeding fixes the *pull*, not the depth limit — run the client on
@@ -85,7 +101,7 @@ different missing artifacts.
 
 1. **Approach — which?** Recommend **(1) read-only `additionalimagestores` baked in** (self-contained,
    no per-launch cost), over (2) startup `podman load` or (3) a dir-backed persistent store. Your call.
-2. **Seed set — which base images?** Recommend **just `fedora:44`** to start (the template base), with
+2. **Seed set — which base images?** Recommend **just `fedora:45`** to start (the template base), with
    a documented way to add more, rather than pre-baking a broad set and inflating the image. Agree, or
    name specific project bases to include?
 

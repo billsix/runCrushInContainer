@@ -87,17 +87,16 @@ podman run … -v "$STORE":/var/lib/containers:Z …
 
 Every nested layer the inner podman **writes** lands in that per-session temp dir under `~/.cache/`
 and is deleted on exit — **not** the host store `~/.local/share/containers/storage`, and **not** a
-tmpfs. A hard-killed session can leak the dir → `rm -rf ~/.cache/crush-nested.*`.
+tmpfs. A hard-killed session can leak the dir → `podman unshare rm -rf ~/.cache/crush-nested.*` (a bare
+`rm` cannot delete the layers' read-only dirs).
 
-**Why a dedicated real-fs dir?** The sandbox rootfs is itself an **overlay** mount; layering the
-inner `fuse-overlayfs` on top is **overlay-on-overlay under a nested userns, which the kernel
-rejects**. A tmpfs is a real (non-overlay) fs — the historical reason the store was tmpfs. A **host
+**Why a dedicated real-fs dir?** The sandbox rootfs is itself an **overlay** mount; an inner overlay
+whose upper dir sits on top of it is **overlay-on-overlay, which the kernel rejects**. A tmpfs is a real (non-overlay) fs — the historical reason the store was tmpfs. A **host
 directory on the real disk fs, bind-mounted in, is equally a real fs**, so it sidesteps the problem
 with no RAM ceiling. That is the 2026-09-27 change: the ~22 GB client image and TeX-Live-sized
 downstream builds used to fail at *layer-commit* (`no space left`) in the RAM tmpfs (needing
-`remount,size=50g`). Either store still commits slowly: `fuse-overlayfs` has no native overlay
-diff, so each nested commit walks the whole image; build large images on the host
-(`tasks/reference/nested-podman-design.md`, "Build big images on the host"). Opt back into RAM with `NESTED_PODMAN_STORE=tmpfs` (sized by
+`remount,size=50g`). On either store the inner podman uses native kernel overlay, so a nested
+commit costs what a host commit does (`tasks/reference/nested-podman-design.md`, "Storage driver"). Opt back into RAM with `NESTED_PODMAN_STORE=tmpfs` (sized by
 `NESTED_PODMAN_TMPFS_SIZE`, default 8g).
 
 ### (b) Read-only reuse of the host store — so a nested build doesn't re-pull
@@ -116,19 +115,18 @@ client Dockerfile therefore also installs our file as the drop-in
 the store is mounted but unused. Detail: `tasks/reference/nested-podman-design.md` ("Which storage
 config the nested podman reads").
 
-### (c) A tmpfs over the host runtime dir's `libpod` state
+### (c) No tmpfs over the host runtime dir's `libpod` state
 
-`NESTED_PODMAN_RUNTIME_TMPFS` shadows `$XDG_RUNTIME_DIR/libpod` with an empty tmpfs so the inner
-podman doesn't trip over the *host* podman's leftover runtime state. Runtime state, not image
-storage. (Nested inner runs also need `--cgroups=disabled` and, for networking, `--network=host` —
-see `tasks/reference/nested-podman-design.md`.)
+Unlike runClaudeInContainer, the client mounts no tmpfs over `$XDG_RUNTIME_DIR/libpod`
+(`tasks/reference/nested-podman-design.md`). Nested inner runs need `--cgroups=disabled` and, for
+networking, `--network=host` — see that doc.
 
 ## Disk-management cheat-sheet
 
 | Place | What's there | Lifetime | Reclaim it with |
 |---|---|---|---|
 | `~/.local/share/containers/storage` (host) | `crushcontainer` (~22 GB) + anything built/pulled on the host | Persistent | `podman rmi` / `podman system prune -a` / delete the dir |
-| `~/.cache/crush-nested.XXXXXX` | the nested session's *writable* layers | Ephemeral (rm'd on exit) | auto; leaked dirs → `rm -rf ~/.cache/crush-nested.*` |
+| `~/.cache/crush-nested.XXXXXX` | the nested session's *writable* layers | Ephemeral (rm'd on exit) | auto; leaked dirs → `podman unshare rm -rf ~/.cache/crush-nested.*` |
 | `/var/lib/shared-images` (in-sandbox) | a read-only *view* of the host store | Mount only (writes nothing) | n/a — it's the host store above, read-only |
 | `crushcontainer-*.tar` (repo root) | `make image-export` archives | Persistent, gitignored | delete the tar |
 
@@ -136,7 +134,7 @@ see `tasks/reference/nested-podman-design.md`.)
 
 - runClaudeInContainer `tasks/archive/2026/09/27/dir-backed-nested-podman-storage.md` — the disk-store change, the
   rootful-config fix, and the verification (canonical location; the client mirrors its Makefile change).
-- `tasks/reference/nested-podman-design.md` — every nested flag and why (fuse-overlayfs,
+- `tasks/reference/nested-podman-design.md` — every nested flag and why (the storage driver,
   `--cgroups=disabled`, `--network=host`/netavark, the `libpod` tmpfs), plus the store-backend section.
 - `tasks/reference/nested-podman-vs-image-content.md` — why `NESTED_PODMAN` (run-time) and image
   content are decoupled.

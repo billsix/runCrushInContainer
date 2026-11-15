@@ -5,7 +5,7 @@ tool* — a starting point to fork, **not** a template for the codebases you dev
 coding LLM served on one machine (`server/`) driven by a terminal coding agent in a disposable
 container (`client/`) over an SSH tunnel, used to develop your other projects. It's built to be
 re-pointed at different **models**, **quants**, or an **agent version** — the swappable surface is
-Makefile variables (the two serving ports are fixed on purpose; see step 1), and the maintainer's
+Makefile variables (the five serving ports are fixed on purpose; see step 1), and the maintainer's
 personal layer is kept separate so you can adopt the machinery and pull upstream improvements without
 conflicts.
 
@@ -13,7 +13,7 @@ conflicts.
 
 - **Portable (use as-is):** the whole container build/run stack (`server/Makefile`, `client/Makefile`,
   `client/Dockerfile`, `client/entrypoint/`), the baked conventions `CLAUDE.md` + the reference docs,
-  the 8 slash commands, and the nested-podman flag set.
+  the 13 slash commands, and the nested-podman flag set.
 - **Personal / swappable:** the model + quant + pinned tags (Makefile variables), the personal-overlay
   `@`-imported `~/.ai-coding-conventions.personal.md`, the dotfiles (`.extrabashrc`), and the SSH-tunnel
   target.
@@ -30,8 +30,8 @@ conflicts.
    `client/entrypoint/shell.sh` — which is why `PORT` is not an override knob.
 
 2. **Swap the agent version** (`client/Makefile`): `CRUSH_TAG` (the Crush release). The baked `crushrc`
-   pins each model (`<provider>/$(MODEL_ALIAS_<m>)`) and its `--context-window`, and probes the two
-   ports at load to preselect the served one — update the provider/model pairs, the probe URLs, and
+   pins each model (`<provider>/$(MODEL_ALIAS_<m>)`) and its `--context-window`, and probes the five
+   ports at load and preselects the first that answers — update the provider/model pairs, the probe URLs, and
    `--context-window` to your models + your server's `CTX`. The **`@`-import patch** (`client/patches/`) is pinned to a Crush tag —
    re-verify/regenerate on a `CRUSH_TAG` bump (see
    `tasks/archive/2026/08/21/patch-crush-for-at-imports.md`), or build stock with

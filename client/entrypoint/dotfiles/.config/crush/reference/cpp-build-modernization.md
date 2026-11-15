@@ -144,19 +144,14 @@ template:
 
 ## Isolate the tree-wide reformat, and tell `git blame` to skip it
 
-A tree-wide `clang-format`/`ruff format` pass should be **its own commit containing nothing
-else**, so `.git-blame-ignore-revs` can hide it without hiding real edits. ePiX's reformat commit
-also carried a few real changes (Makefile, `format.sh`, `pyproject.toml`, a task doc), so ignoring
-it costs the blame on those lines — tolerable, but avoidable. Add the file at the repo root,
-list the SHA with a comment, and note in the project `CLAUDE.md` that a clone needs
-`git config blame.ignoreRevsFile .git-blame-ignore-revs` (GitHub picks the file up automatically).
-Formatting upstream-authored sources in a *mirror* is a deliberate exception to "keep upstream
-intact" — record the maintainer's decision where the mirror rule is stated.
+The rule and mechanics are in `code-style-conventions.md` ("A tree-wide reformat is its own commit,
+listed in `.git-blame-ignore-revs`"). The C++-port specifics: ePiX's reformat commit also carried a
+few real changes (Makefile, `format.sh`, `pyproject.toml`, a task doc), so ignoring it costs the
+blame on those lines. Formatting upstream-authored sources in a *mirror* is a deliberate exception
+to "keep upstream intact"; record the maintainer's decision where the mirror rule is stated.
 
 ## Generated files: edit the source, record the mapping
 
-Anything a build step produces — an umbrella header from a curated list (`make_header`), driver
-scripts and man pages from `*.in` templates, `epix.el` — is **never hand-edited**; change the
-list/template and regenerate. Record the mapping (output → source → generator) in the project
-`CLAUDE.md` so the next reader doesn't "fix" the output. (`codegen-conventions.md` has the
-generator-author side of this rule.)
+The rule is `codegen-conventions.md` ("Generated files in a repo: edit the source, never the
+output"). In a C++ build the generated files are things like an umbrella header from a curated list
+(`make_header`), driver scripts and man pages from `*.in` templates, and `epix.el`.

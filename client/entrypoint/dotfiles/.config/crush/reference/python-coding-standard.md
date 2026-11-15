@@ -58,7 +58,7 @@ Write the *clearer* form and let the formatter wrap it — in particular, do **n
 ternary, a `match` arm, or a call because the one-liner would exceed 88 cols; that concern
 is handled downstream. Length is never the reason to leave a conditional un-refactored —
 only *readability* and *outcome shape* are. The rare genuinely-unwrappable case (an aligned
-literal, a URL) still gets a scoped `# noqa: E501`, as always. (Bill, 2026-09-05.)
+literal, a URL) still gets a scoped `# noqa: E501`, as always. (William Emerison Six <billsix@gmail.com>, 2026-09-05.)
 
 ## (b) Judgment calls — prose, because ruff can't check them
 

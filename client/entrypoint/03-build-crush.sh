@@ -60,10 +60,11 @@
 #                                   (2) crush-lsp-async.patch — defensive: wraps the handler in
 #                                       jsonrpc2.AsyncHandler so a server that gates on a server->client
 #                                       callback can't deadlock powernap's single reader goroutine.
-#                                 Defaulted ON here (not plumbed via the Makefile) because they're
-#                                 correctness fixes; set CRUSH_LSP_ASYNC=0 to build without them.
+#                                 Default ON (client/Makefile `CRUSH_LSP_ASYNC ?= 1`, Dockerfile ARG 1)
+#                                 because they're correctness fixes; `make image CRUSH_LSP_ASYNC=0`
+#                                 builds without them.
 #                                 Re-verify both on every CRUSH_TAG bump. See
-#                                 tasks/lsp-python-server-not-registering.md.
+#                                 tasks/archive/2026/09/13/lsp-python-server-not-registering.md.
 #   CRUSH_CONTEXT_DEBUG          0/1, default 0 — DEBUG-only instrumentation patch (a FEATURE
 #                                 flag, not a bugfix): logs a per-source token/byte breakdown of
 #                                 the assembled system prompt (each context file @-expanded, the
@@ -71,7 +72,7 @@
 #                                 <data-dir>/logs/crush.log. Turn ON to attribute first-turn
 #                                 context bloat on a large repo, then read the CTXDBG lines from
 #                                 the log. Keep the patch in patches/ but leave this OFF in
-#                                 shipped images. See tasks/investigate-context-bloat-geometricalgebra.md
+#                                 shipped images. See tasks/archive/2026/09/14/investigate-context-bloat-geometricalgebra.md
 #                                 and tasks/reference/crush-context-assembly.md.
 #   PATCH_OUT_UPDATE_CHECK        0/1, default 1 — no startup api.github.com release check
 #   PATCH_OUT_TELEMETRY           0/1, default 1 — PostHog/data.charm.land unreachable at
@@ -103,8 +104,8 @@ PATCHES_DIR="${PATCHES_DIR:-/patches}"
 
 CRUSH_AT_IMPORT="${CRUSH_AT_IMPORT:-0}"
 CRUSH_SHELL_HISTORY="${CRUSH_SHELL_HISTORY:-0}"
-CRUSH_LSP_ASYNC="${CRUSH_LSP_ASYNC:-1}"   # mandatory bugfix, default ON (see the env note above)
-CRUSH_CONTEXT_DEBUG="${CRUSH_CONTEXT_DEBUG:-0}"   # DEBUG-only context breakdown logging, default OFF
+CRUSH_LSP_ASYNC="${CRUSH_LSP_ASYNC:-1}"         # mandatory bugfix, default ON (see the env note above)
+CRUSH_CONTEXT_DEBUG="${CRUSH_CONTEXT_DEBUG:-0}" # DEBUG-only context breakdown logging, default OFF
 PATCH_OUT_UPDATE_CHECK="${PATCH_OUT_UPDATE_CHECK:-1}"
 PATCH_OUT_TELEMETRY="${PATCH_OUT_TELEMETRY:-1}"
 PATCH_OUT_UPDATE_PROVIDERS_CMD="${PATCH_OUT_UPDATE_PROVIDERS_CMD:-1}"
@@ -126,7 +127,7 @@ if [ "$CRUSH_VENDORED" = "1" ]; then
     cp -r /vendor/crush /tmp/crush
 else
     git clone --depth 1 --branch "$CRUSH_TAG" https://github.com/charmbracelet/crush /tmp/crush
-    ( cd /tmp/crush && go mod vendor )
+    (cd /tmp/crush && go mod vendor)
 fi
 
 # --- apply the flag-selected patches (identical for both modes) -------------------
@@ -137,49 +138,51 @@ apply_patch() {
         git -C /tmp/crush apply --unidiff-zero "$PATCHES_DIR/$2"
     fi
 }
-apply_patch "$CRUSH_AT_IMPORT"                "crush-at-import.patch"
-apply_patch "$CRUSH_SHELL_HISTORY"            "crush-shell-history.patch"
-apply_patch "$CRUSH_LSP_ASYNC"               "crush-lsp-async.patch"
-apply_patch "$CRUSH_LSP_ASYNC"               "crush-lsp-router-notif.patch"
-apply_patch "$CRUSH_CONTEXT_DEBUG"           "crush-context-debug.patch"
-apply_patch "$PATCH_OUT_UPDATE_CHECK"         "crush-no-update-check.patch"
-apply_patch "$PATCH_OUT_TELEMETRY"            "no-telemetry.patch"
+apply_patch "$CRUSH_AT_IMPORT" "crush-at-import.patch"
+apply_patch "$CRUSH_SHELL_HISTORY" "crush-shell-history.patch"
+apply_patch "$CRUSH_LSP_ASYNC" "crush-lsp-async.patch"
+apply_patch "$CRUSH_LSP_ASYNC" "crush-lsp-router-notif.patch"
+apply_patch "$CRUSH_CONTEXT_DEBUG" "crush-context-debug.patch"
+apply_patch "$PATCH_OUT_UPDATE_CHECK" "crush-no-update-check.patch"
+apply_patch "$PATCH_OUT_TELEMETRY" "no-telemetry.patch"
 apply_patch "$PATCH_OUT_UPDATE_PROVIDERS_CMD" "no-update-providers-cmd.patch"
-apply_patch "$PATCH_OUT_WEB_TOOLS"            "no-web-tools.patch"
-apply_patch "$PATCH_OUT_SOURCEGRAPH"          "no-sourcegraph.patch"
-apply_patch "$PATCH_OUT_GOOGLE_PROVIDER"      "no-google-provider.patch"
-apply_patch "$PATCH_OUT_BEDROCK_AWS"          "no-bedrock-aws.patch"
-apply_patch "$PATCH_OUT_AZURE"                "no-azure.patch"
-apply_patch "$PATCH_OUT_OPENROUTER"           "no-openrouter.patch"
-apply_patch "$PATCH_OUT_VERCEL"               "no-vercel.patch"
-apply_patch "$PATCH_OUT_HYPER"                "no-hyper.patch"
-apply_patch "$PATCH_OUT_COPILOT"              "no-copilot.patch"
+apply_patch "$PATCH_OUT_WEB_TOOLS" "no-web-tools.patch"
+apply_patch "$PATCH_OUT_SOURCEGRAPH" "no-sourcegraph.patch"
+apply_patch "$PATCH_OUT_GOOGLE_PROVIDER" "no-google-provider.patch"
+apply_patch "$PATCH_OUT_BEDROCK_AWS" "no-bedrock-aws.patch"
+apply_patch "$PATCH_OUT_AZURE" "no-azure.patch"
+apply_patch "$PATCH_OUT_OPENROUTER" "no-openrouter.patch"
+apply_patch "$PATCH_OUT_VERCEL" "no-vercel.patch"
+apply_patch "$PATCH_OUT_HYPER" "no-hyper.patch"
+apply_patch "$PATCH_OUT_COPILOT" "no-copilot.patch"
 
 # --- self-verify the async LSP bugfix actually landed --------------------------
 # A cached/mis-applied patch would silently reintroduce the powernap deadlock (ty's
 # documentSymbol times out). This assertion runs inside the (uncached-when-patches-change)
 # build layer, so a SUCCESSFUL build proves the wrap is in the tree; it also prints a
-# grep-able marker for the build log. See tasks/lsp-python-server-not-registering.md.
+# grep-able marker for the build log. See tasks/archive/2026/09/13/lsp-python-server-not-registering.md.
 _CONN=/tmp/crush/vendor/github.com/charmbracelet/x/powernap/pkg/transport/connection.go
 _ROUTER=/tmp/crush/vendor/github.com/charmbracelet/x/powernap/pkg/transport/router.go
 if [ "$CRUSH_LSP_ASYNC" = "1" ]; then
     if grep -q "AsyncHandler(jsonrpc2.HandlerWithError" "$_CONN"; then
         echo "CRUSH_LSP_ASYNC_VERIFY: PRESENT — AsyncHandler wrap is in the build tree"
     else
-        echo "CRUSH_LSP_ASYNC_VERIFY: MISSING — crush-lsp-async.patch did not apply"; exit 1
+        echo "CRUSH_LSP_ASYNC_VERIFY: MISSING — crush-lsp-async.patch did not apply"
+        exit 1
     fi
     # The router notification-routing fix is THE fix for ty timing out (id-0 request misrouted
     # as a notification -> null workspace/configuration -> gated documentSymbol).
     if grep -q "if req.Notif {" "$_ROUTER"; then
         echo "CRUSH_LSP_ROUTER_VERIFY: PRESENT — req.Notif routing fix is in the build tree"
     else
-        echo "CRUSH_LSP_ROUTER_VERIFY: MISSING — crush-lsp-router-notif.patch did not apply"; exit 1
+        echo "CRUSH_LSP_ROUTER_VERIFY: MISSING — crush-lsp-router-notif.patch did not apply"
+        exit 1
     fi
 fi
 
 # --- build offline from vendor/ (both modes; the online mode already fetched) -----
-( cd /tmp/crush && GOPROXY=off go build -mod=vendor -ldflags "$LDFLAGS" \
-    -o "${GOBIN:-/usr/local/bin}/crush" . )
+(cd /tmp/crush && GOPROXY=off go build -mod=vendor -ldflags "$LDFLAGS" \
+    -o "${GOBIN:-/usr/local/bin}/crush" .)
 
 rm -rf /tmp/crush
 crush --version

@@ -8,9 +8,11 @@ Steps:
    task doc's status, `git status`. If it does not look done, **say so and ask** rather
    than popping. A stack that pops unfinished work is worse than no stack.
 
-2. **If the completed work has a task doc, archive it** per the task-document convention
-   (`/archive-task`, moving it to `tasks/archive/<YYYY>/<MM>/<DD>/`) — recording *why* it
-   is complete, not just flipping a status line.
+2. **If the completed work has a task doc, close it** per the task-document convention
+   (`/archive-task`): the done-record rewrite is staged with the work now, recording *why* it
+   is complete, not just flipping a status line. The move into `tasks/archive/` waits for the
+   work commit; until that exists, the move is owed, so record it in the task's `Status` (the
+   stack itself does not survive the session).
 
 3. **Remove the TOP entry** from `~/.config/crush/stack.md`.
 

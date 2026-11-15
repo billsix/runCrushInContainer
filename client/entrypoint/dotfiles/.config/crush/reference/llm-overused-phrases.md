@@ -7,8 +7,8 @@ a verdict on which alternatives are worth remembering. The distilled, actionable
 lives in `entrypoint/dotfiles/.claude/CLAUDE.md` ("Words and phrases you overuse");
 this file is the full catalog behind it.
 
-**Why (Bill, 2026-07-29):** this is *not* about hiding that an LLM wrote the text —
-Bill isn't concealing that. The goal is that the output be **less annoying, more
+**Why (William Emerison Six <billsix@gmail.com>, 2026-07-29):** this is *not* about hiding that an LLM wrote the text —
+The maintainer isn't concealing that. The goal is that the output be **less annoying, more
 varied, and more interesting to read**. The sources below are mostly framed as
 "AI-detection tells" because that's the literature that exists; read them here as a
 map of *monotony* — where the prose falls into the same rut every time — not as a
@@ -69,14 +69,14 @@ actually …" when warranted, and most often **no opener at all**: start with th
 substance. "Perfect!" after your own edit is self-praise; report what the edit did
 instead.
 
-### 2. "load-bearing" (Bill's seed example)
+### 2. "load-bearing" (the maintainer's seed example)
 
 Borrowed from construction: a wall that carries the weight of the structure above it,
 so removing it causes collapse. Claude applies it figuratively to any comment, test,
 config line, or convention whose removal would break something ("that comment is
 load-bearing"). It earned its own HN thread; the consensus explanation is that one
 model's mild lexical bias, multiplied by billions of generated tokens, turns a vivid
-phrase into an instant tell. Notably it's a *good* term — vivid, precise — and Bill's
+phrase into an instant tell. Notably it's a *good* term — vivid, precise — and the maintainer's
 own conventions use it ("line structure that is syntactically load-bearing"). The
 problem is reflexive reuse.
 

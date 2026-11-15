@@ -122,7 +122,7 @@ dnf repoquery --whatprovides '*/libsoup-3.0.pc'     # → libsoup3-devel
 dnf repoquery --whatprovides '*/webkit2gtk-4.1.pc'  # → webkit2gtk4.1-devel
 ```
 
-These go in the project's Rust install group (`entrypoint/04-install-rust.sh` for hanoi), alongside
+These go in the project's Rust install group (`rust/entrypoint/01-install-rust-base.sh` in github.com/billsix/towersofhanoi), alongside
 the toolchain. A lean/Python-only image has none of the GTK stack, so the whole set lands there.
 
 ## Config & build gotchas (cost real time)
@@ -152,12 +152,12 @@ gives code reuse without build coupling. (`tauri/.gitignore` then carries `src-t
 
 ## Container wiring (the template)
 
-- A `make rust-tauri` run target: `cd tauri/src-tauri` → set a per-crate `CARGO_TARGET_DIR` (a
+- A run target (github.com/billsix/towersofhanoi `rust/Makefile` has `make tauri`): `cd tauri/src-tauri` → set a per-crate `CARGO_TARGET_DIR` (a
   bind-mounted `.container-target`, so artifacts persist across `--rm` runs) and `CARGO_HOME` (a shared
   bind-mounted `.container-cargo`, so crate downloads persist) → `WEBKIT_DISABLE_DMABUF_RENDERER=1` →
   `cargo run`, under the same X11/Wayland passthrough the other GUI targets use. The two cache dirs are
   the dnf/pip-download-cache analog for cargo; see `rust-gui-tui-and-ecosystem.md` for the toolchain
-  detail and the `CARGO_HOME`/`CARGO_TARGET_DIR` persistence pattern.
+  detail.
 - **Self-contained-image caveat:** the WebKitGTK deps are system packages (fine, they bake into the
   image), but like any crate-fetching build the first `cargo run` needs network; a `--mount=type=cache`
   (or the bind-mount cargo caches) speeds rebuilds but does **not** make the image ship the deps — see
@@ -167,7 +167,7 @@ gives code reuse without build coupling. (`tauri/.gitignore` then carries `src-t
 
 - `rust-coding-standard.md` — the Rust (a)/(b) standard the backend follows.
 - `rust-gui-tui-and-ecosystem.md` — the sibling: wxDragon/ratatui/rustyline, the sandbox toolchain,
-  headless-Xvfb verify, and the `CARGO_HOME`/`CARGO_TARGET_DIR` cache pattern.
+  headless-Xvfb verify.
 - `nested-run-and-gates.md` — running a project's own containers nested.
 
 ## Sources
