@@ -1,44 +1,42 @@
-# Consider dropping shfmt and procs instead of vendoring upstream binaries
+# Drop procs; keep shfmt (the Fedora 44 leftovers in /usr/local/bin)
 
-**Status:** proposed — needs go-ahead
-**Priority:** 7
+**Status:** proposed — decided 2026-11-15 (drop procs, keep shfmt); ready to implement
+**Priority:** 6
 **Difficulty:** 2
+**Created:** 2026-11-06 (William Emerison Six <billsix@gmail.com>); investigated 2026-11-15
+**Spans:** this repo and github.com/billsix/runClaudeInContainer. That repo's
+`tasks/consider-dropping-shfmt-procs.md` is the primary copy (investigation, sources, plan); decide
+there, apply in both.
 
 ## BLUF
-The Fedora 45 upgrade kept `shfmt` and `procs` working by fetching their upstream
-release binaries in `client/entrypoint/01b-install-binary-tools.sh` (both were
-dropped from F45's repos). That adds a maintenance cost — pinned versions to bump,
-a build-time network fetch from GitHub, and a bespoke script outside the clean
-`dnf install` list. **Reconsider whether these two dev conveniences are worth it,
-or whether they should just be dropped from the image.** "Done" = a decision:
-keep the binary fetch, or remove `01b-install-binary-tools.sh` + its Dockerfile
-layer.
+
+The client installs the same two Fedora 44 leftovers as runClaude, **shfmt** and **procs**, through the
+identical `client/entrypoint/01b-install-binary-tools.sh` (pinned, checksum-verified upstream binaries in
+`/usr/local/bin`). Fedora retired both from Fedora 45: shfmt failed to build, procs was orphaned.
+**Recommendation: drop procs, keep shfmt.** Done means the same as in runClaude, applied here.
+
+## Decision (William Emerison Six <billsix@gmail.com>, 2026-11-15)
+
+**Drop procs and keep shfmt**, in both runClaudeInContainer and runCrushInContainer, as recommended
+below: procs is unused and covered by the packaged `htop`, `btop`, `ps` and `pstree`; shfmt has no
+Fedora 45 replacement and runs both sandboxes' `make format` gates (and, in runCrush, the bash language
+server's formatting). shfmt stays a pinned, checksum-verified upstream binary.
 
 ## Context
-Raised by William Emerison Six <billsix@gmail.com>, 2026-11-06, during the F45
-upgrade (`tasks/archive/.../upgrade-to-fedora-45.md`). The base list is
-"batteries-included" on purpose, so this is a judgement call, not an obvious cut.
 
-What dropping each would cost:
-- **shfmt** (shell formatter) — nothing else in the image formats shell;
-  `ShellCheck` (still packaged) covers shell *linting* but not formatting. Dropping
-  it means no in-image shell auto-format.
-- **procs** (modern `ps`) — `procps-ng` (`ps`) stays, so this is pure convenience;
-  lowest-cost to drop.
+- Investigation, Fedora sources and replacements: the primary copy in runClaudeInContainer.
+- What differs here: shfmt is also what `nodejs-bash-language-server` (one of the six LSPs the crushrc
+  declares, `client/entrypoint/crushrc`) uses to format shell when it is on `PATH`, so dropping shfmt
+  would also cost Crush's `lsp` formatting for `.sh` files. Another reason to keep it.
+- `client/entrypoint/format.sh` (`make -C client format`) runs shfmt over `entrypoint/*.sh`,
+  `entrypoint/vendor/*.sh` and `runCrush*.sh`.
+- Docs that mention procs here: `CLAUDE.md`, `client/Dockerfile`'s comment, the baked
+  `client/entrypoint/dotfiles/.config/crush/reference/sandbox-capability-map.md` (a byte mirror; re-copy
+  it from runClaude after runClaude's change), `tasks/reference/container-file-layout.md`.
 
-What keeping costs: the pinned-binary fetch in `01b-install-binary-tools.sh` (a
-GitHub download at build, two version pins to maintain, x86_64-only).
+## Plan (on go-ahead)
 
-## Options
-1. **Keep both** (status quo) — the binary fetch stays.
-2. **Drop `procs`, keep `shfmt`** — procs is pure convenience; shfmt has no
-   in-image substitute for formatting.
-3. **Drop both** — remove `01b-install-binary-tools.sh` and its Dockerfile `COPY`
-   + `RUN`; simplest image, no out-of-dnf fetch.
-
-Recommendation: at least drop `procs` (option 2); decide shfmt on whether in-image
-shell formatting is actually used.
-
-## Note
-This is the client sandbox; the twin task lives in runClaudeInContainer (the
-canonical base list). Decide both together and keep them in sync.
+1. Re-copy runClaude's updated `01b-install-binary-tools.sh` over `client/entrypoint/01b-install-binary-tools.sh`.
+2. Update the docs above; re-copy the baked capability map.
+3. Verify: `make -C client image`; `command -v procs` fails, `shfmt --version` prints v3.14.1,
+   `make -C client format` passes.
