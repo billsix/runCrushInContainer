@@ -40,8 +40,8 @@ v0.89.0-specific (several absent features are on Crush's in-repo `docs/*/FUTURE.
    **Update (2026-08-27, revised 2026-08-29):** a second local patch,
    `client/patches/crush-no-update-check.patch`, removes the unconditional startup update check
    (`go app.checkForUpdates(ctx)`, `internal/app/app.go` → GET
-   `api.github.com/.../releases/latest`). As of 2026-09-09 it is one of **fourteen** build-time
-   patches, each behind its own defaulted flag (`PATCH_OUT_UPDATE_CHECK ?= 1` for this one) — see
+   `api.github.com/.../releases/latest`). It is one of **seventeen** build-time
+   patches, each behind a defaulted flag (`PATCH_OUT_UPDATE_CHECK ?= 1` for this one) — see
    the egress patch/flag system in `architecture.md` and the decisions in
    `dependency-network-audit.md`. Every build clones (or copies the vendored tree) + builds from
    source; `go install …@tag` is no longer used. Telemetry to `data.charm.land` is disabled separately via env

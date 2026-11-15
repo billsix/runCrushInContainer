@@ -97,6 +97,8 @@ ARG CRUSH_SHELL_HISTORY=0
 # breakdown logged to <data-dir>/logs/crush.log). Default 0; keep it 0 in shipped
 # images. See tasks/investigate-context-bloat-geometricalgebra.md.
 ARG CRUSH_CONTEXT_DEBUG=0
+# The powernap LSP bugfix patches; default 1 even for a bare `podman build` (they are fixes).
+ARG CRUSH_LSP_ASYNC=1
 ARG CRUSH_VENDORED=0
 ARG PATCH_OUT_UPDATE_CHECK=1
 ARG PATCH_OUT_TELEMETRY=1
@@ -130,6 +132,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     CRUSH_TAG="$CRUSH_TAG" CRUSH_VENDORED="$CRUSH_VENDORED" CRUSH_AT_IMPORT="$CRUSH_AT_IMPORT" \
     CRUSH_SHELL_HISTORY="$CRUSH_SHELL_HISTORY" \
     CRUSH_CONTEXT_DEBUG="$CRUSH_CONTEXT_DEBUG" \
+    CRUSH_LSP_ASYNC="$CRUSH_LSP_ASYNC" \
     PATCH_OUT_UPDATE_CHECK="$PATCH_OUT_UPDATE_CHECK" \
     PATCH_OUT_TELEMETRY="$PATCH_OUT_TELEMETRY" \
     PATCH_OUT_UPDATE_PROVIDERS_CMD="$PATCH_OUT_UPDATE_PROVIDERS_CMD" \

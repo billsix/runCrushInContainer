@@ -60,6 +60,11 @@ CRUSH_SHELL_HISTORY ?= 1
 # images. See ../tasks/investigate-context-bloat-geometricalgebra.md and
 # ../tasks/reference/crush-context-assembly.md.
 CRUSH_CONTEXT_DEBUG ?= 0
+# The two powernap LSP bugfix patches (crush-lsp-router-notif.patch, crush-lsp-async.patch): without
+# them ty's workspace/configuration request goes unanswered and lsp_symbols times out. Default ON;
+# `make image CRUSH_LSP_ASYNC=0` builds without them (to re-test on a CRUSH_TAG bump). See
+# ../tasks/reference/crush-lsp-integration.md.
+CRUSH_LSP_ASYNC ?= 1
 
 # ---- Egress patch flags: one per decision, defaults encode the audit's disposition ----
 # From the dependency network audit (../tasks/reference/dependency-network-audit.md, D1-D12).
@@ -286,6 +291,7 @@ image: ## build the client image: full toolchain + Crush built from source (pinn
 		--build-arg CRUSH_AT_IMPORT=$(CRUSH_AT_IMPORT) \
 		--build-arg CRUSH_SHELL_HISTORY=$(CRUSH_SHELL_HISTORY) \
 		--build-arg CRUSH_CONTEXT_DEBUG=$(CRUSH_CONTEXT_DEBUG) \
+		--build-arg CRUSH_LSP_ASYNC=$(CRUSH_LSP_ASYNC) \
 		--build-arg VENDOR_TOOLS=$(VENDOR_TOOLS) \
 		$(PATCH_FLAGS) \
 		$(CRUSH_VENDOR_FLAGS) .

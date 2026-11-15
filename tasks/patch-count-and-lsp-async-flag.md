@@ -1,21 +1,28 @@
-# Document all 17 patches and make CRUSH_LSP_ASYNC settable
+# Documented all 17 patches and made CRUSH_LSP_ASYNC settable from make
 
-**Status:** proposed — in the 2026-11-15 audit batch
+**Status:** complete
+**Completed:** 2026-11-15
 **Priority:** 4
 **Difficulty:** 2
 **Created:** 2026-11-15 (William Emerison Six <billsix@gmail.com>)
 **Source:** tasks/review/2026/11/15/repo-review.md §1.2, §2.2 F11
 
-## BLUF
+## What this did
 
-Docs say fourteen local patches; there are 17, and three are documented only in their own reference docs. `CRUSH_LSP_ASYNC` is read by the build script but cannot be set from `make`. Done means every count and list matches `client/patches/`, and the flag threads through like the other patch flags.
+- `client/patches/` holds 17 patches, but `CLAUDE.md`, `tasks/reference/architecture.md` (twice) and
+  `tasks/reference/crush-capabilities.md` said fourteen, and `architecture.md` never listed the two
+  powernap LSP bugfix patches or `crush-context-debug.patch`. All four places now say seventeen, and
+  both `architecture.md` lists name the three.
+- `CRUSH_LSP_ASYNC` (read by `client/entrypoint/03-build-crush.sh`, default 1) could not be set from
+  `make`. It is now `CRUSH_LSP_ASYNC ?= 1` in `client/Makefile`, passed as a `--build-arg`, declared
+  `ARG CRUSH_LSP_ASYNC=1` in `client/Dockerfile` (1 even for a bare `podman build`, since these are
+  fixes) and passed to the script; the script's comment no longer says "not plumbed via the
+  Makefile".
 
-## Context
+The sweep's combination count (42) changes when the sweep covers all 17 patches; that is
+`tasks/egress-sweep-coverage.md`.
 
-- §1.2: `CLAUDE.md:96`, `architecture.md:206,367`, `crush-capabilities.md:43`; sweep count 42 → 43.
-- §2.2: `client/entrypoint/03-build-crush.sh:50-64,106`.
+## Verification
 
-## Plan
-
-1. Fix the counts and add the three patches to `architecture.md`'s list.
-2. Add `CRUSH_LSP_ASYNC ?= 1` to `client/Makefile`, an `ARG` in `client/Dockerfile`, pass it to the build script.
+`make -n image` passes `CRUSH_LSP_ASYNC=1`; `make -n image CRUSH_LSP_ASYNC=0` passes 0. The image
+build itself is verified with the batch's client `make image`.

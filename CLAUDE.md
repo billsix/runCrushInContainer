@@ -93,7 +93,7 @@ Three environments are in play; label instructions so it's unambiguous:
 
 The full runClaudeInContainer working-method machinery is ported and in use (task/reference-doc
 systems, always-loaded conventions + personal overlay, in-session diversion stack, 12 slash commands,
-`make shell-exec`, nested podman, fourteen local Crush patches, no-telemetry/no-phone-home). The full
+`make shell-exec`, nested podman, seventeen local Crush patches, no-telemetry/no-phone-home). The full
 inventory with per-item detail, and what was deliberately NOT ported, is in
 `tasks/reference/architecture.md` § "Conventions machinery — ported" / "Ported machinery inventory".
 The egress patch/flag system and the 213-Go-dep dependency network audit are in

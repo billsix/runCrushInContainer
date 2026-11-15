@@ -201,9 +201,11 @@ for its own `client/` image, but that's incidental to its purpose.
     `hyper.charm.land` (guarded out by `PATCH_OUT_HYPER ?= 1`).
 - **The egress patch/flag system (2026-08-29):** the dependency network audit
   (`tasks/reference/dependency-network-audit.md`, decisions D1–D12) produced twelve `PATCH_OUT_<X>`
-  patches; with the two feature patches (`CRUSH_AT_IMPORT`, and `CRUSH_SHELL_HISTORY` added
-  2026-09-09) `client/patches/` holds **fourteen build-time patches**, each behind its own defaulted
-  flag. Defaults encode the audit's disposition: phone-home
+  patches. With the two feature patches (`CRUSH_AT_IMPORT`, `CRUSH_SHELL_HISTORY`), the two powernap
+  LSP bugfix patches (`crush-lsp-router-notif.patch` and `crush-lsp-async.patch`, both under
+  `CRUSH_LSP_ASYNC ?= 1`; `tasks/reference/crush-lsp-integration.md`) and the debug-only
+  `crush-context-debug.patch` (`CRUSH_CONTEXT_DEBUG ?= 0`; `tasks/reference/crush-context-assembly.md`),
+  `client/patches/` holds **seventeen build-time patches**, each behind a defaulted flag. Defaults encode the audit's disposition: phone-home
   (telemetry, update check), the ungated catwalk command, and the out-of-design cloud providers
   (Google/Vertex, Bedrock/AWS, Azure, OpenRouter, Vercel, Hyper, Copilot) are **patched out by
   default**; the web tools and sourcegraph are **kept by default**. `entrypoint/03-build-crush.sh`
@@ -363,10 +365,11 @@ The full working-method machinery is **ported and in use** (Phases 0–4, 2026-0
   bash "$@"`. Cross-project fan-out + design: `github.com/billsix/runClaudeInContainer`
   `tasks/add-shell-exec-target.md` and `.../fan-out-shell-exec-to-projects.md`. The general template
   contract for this lives in the personal overlay (`ai-coding-conventions.personal.md`), not here.
-- **fourteen local Crush patches** (`client/patches/`), each behind its own defaulted build flag — the
+- **seventeen local Crush patches** (`client/patches/`), each behind a defaulted build flag — the
   two FEATURE patches (`crush-at-import.patch` / `CRUSH_AT_IMPORT ?= 1`, and `crush-shell-history.patch`
-  / `CRUSH_SHELL_HISTORY ?= 1`, see `tasks/reference/crush-prompt-history.md`) plus twelve `PATCH_OUT_<X>`
-  egress patches. Full detail: "The egress patch/flag system" above and
+  / `CRUSH_SHELL_HISTORY ?= 1`, see `tasks/reference/crush-prompt-history.md`), the two LSP bugfix
+  patches (`CRUSH_LSP_ASYNC ?= 1`), the debug-only `crush-context-debug.patch` (`CRUSH_CONTEXT_DEBUG ?= 0`),
+  and twelve `PATCH_OUT_<X>` egress patches. Full detail: "The egress patch/flag system" above and
   `tasks/reference/dependency-network-audit.md` §5.
 - **no telemetry / no phone-home** — see "No telemetry / no phone-home" above; the audit of the **213
   vendored Go deps** is DONE (2026-08-29, `tasks/reference/dependency-network-audit.md`; triage scanner

@@ -60,8 +60,9 @@
 #                                   (2) crush-lsp-async.patch — defensive: wraps the handler in
 #                                       jsonrpc2.AsyncHandler so a server that gates on a server->client
 #                                       callback can't deadlock powernap's single reader goroutine.
-#                                 Defaulted ON here (not plumbed via the Makefile) because they're
-#                                 correctness fixes; set CRUSH_LSP_ASYNC=0 to build without them.
+#                                 Default ON (client/Makefile `CRUSH_LSP_ASYNC ?= 1`, Dockerfile ARG 1)
+#                                 because they're correctness fixes; `make image CRUSH_LSP_ASYNC=0`
+#                                 builds without them.
 #                                 Re-verify both on every CRUSH_TAG bump. See
 #                                 tasks/lsp-python-server-not-registering.md.
 #   CRUSH_CONTEXT_DEBUG          0/1, default 0 — DEBUG-only instrumentation patch (a FEATURE
