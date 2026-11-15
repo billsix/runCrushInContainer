@@ -172,7 +172,9 @@ FULL_MODEL_FILES ?=
 MLX_REPO ?= RadixArk/Muse-Glimmer-q4-MLX
 
 # Serving.  (PORT is NOT a knob -- it comes from the MODEL row above.)
-HOST ?= 127.0.0.1
+# HOST is not a knob either: llama-server binds loopback only, and the only way in is the SSH
+# tunnel.  `override` ignores a command-line HOST=... and an exported HOST (`?=` would take either).
+override HOST := 127.0.0.1
 CTX  ?= 65536        # KV-cache / context window. Raised 32768 -> 65536 (2026-08-21) so the
                      # always-loaded conventions + Crush's own ~18k-token system prompt/tools leave
                      # comfortable room for an actual coding session (the 32k window overflowed —

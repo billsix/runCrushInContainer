@@ -1,21 +1,20 @@
-# Pin llama-server to loopback (HOST cannot be overridden)
+# Pinned llama-server to loopback (HOST can no longer be overridden)
 
-**Status:** proposed — in the 2026-11-15 audit batch
+**Status:** complete
+**Completed:** 2026-11-15
 **Priority:** 1
 **Difficulty:** 1
 **Created:** 2026-11-15 (William Emerison Six <billsix@gmail.com>)
 **Source:** tasks/review/2026/11/15/repo-review.md §2.1 F3
 
-## BLUF
+## What this did
 
-`server/Makefile:175` is `HOST ?= 127.0.0.1`, so `make serve HOST=0.0.0.0`, or an exported `HOST`, binds the model server to the LAN, against the repo's "loopback only" rule. Make it `override HOST := 127.0.0.1`, like `PORT`. Done means no command line or environment can change the bind address.
+`server/Makefile` had `HOST ?= 127.0.0.1`, so `make serve HOST=0.0.0.0`, or a `HOST` exported in the
+Mac's environment (`?=` takes either), would bind the model server to the LAN, against the repo's
+"loopback only" rule (`CLAUDE.md`, `tasks/reference/architecture.md`). It is now
+`override HOST := 127.0.0.1`, the same way `PORT` is fixed, with a comment saying why.
 
-## Context
+## Verification
 
-- `server/Makefile:175` and `:307` (`--host $(HOST)`); `:147` already `override`s `PORT`.
-- `CLAUDE.md:65`, `tasks/reference/architecture.md:80` state the rule.
-
-## Plan
-
-1. `override HOST := 127.0.0.1`, with a comment.
-2. Verify with `make -n serve HOST=0.0.0.0` and `HOST=0.0.0.0 make -n serve`: both show `--host 127.0.0.1`.
+`make -n serve MODEL=glimmer` with no override, with `HOST=0.0.0.0` on the command line, and with
+`HOST=0.0.0.0` exported, and `make -n serve-mlx` with it exported: all four show `--host 127.0.0.1`.
