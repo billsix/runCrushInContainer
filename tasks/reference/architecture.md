@@ -219,8 +219,10 @@ for its own `client/` image, but that's incidental to its purpose.
   deleted import lines are replaced by unique marker comments** so every hunk is anchored in both
   directions (a bare-deletion's reverse is an unanchored insertion; that mis-ordered re-added
   imports until fixed, 2026-08-29). Verified by
-  `tools/sweep_egress_patch_combos.sh`: 42 flag combinations applied,
-  reversed, byte-identical, and the interacting-group combinations compiled. Re-verify all patches
+  `tools/sweep_egress_patch_combos.sh` (a shim for the `.py`): 46 flag combinations over all 17 patches
+  applied, reversed, byte-identical, the interacting-group combinations compiled, and the patches' Go
+  tests run on the shipped (default) combination. It refuses to run if its patch list and
+  `client/patches/` differ, or if `client/vendor/crush` is not its own git repo. Re-verify all patches
   on each `CRUSH_TAG` bump.
 
 ## Offline / airgap rebuild — vendoring (2026-08-22)
