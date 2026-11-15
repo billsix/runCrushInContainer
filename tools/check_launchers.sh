@@ -27,9 +27,13 @@ export HARNESS_LOG="$log"
 
 status=0
 pass() { echo "  ok   $*"; }
-fail() { echo "  FAIL $*"; status=1; }
+fail() {
+    echo "  FAIL $*"
+    status=1
+}
 check() { # check <description> <command...>
-    local desc=$1; shift
+    local desc=$1
+    shift
     if "$@"; then pass "$desc"; else fail "$desc"; fi
 }
 
@@ -109,7 +113,7 @@ done
 exit 0
 EOF
 chmod +x "$shim/ssh" "$shim/make"
-real_make=$(command -v make)   # resolved BEFORE the shim shadows it (`command` does not bypass PATH)
+real_make=$(command -v make) # resolved BEFORE the shim shadows it (`command` does not bypass PATH)
 export PATH="$shim:$PATH"
 
 reset_log() { rm -f "$log"/*; }
@@ -124,9 +128,9 @@ for f in runCrush-common.sh runCrushNoInternet.sh runCrushWithInternet.sh; do
 done
 check "shellcheck (3 scripts)" shellcheck -x "$client/runCrushNoInternet.sh" "$client/runCrushWithInternet.sh" "$client/runCrush-common.sh"
 render=$("$real_make" -n -C "$client" shell LOCALHOST_ONLY=1 MUSE_SOCK_DIR=/tmp/x PROJECT=/p EXTRA_PODMAN_FLAGS="-v /a:/b:z" 2>&1)
-check "make -n: --network=none"        grep -q -- '--network=none' <<<"$render"
-check "make -n: socket dir mounted"    grep -q -- '-v /tmp/x:/run/muse' <<<"$render"
-check "make -n: PROJECT at /work"      grep -q -- '-v /p:/work' <<<"$render"
+check "make -n: --network=none" grep -q -- '--network=none' <<<"$render"
+check "make -n: socket dir mounted" grep -q -- '-v /tmp/x:/run/muse' <<<"$render"
+check "make -n: PROJECT at /work" grep -q -- '-v /p:/work' <<<"$render"
 check "make -n: EXTRA_PODMAN_FLAGS threaded" grep -q -- '-v /a:/b:z' <<<"$render"
 # The old name, EXTRA_MOUNTS, is still accepted.
 render_old=$("$real_make" -n -C "$client" shell LOCALHOST_ONLY=1 MUSE_SOCK_DIR=/tmp/x PROJECT=/p EXTRA_MOUNTS="-v /c:/d:z" 2>&1)
@@ -134,52 +138,59 @@ check "make -n: EXTRA_MOUNTS alias threaded" grep -q -- '-v /c:/d:z' <<<"$render
 # NESTED_PODMAN=1 mounts the host image store read-only (any existing dir stands in for it).
 render_nested=$("$real_make" -n -C "$client" shell NESTED_PODMAN=1 NESTED_PODMAN_STORE=tmpfs NESTED_PODMAN_HOST_IMAGESTORE="$repo_root" PROJECT=/p 2>&1)
 check "make -n: host image store mounted ro" grep -q -- "-v $repo_root:/var/lib/shared-images:ro" <<<"$render_nested"
-check "make -n: /dev/fuse when nested"  grep -q -- '--device /dev/fuse' <<<"$render_nested"
+check "make -n: /dev/fuse when nested" grep -q -- '--device /dev/fuse' <<<"$render_nested"
 
 # ---- case 1: no-internet happy path ----------------------------------------------------------
 echo "== 1 no-internet happy path"
 reset_log
-proj=$(mktemp -d); cd "$proj"
-"$client/runCrushNoInternet.sh" fake@mac "-v /a:/b:z" >/dev/null 2>&1; rc=$?
+proj=$(mktemp -d)
+cd "$proj" || exit 1
+"$client/runCrushNoInternet.sh" fake@mac "-v /a:/b:z" >/dev/null 2>&1
+rc=$?
 check "exit 0 (got $rc)" [ "$rc" -eq 0 ]
-check "make image called first"          bash -c 'head -1 "$1" | grep -q " image$"' _ "$log/make.args"
+check "make image called first" bash -c 'head -1 "$1" | grep -q " image$"' _ "$log/make.args"
 line=$(make_shell_line)
-check "PROJECT=\$PWD"                    grep -q "PROJECT=$proj " <<<"$line"
-check "EXTRA_PODMAN_FLAGS passed verbatim"     grep -q -- 'EXTRA_PODMAN_FLAGS=-v /a:/b:z ' <<<"$line"
-check "LOCALHOST_ONLY=1"                 grep -q 'LOCALHOST_ONLY=1 ' <<<"$line"
-check "NESTED_PODMAN=1 by default"       grep -q 'NESTED_PODMAN=1 ' <<<"$line"
-check "MUSE_SOCK_DIR = the mktemp dir"   grep -q "MUSE_SOCK_DIR=$(cat "$log/tmpdir")\$" <<<"$line"
+check "PROJECT=\$PWD" grep -q "PROJECT=$proj " <<<"$line"
+check "EXTRA_PODMAN_FLAGS passed verbatim" grep -q -- 'EXTRA_PODMAN_FLAGS=-v /a:/b:z ' <<<"$line"
+check "LOCALHOST_ONLY=1" grep -q 'LOCALHOST_ONLY=1 ' <<<"$line"
+check "NESTED_PODMAN=1 by default" grep -q 'NESTED_PODMAN=1 ' <<<"$line"
+check "MUSE_SOCK_DIR = the mktemp dir" grep -q "MUSE_SOCK_DIR=$(cat "$log/tmpdir")\$" <<<"$line"
 check "ssh: -f -N ExitOnForwardFailure ControlMaster" grep -q -- '-f -N -o ExitOnForwardFailure=yes -o ControlMaster=yes' "$log/ssh.args"
 check "ssh: five unix-socket -L forwards" [ "$(grep -o -- '-L [^ ]*/808[0-4]\.sock:127.0.0.1:808[0-4]' "$log/ssh.args" | wc -l)" -eq 5 ]
-check "tunnel closed (ssh -O exit)"      tunnel_closed
-check "temp dir removed"                 tmpdir_gone
-cd "$repo_root"; rm -rf "$proj"
+check "tunnel closed (ssh -O exit)" tunnel_closed
+check "temp dir removed" tmpdir_gone
+cd "$repo_root" || exit 1
+rm -rf "$proj"
 
 # ---- case 2: with-internet happy path --------------------------------------------------------
 echo "== 2 with-internet happy path"
 reset_log
-proj=$(mktemp -d); cd "$proj"
-"$client/runCrushWithInternet.sh" fake@mac "" >/dev/null 2>&1; rc=$?
+proj=$(mktemp -d)
+cd "$proj" || exit 1
+"$client/runCrushWithInternet.sh" fake@mac "" >/dev/null 2>&1
+rc=$?
 check "exit 0 (got $rc)" [ "$rc" -eq 0 ]
 line=$(make_shell_line)
-check "LOCALHOST_ONLY=0"                 grep -q 'LOCALHOST_ONLY=0 ' <<<"$line"
-check "NESTED_PODMAN=1 by default"       grep -q 'NESTED_PODMAN=1 ' <<<"$line"
-check "EXTRA_PODMAN_FLAGS empty"               grep -q 'EXTRA_PODMAN_FLAGS= ' <<<"$line"
-check "ssh: five TCP -L forwards"        [ "$(grep -o -- '-L 127.0.0.1:808[0-4]:127.0.0.1:808[0-4]' "$log/ssh.args" | wc -l)" -eq 5 ]
-check "tunnel closed"                    tunnel_closed
-check "temp dir removed"                 tmpdir_gone
-cd "$repo_root"; rm -rf "$proj"
+check "LOCALHOST_ONLY=0" grep -q 'LOCALHOST_ONLY=0 ' <<<"$line"
+check "NESTED_PODMAN=1 by default" grep -q 'NESTED_PODMAN=1 ' <<<"$line"
+check "EXTRA_PODMAN_FLAGS empty" grep -q 'EXTRA_PODMAN_FLAGS= ' <<<"$line"
+check "ssh: five TCP -L forwards" [ "$(grep -o -- '-L 127.0.0.1:808[0-4]:127.0.0.1:808[0-4]' "$log/ssh.args" | wc -l)" -eq 5 ]
+check "tunnel closed" tunnel_closed
+check "temp dir removed" tmpdir_gone
+cd "$repo_root" || exit 1
+rm -rf "$proj"
 
 # ---- case 3: ssh forward fails ----------------------------------------------------------------
 echo "== 3 ssh forward fails"
 reset_log
 before=$(find "${TMPDIR:-/tmp}" -maxdepth 1 -name 'tmp.*' 2>/dev/null | sort)
-FAKE_SSH_FAIL=1 "$client/runCrushNoInternet.sh" fake@mac "" >/dev/null 2>"$log/stderr"; rc=$?
+FAKE_SSH_FAIL=1 "$client/runCrushNoInternet.sh" fake@mac "" >/dev/null 2>"$log/stderr"
+rc=$?
 after=$(find "${TMPDIR:-/tmp}" -maxdepth 1 -name 'tmp.*' 2>/dev/null | sort)
-check "exit 1 (got $rc)"                 [ "$rc" -eq 1 ]
-check "hint printed"                     grep -q 'could not open the tunnel' "$log/stderr"
-check "make shell never ran"             bash -c '! grep -q " shell " "$1"' _ "$log/make.args"
-check "no temp dir left behind"          [ "$before" = "$after" ]
+check "exit 1 (got $rc)" [ "$rc" -eq 1 ]
+check "hint printed" grep -q 'could not open the tunnel' "$log/stderr"
+check "make shell never ran" bash -c '! grep -q " shell " "$1"' _ "$log/make.args"
+check "no temp dir left behind" [ "$before" = "$after" ]
 
 # ---- case 4: SIGINT mid-session ---------------------------------------------------------------
 echo "== 4 SIGINT mid-session"
@@ -194,38 +205,47 @@ set -m
 FAKE_MAKE_SHELL_SLEEP=30 bash "$client/runCrushNoInternet.sh" fake@mac "" >/dev/null 2>&1 &
 pid=$!
 set +m
-for _ in $(seq 1 50); do grep -q ' shell ' "$log/make.args" 2>/dev/null && break; sleep 0.1; done
+for _ in $(seq 1 50); do
+    grep -q ' shell ' "$log/make.args" 2>/dev/null && break
+    sleep 0.1
+done
 kill -INT -- "-$pid"
-wait "$pid"; rc=$?
-check "exit 130 (got $rc)"               [ "$rc" -eq 130 ]
-check "tunnel closed"                    tunnel_closed
-check "temp dir removed"                 tmpdir_gone
+wait "$pid"
+rc=$?
+check "exit 130 (got $rc)" [ "$rc" -eq 130 ]
+check "tunnel closed" tunnel_closed
+check "temp dir removed" tmpdir_gone
 
 # ---- case 5: make shell's exit status propagates ---------------------------------------------
 echo "== 5 make shell exits 7"
 reset_log
-FAKE_MAKE_SHELL_STATUS=7 "$client/runCrushWithInternet.sh" fake@mac "" >/dev/null 2>&1; rc=$?
-check "exit 7 (got $rc)"                 [ "$rc" -eq 7 ]
-check "tunnel closed"                    tunnel_closed
-check "temp dir removed"                 tmpdir_gone
+FAKE_MAKE_SHELL_STATUS=7 "$client/runCrushWithInternet.sh" fake@mac "" >/dev/null 2>&1
+rc=$?
+check "exit 7 (got $rc)" [ "$rc" -eq 7 ]
+check "tunnel closed" tunnel_closed
+check "temp dir removed" tmpdir_gone
 
 # ---- case 6: usage --------------------------------------------------------------------------
 echo "== 6 usage"
 reset_log
-"$client/runCrushNoInternet.sh" >/dev/null 2>&1; rc=$?
-check "no args → exit 2 (got $rc)"       [ "$rc" -eq 2 ]
-"$client/runCrushNoInternet.sh" fake@mac >/dev/null 2>&1; rc=$?
-check "one arg → exit 2 (got $rc)"       [ "$rc" -eq 2 ]
-"$client/runCrushNoInternet.sh" -h "" >/dev/null 2>&1; rc=$?
-check "-h as target → exit 2 (got $rc)"  [ "$rc" -eq 2 ]
-check "ssh/make never called"            bash -c '[ ! -e "$1/ssh.args" ] && [ ! -e "$1/make.args" ]' _ "$log"
+"$client/runCrushNoInternet.sh" >/dev/null 2>&1
+rc=$?
+check "no args → exit 2 (got $rc)" [ "$rc" -eq 2 ]
+"$client/runCrushNoInternet.sh" fake@mac >/dev/null 2>&1
+rc=$?
+check "one arg → exit 2 (got $rc)" [ "$rc" -eq 2 ]
+"$client/runCrushNoInternet.sh" -h "" >/dev/null 2>&1
+rc=$?
+check "-h as target → exit 2 (got $rc)" [ "$rc" -eq 2 ]
+check "ssh/make never called" bash -c '[ ! -e "$1/ssh.args" ] && [ ! -e "$1/make.args" ]' _ "$log"
 
 # ---- case 7: the NESTED_PODMAN opt-out -------------------------------------------------------
 echo "== 7 NESTED_PODMAN=0 opts out"
 reset_log
-NESTED_PODMAN=0 "$client/runCrushWithInternet.sh" fake@mac "" >/dev/null 2>&1; rc=$?
-check "exit 0 (got $rc)"                 [ "$rc" -eq 0 ]
-check "NESTED_PODMAN=0 passed"           grep -q 'NESTED_PODMAN=0 ' <<<"$(make_shell_line)"
+NESTED_PODMAN=0 "$client/runCrushWithInternet.sh" fake@mac "" >/dev/null 2>&1
+rc=$?
+check "exit 0 (got $rc)" [ "$rc" -eq 0 ]
+check "NESTED_PODMAN=0 passed" grep -q 'NESTED_PODMAN=0 ' <<<"$(make_shell_line)"
 
 echo
 [ "$status" -eq 0 ] && echo "ALL PASS" || echo "FAILURES"

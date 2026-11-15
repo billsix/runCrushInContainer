@@ -423,6 +423,7 @@ image-export: ## save the built image to a timestamped tar (podman save)
 
 .PHONY: image-import
 image-import: ## load an image from a tar: make image-import FILE=foo.tar
+	@[ -n "$(FILE)" ] || { echo 'usage: make image-import FILE=<image tar>'; exit 2; }
 	$(CONTAINER_CMD) load -i $(FILE)
 
 .PHONY: help

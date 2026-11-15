@@ -6,7 +6,7 @@
 # host's network (it reaches the model and the internet).
 #
 #   cd /path/to/the/project/you/want/crush/to/work/on
-#   /path/to/runCrushInContainer/client/runCrushWithInternet.sh williamsix@macmini ""
+#   /path/to/runCrushInContainer/client/runCrushWithInternet.sh you@mac-studio.local ""
 #
 #   $1  user@host of the Mac serving the model (any ssh target; ~/.ssh/config aliases work)
 #   $2  extra `podman run` flags (bind mounts -v, env -e), one string, "" for none — REQUIRED,

@@ -4,19 +4,19 @@
 # Vendor everything for an OFFLINE / airgap rebuild. Runs the vendoring INSIDE the client
 # image, so this online host needs only **podman + make** — no host go/git/python3.
 #
-#   ./vendor.sh            DEFAULT: Crush + llama.cpp source + BOTH models, one GGUF each
+#   ./vendor.sh            DEFAULT: Crush + llama.cpp source + one GGUF per active model
 #                                   (Glimmer Q4_K_M ~16.8 GB, Gemma 4 26B-A4B Q4_0 ~14.4 GB)
 #   FULL=1 ./vendor.sh     FULL:    the above + ALL Glimmer quant GGUFs + Glimmer's full-precision weights
 #
 # Populates (all gitignored, all fetched from the public internet):
-#   client/vendor/crush     Crush repo @ CRUSH_TAG, @-import patch applied, `go mod vendor`ed
+#   client/vendor/crush     Crush repo @ CRUSH_TAG, patches applied at image build, not here, `go mod vendor`ed
 #   client/vendor/wheels    the `ty` wheel (TY_VERSION) — used ONLY by the RHEL 9 Dockerfile block
 #   server/llama.cpp        llama.cpp full history @ LLAMACPP_TAG
 #   server/models/<gguf…>   both models' GGUFs (the server/Makefile model table); more with FULL=1
 #
 # Finer control (instead of FULL=1): set MODEL_FILES / FULL_MODEL_FILES / FULL_MODEL_REPO in the env
 # and they're forwarded to the server vendor step (same meaning as in server/Makefile: extra files
-# from the Glimmer repo, on top of the two defaults). Verify the repo/filenames on Hugging Face —
+# from the Glimmer repo, on top of the defaults). Verify the repo/filenames on Hugging Face —
 # `make check-repo [MODEL=gemma]` (in server/) lists a repo's real GGUF filenames.
 #
 # The client image is the toolbox: it already ships go, git, python3 and (baked)
@@ -40,9 +40,9 @@ name="$(sed -n 's/^CONTAINER_NAME *[:?]*= *//p' "$here/client/Makefile" | head -
 # server/Makefile defaults apply (one GGUF per active model; MODEL_COUNTRIES=US gives Glimmer, Gemma 4, Granite). Explicit
 # MODEL_FILES/FULL_MODEL_FILES/FULL_MODEL_REPO in the env still win over the FULL=1 presets.
 if [ "${FULL:-0}" = "1" ]; then
-	MODEL_FILES="${MODEL_FILES:-*.gguf}"                               # all Glimmer quant GGUFs (MODEL=glimmer is the Makefile default)
-	FULL_MODEL_FILES="${FULL_MODEL_FILES:-*.safetensors}"              # full-precision weights
-	FULL_MODEL_REPO="${FULL_MODEL_REPO:-meta-models/Muse-Glimmer-30B}" # base (non-GGUF) repo; verify on HF
+    MODEL_FILES="${MODEL_FILES:-*.gguf}"                               # all Glimmer quant GGUFs (MODEL=glimmer is the Makefile default)
+    FULL_MODEL_FILES="${FULL_MODEL_FILES:-*.safetensors}"              # full-precision weights
+    FULL_MODEL_REPO="${FULL_MODEL_REPO:-meta-models/Muse-Glimmer-30B}" # base (non-GGUF) repo; verify on HF
 fi
 # Forward only the vars that are actually set, so unset ones fall through to server/Makefile's
 # defaults (an empty `-e MODEL_FILES=` would wrongly blank the default).
@@ -65,17 +65,17 @@ make -C "$here/client" vendor VENDOR_TOOLS=1
 echo ">> [server] vendoring llama.cpp + both models -> server/ (inside the client image)"
 if [ "${FULL:-0}" = "1" ]; then echo "   FULL=1: all Glimmer quant GGUFs + full-precision weights (plus the Gemma 4 default)"; fi
 podman run --rm \
-	--security-opt label=disable \
-	-v "$here/server":/server:z \
-	-w /server \
-	${model_env[@]+"${model_env[@]}"} \
-	"$name" \
-	make vendor
+    --security-opt label=disable \
+    -v "$here/server":/server:z \
+    -w /server \
+    ${model_env[@]+"${model_env[@]}"} \
+    "$name" \
+    make vendor
 
 cat <<EOF
 
 vendored OK (all inside the '$name' image — host needed only podman + make).
-  client/vendor/crush   (Crush, patched, go-mod-vendored)
+  client/vendor/crush   (Crush, unpatched, go-mod-vendored; the build applies the patches)
   server/llama.cpp      (full history)
   server/models/        (GGUF)
 

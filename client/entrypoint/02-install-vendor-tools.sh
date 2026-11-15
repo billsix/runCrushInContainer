@@ -21,31 +21,31 @@
 set -eu
 
 command -v dnf >/dev/null 2>&1 || {
-	echo "02-install-vendor-tools: dnf not found (Fedora/RHEL/dnf host required)" >&2
-	exit 1
+    echo "02-install-vendor-tools: dnf not found (Fedora/RHEL/dnf host required)" >&2
+    exit 1
 }
 
 # 1) Preferred: the distro package — but only if it exists AND actually provides `hf`. An old
 #    huggingface-hub ships only `huggingface-cli`, so verifying `hf` (not just install success)
 #    is what lets a too-old package fall through to pip instead of silently "succeeding".
 if dnf install -y python3-huggingface-hub 2>/dev/null && command -v hf >/dev/null 2>&1; then
-	echo "02-install-vendor-tools: installed hf via dnf (python3-huggingface-hub)"
+    echo "02-install-vendor-tools: installed hf via dnf (python3-huggingface-hub)"
 else
-	# 2) Fallback: pip. The dnf package is absent (e.g. RHEL9) or too old for `hf`. `python3-pip`
-	#    itself IS in the RHEL9 repos, so install it here rather than assume it's present.
-	echo "02-install-vendor-tools: python3-huggingface-hub unavailable/too old via dnf; using pip" >&2
-	dnf install -y python3-pip
-	# PEP 668: Fedora marks the system Python externally-managed and needs --break-system-packages;
-	# RHEL9's older pip does not know that flag, so try it first and fall back to a plain install.
-	# A system install is fine here — throwaway, online-only vendoring image, not a durable env.
-	python3 -m pip install --break-system-packages huggingface_hub ||
-		python3 -m pip install huggingface_hub
+    # 2) Fallback: pip. The dnf package is absent (e.g. RHEL9) or too old for `hf`. `python3-pip`
+    #    itself IS in the RHEL9 repos, so install it here rather than assume it's present.
+    echo "02-install-vendor-tools: python3-huggingface-hub unavailable/too old via dnf; using pip" >&2
+    dnf install -y python3-pip
+    # PEP 668: Fedora marks the system Python externally-managed and needs --break-system-packages;
+    # RHEL9's older pip does not know that flag, so try it first and fall back to a plain install.
+    # A system install is fine here — throwaway, online-only vendoring image, not a durable env.
+    python3 -m pip install --break-system-packages huggingface_hub ||
+        python3 -m pip install huggingface_hub
 fi
 
 # The contract: `hf` must be on PATH afterwards (server/'s make pull calls `hf download`).
 command -v hf >/dev/null 2>&1 || {
-	echo "02-install-vendor-tools: 'hf' CLI not found after install — need a huggingface_hub" \
-		"version that ships the 'hf' entry point" >&2
-	exit 1
+    echo "02-install-vendor-tools: 'hf' CLI not found after install — need a huggingface_hub" \
+        "version that ships the 'hf' entry point" >&2
+    exit 1
 }
 echo "02-install-vendor-tools: hf ready ($(hf --version 2>/dev/null || echo 'version unknown'))"

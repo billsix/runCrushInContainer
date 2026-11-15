@@ -6,16 +6,15 @@
 # to build Crush from source (at any PATCH_OUT_<X> flag combination, online or from the
 # vendored tree), run it against the local model, run `make vendor` inside the image,
 # and host a runtime egress check. This ALWAYS runs (both the full and the minimal
-# image start from it); the ~460-package full toolchain (01-install-base.sh) is layered
-# on top only when FULL_TOOLCHAIN=1.
+# image start from it); the ~460-package full toolchain (01-install-base.sh) is always
+# layered on top.
 #
 # Every package here is a strict subset of 01-install-base.sh, installed first, so the
-# full image is "minimal + more": dnf no-ops the overlap and the two variants share this
-# base layer. See tasks/archive/2026/09/10/minimal-client-image.md.
+# full image is "minimal + more": dnf no-ops the overlap. Origin:
+# tasks/archive/2026/09/10/minimal-client-image.md.
 #
 # Extracted per the "host-agnostic setup belongs in a script" convention: the same set
-# can be installed on a bare Fedora host, not only during `podman build`. Optionless
-# (which optional groups get added is the Dockerfile's decision, via FULL_TOOLCHAIN).
+# can be installed on a bare Fedora host, not only during `podman build`. Optionless.
 #
 # Single dnf call, so its own exit status is this script's exit status.
 set -uo pipefail

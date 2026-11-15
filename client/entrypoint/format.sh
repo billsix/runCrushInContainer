@@ -10,5 +10,5 @@
 set -uo pipefail
 
 status=0
-shfmt -w -i 4 entrypoint/*.sh || status=1
+shfmt -w -i 4 entrypoint/*.sh entrypoint/vendor/*.sh runCrush*.sh || status=1
 exit $status

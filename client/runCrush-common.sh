@@ -53,7 +53,7 @@ usage() {
     cat >&2 <<EOF
 usage: $(basename "$0") <ssh-target> <extra-podman-flags>
 
-  <ssh-target>    user@host of the machine serving the model(s), e.g. williamsix@macmini;
+  <ssh-target>    user@host of the machine serving the model(s), e.g. you@mac-studio.local;
                   passed verbatim to ssh, so ~/.ssh/config aliases work.
   <extra-podman-flags>
                   REQUIRED: extra podman-run flags for the container, as one string, e.g.
@@ -120,7 +120,7 @@ runcrush_main() {
     [ "$#" -eq 2 ] || usage
     target=$1
     local extra_podman_flags=$2
-    case "$target" in ""|-*) usage ;; esac
+    case "$target" in "" | -*) usage ;; esac
 
     # Traps first, so an interrupt anywhere below (even during `make image`, when there is
     # nothing to clean yet) still exits through cleanup with the conventional status.
@@ -136,9 +136,9 @@ runcrush_main() {
     build_forward_flags
     echo "[runCrush] 2/3  SSH tunnel to $target (returns once every forward is bound)" >&2
     if ! ssh -f -N \
-            -o ExitOnForwardFailure=yes \
-            -o ControlMaster=yes -o ControlPath="$tmp/ctl" \
-            "${fwd[@]}" "$target"; then
+        -o ExitOnForwardFailure=yes \
+        -o ControlMaster=yes -o ControlPath="$tmp/ctl" \
+        "${fwd[@]}" "$target"; then
         echo "[runCrush] ssh could not open the tunnel. Is $target reachable? In with-internet" >&2
         echo "[runCrush] mode, 'Address already in use' means another ssh -L already holds one" >&2
         echo "[runCrush] of ports $MODEL_PORTS on this host — close it first." >&2
