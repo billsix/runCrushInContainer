@@ -1,7 +1,14 @@
 # Nested podman ignores the host image store (podman 6), and the launchers never offer it
 
-**Status:** implemented and staged 2026-11-12; awaiting the host rebuild + launch check
-(step 7). Steps 1–6 are done, with one difference: step 1 was reproduced in the
+**Status:** blocked — implemented 2026-11-12 (commit `e87b68a`); waiting on the maintainer's host
+rebuild + launch check (step 7).
+**Blocked on:** `[LINUX HOST] make -C client image`, then one launcher session (the launchers now
+default `NESTED_PODMAN=1`).
+**Recheck:** inside that session, `podman images --format '{{.Repository}}:{{.Tag}} {{.ReadOnly}}'`
+lists the host images as `true`, the shell prints no `[nested podman]` store warning, and a
+`FROM <host image>` build pulls nothing (the checks github.com/billsix/runClaudeInContainer ran in
+`tasks/archive/2026/11/13/nested-podman-host-image-store-ignored.md`). Cleared → done-record + archive.
+ Steps 1–6 are done, with one difference: step 1 was reproduced in the
 runClaudeInContainer sandbox (same base and `COPY`), not in the client, which can't be built
 cheaply here.
 - **Fix.** `client/Dockerfile` installs the drop-in `50-crush-nested.conf`, and

@@ -239,8 +239,9 @@ commands, the updated crushrc), and **`[MAC] make serve`** at `CTX=65536`.
 - [ ] **A command with an arg runs:** `/new-task` → the dialog prompts for `$SLUG` → it scaffolds
       `tasks/<slug>.md`. Try `/stack-push` (prompts `$DIVERSION`) and `/stack` (no prompt, prints the
       stack).
-- [ ] **Stack persists across `--rm`:** push something with `/stack-push`, exit the container, `make
-      shell` again, `/stack` — the entry is still there (it's mounted from host `~/.config/crush/stack.md`).
+- [ ] **Stack is in-session only:** push something with `/stack-push`, exit the container, `make
+      shell` again, `/stack` — the stack is empty (superseded 2026-09-03: the stack lives on the `--rm`
+      overlay and is not mounted; `tasks/archive/2026/09/03/stack-in-session-only-harvest-at-sweep.md`).
 - [ ] **Personal overlay:** put a line in host `~/.ai-coding-conventions.personal.md`, `make shell`,
       and confirm the agent knows it (it's `@`-imported into the conventions).
 - [ ] **Makefile polish:** `make format` runs shfmt clean; `make image-export` writes a tar (gitignored)

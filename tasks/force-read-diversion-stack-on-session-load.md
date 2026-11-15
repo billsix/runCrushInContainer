@@ -6,8 +6,8 @@
 
 ## BLUF
 
-The global diversion stack (`~/.config/crush/stack.md`) is **mounted and referenced** in the
-Crush client but is **not force-loaded** at session start, so — exactly as happened in
+The diversion stack (`~/.config/crush/stack.md`, in-session only since 2026-09-03; see "Premise
+outdated" below) is **referenced** in the Crush client but is **not force-loaded** at session start, so — exactly as happened in
 runClaudeInContainer — it silently drifts out of sync with the actual work and nobody notices.
 Wire it to be **force-read every session**, mirroring the fix just made in runClaudeInContainer
 (there, an `@`-import of `~/.claude/stack.md` + a Makefile seed + a strengthened "reconcile at
