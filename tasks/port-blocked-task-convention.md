@@ -6,7 +6,14 @@
 **Started:** 2026-08-23
 **Source:** tasks/review/2026/11/15/repo-review.md §3.3
 
-## Goal
+## BLUF
+
+Port runClaudeInContainer's blocked-task convention (`**Blocked on:**` + `**Recheck:**` fields) and its
+`/recheck-blocked` command into this repo's baked Crush conventions and commands, so the two sibling
+conventions systems agree. "Done" = both are delivered through the existing conventions/command path and
+pass the "Verify" section below.
+
+## Context
 
 Port the **blocked-task convention** and its **`/recheck-blocked`** command — just added to
 runClaudeInContainer (`github.com/billsix/runClaudeInContainer`) on 2026-08-23 — into this
@@ -18,6 +25,9 @@ without re-deriving anything.
 
 This is a follow-on to `tasks/port-runclaude-conventions-systems.md` (the original conventions
 port) and reuses the same delivery mechanism it established.
+
+Read first: that task, then "Crush-specific wiring" and "Key risk" below. Source finding:
+`tasks/review/2026/11/15/repo-review.md` §3.3.
 
 ## What to port (source: runClaudeInContainer, 2026-08-23)
 

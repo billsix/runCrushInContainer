@@ -23,7 +23,8 @@ that test later rather than close on the runClaude evidence.
 host (a session launched after 2026-10-04, left with `exit`).
 **Recheck:** `[LINUX HOST] cat ~/.cache/crush-nested-cleanup.log; ls -d ~/.cache/crush-nested.* 2>/dev/null`
 — cleared when the log has at least one `==` block; a `== clean` block with no leftover dir means done.
-**Priority:** 8 (blocked; the fix is in and the shared trap is verified). **Difficulty:** 1.
+**Priority:** 8 (blocked; the fix is in and the shared trap is verified).
+**Difficulty:** 1
 **Created:** 2026-10-02 (William Emerison Six <billsix@gmail.com>). **Owner:** William Emerison Six
 <billsix@gmail.com>.
 **See also:** the substantive twin on the runClaude side,

@@ -5,7 +5,20 @@ William Emerison Six <billsix@gmail.com>, 2026-08-29.
 **Priority:** 5
 **Difficulty:** 5
 
-## Why
+## BLUF
+
+Adopt in this repo the same container-template standard (one bind-mounted `shell.sh` path, `REPO_MOUNT`,
+whole-repo mount by default, shared `SHELL_RUN_FLAGS`, `PODMAN_RUN_FLAGS`, a decided prereq policy) that
+the runClaudeInContainer sibling task defines. "Done" = the three Plan boxes below are checked: the
+conformance checklist is in this repo's `CLAUDE.md`, applied to `client/`, and kept in sync with the sibling.
+
+## Context
+
+Read first: `runClaudeInContainer/tasks/standardize-project-container-template.md` (the canonical analysis
+and standard). Current state: the decisions are settled and the client's `shell.sh` is already bind-mounted;
+the conformance checklist has not been written into this repo's docs.
+
+### Why
 
 runCrushInContainer, like runClaudeInContainer, is a **metaproject that defines how projects are
 structured** (the Fedora + Podman container-per-project template). The `make shell-exec` fan-out across
@@ -14,7 +27,7 @@ the template has drifted in accidental ways — `shell.sh` mount path, whole-vs-
 bind-mounted launcher, `REPO_MOUNT` naming, prereq policy, X11 flag var name. Each divergence turned a
 mechanical cross-cutting edit into a per-project judgment call.
 
-Bill's instruction (2026-08-29): where projects aren't done in a standard way (e.g. texExpToPng's
+The maintainer's instruction (2026-08-29): where projects aren't done in a standard way (e.g. texExpToPng's
 selective mount), **formalize a standard in the nested CLAUDE.md** for the projects these meta-repos
 manage — in **both** runClaudeInContainer and runCrushInContainer.
 
@@ -37,7 +50,7 @@ adopt the SAME standard here so the two meta-repos agree.
 - [ ] Keep the two meta-repos' contract docs in sync (a divergence between them is itself the drift this
       task fights).
 
-## Decisions (Bill, 2026-08-29)
+## Decisions (William Emerison Six <billsix@gmail.com>, 2026-08-29)
 
 Resolved in the sibling task, apply in both:
 1. **Whole-repo mount = the default** (selective = documented exception). ✅
@@ -47,7 +60,7 @@ Resolved in the sibling task, apply in both:
 
 **Done 2026-08-29:** the client's `shell.sh` is now **bind-mounted** (`-v ./entrypoint/shell.sh:/shell.sh:Z`
 in `client/Makefile`'s `SHELL_RUN_FLAGS`) — so a `shell.sh` edit is live without a 22 GB rebuild; the
-Dockerfile `COPY … /shell.sh` stays as the baked fallback. Bill's reasoning: this is the tool you
+Dockerfile `COPY … /shell.sh` stays as the baked fallback. The maintainer's reasoning: this is the tool you
 actively develop, so live launcher edits matter here (unlike a dead project). The `CLAUDE.md`
 framing/shell-exec notes are also updated. The decisions are settled; the three Plan boxes above are still unchecked because this repo has not yet written the conformance checklist into its own docs (noted 2026-09-10).
 

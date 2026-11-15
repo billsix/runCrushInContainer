@@ -1,12 +1,23 @@
 # A host-run script to query the server and recommend context settings
 
-**Status:** proposed — fuller "server health + context advisor" drafted below; **do NOT place yet**
-(maintainer: "not yet", 2026-08-20). Nothing created in the repo.
+**Status:** proposed — needs go-ahead. Fuller "server health + context advisor" drafted below; **do NOT place
+yet** (maintainer: "not yet", 2026-08-20). Nothing created in the repo.
 **Priority:** 4
 **Difficulty:** 2
 **Started:** 2026-08-20
 
-## Goal
+## BLUF
+
+A host-run script (`server/context-advisor.sh`, plus an optional `make advise` target) that queries the
+local llama-server through the SSH port-forward and prints server health, the current/maximum context, and
+one or two concrete context-setting recommendations. The script is fully drafted below; the one open
+decision is whether to place it. "Done" = the file exists and is wired as in "Placement & wiring".
+
+## Context
+
+Read first: `tasks/archive/2026/08/20/context-window-sizing.md` (the findings this script operationalizes).
+Current state: nothing is in the repo yet (no `server/context-advisor.sh`); the maintainer deferred
+placement ("not yet", 2026-08-20). Scope and KV-RAM decisions are already resolved (see Open questions).
 
 The maintainer can't answer the context-sizing questions in `tasks/archive/2026/08/20/context-window-sizing.md` by hand,
 **especially on an airgapped system** where the only way to learn the numbers is to query the running

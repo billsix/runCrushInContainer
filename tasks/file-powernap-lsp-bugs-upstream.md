@@ -14,9 +14,12 @@ text. The primary bug (id-0 request misrouted) is the impactful, easily-reproduc
 one is a related robustness fix — file as one issue with two parts, or split. Repo:
 `https://github.com/charmbracelet/x` (the `powernap` module).
 
-Background/analysis: `tasks/reference/crush-lsp-integration.md` §3a and
-`tasks/archive/2026/09/13/lsp-python-server-not-registering.md`; reproducer
-`tools/ty_lsp_probe.py`.
+## Context
+
+Read first: `tasks/reference/crush-lsp-integration.md` §3a and
+`tasks/archive/2026/09/13/lsp-python-server-not-registering.md`. Current state: both bugs are patched
+locally in `client/patches/crush-lsp-router-notif.patch` and `client/patches/crush-lsp-async.patch`; the
+reproducer is `tools/ty_lsp_probe.py`. Nothing has been filed upstream; the maintainer files it.
 
 ## Issue text (ready to paste)
 

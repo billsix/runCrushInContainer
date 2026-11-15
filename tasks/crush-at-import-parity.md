@@ -5,7 +5,20 @@
 **Difficulty:** 4
 **Started:** 2026-08-19
 
-## Relationship / origin
+## BLUF
+
+Extend the MVP Crush `@`-import patch (`client/patches/crush-at-import.patch`) to match Claude Code's
+`@`-import semantics (`$VAR` paths, inline/escape rules, duplicate, missing-target and depth policies).
+The doc's own recommendation is to defer it until a real conventions file trips an MVP limitation. "Done"
+= the parity gaps below are closed, with tests, and the regenerated patch `git am`s cleanly on `CRUSH_TAG`.
+
+## Context
+
+Read first: `tasks/archive/2026/08/21/patch-crush-for-at-imports.md` (the MVP and its recorded scope
+reductions) and `tasks/reference/crush-capabilities.md`. Current state: the MVP patch is in
+`client/patches/crush-at-import.patch` against v0.89.0; none of the gaps below has been worked.
+
+### Relationship / origin
 
 Follow-up to `tasks/archive/2026/08/21/patch-crush-for-at-imports.md`, which delivered a **working MVP** `@`-import
 patch for Crush (`client/patches/crush-at-import.patch`, against `CRUSH_TAG` v0.89.0). The MVP was

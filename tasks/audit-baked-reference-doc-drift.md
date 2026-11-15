@@ -1,8 +1,9 @@
 # Audit & re-sync drifted baked reference docs (+ guard against recurrence)
 
-**Status:** proposed — needs go-ahead (Bill, 2026-09-26)
-**Priority:** 4 **Difficulty:** 3 **Created:** 2026-09-26 **Updated:** 2026-09-26
-(William Emerison Six <billsix@gmail.com>)
+**Status:** proposed — needs go-ahead (William Emerison Six <billsix@gmail.com>, 2026-09-26)
+**Priority:** 4
+**Difficulty:** 3
+**Created:** 2026-09-26 **Updated:** 2026-09-26 (William Emerison Six <billsix@gmail.com>)
 
 ## BLUF
 

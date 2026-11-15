@@ -1,14 +1,30 @@
 # Verify vendor's quant coverage — and that "pull all" really pulls every Glimmer model at every quant
 
-**Status:** proposed — **deferred** until the airgap target hardware (and thus the quant) is chosen.
+**Status:** blocked — **deferred** until the airgap target hardware (and thus the quant) is chosen.
 Real-machine/network check (talks to Hugging Face). The model-universe research (open question 1) is
 **done** and lives in `tasks/reference/glimmer-models-and-airgap-quant-selection.md` — which also
 reframes this task toward *airgap-optimal single-quant selection* rather than "pull everything."
 **Priority:** 4
 **Difficulty:** 3
 **Created:** 2026-08-25 (William Emerison Six <billsix@gmail.com>)
+**Blocked on:** the airgap target hardware (and thus its quant) being chosen; the checks also need network
+to Hugging Face on a real machine.
+**Recheck:** ask the maintainer whether the airgap hardware is chosen; cleared = a named box/quant, after
+which `make -C server check-repo` (network) starts step 2.
 
-## Goal
+## BLUF
+
+Confirm which quant(s) the vendor path pulls by default, enumerate what Hugging Face offers, and make the
+`FULL=1 ./vendor.sh` "pull all" switch really fetch every Glimmer model at every quant (fixing it if not).
+The model-universe research is done and reframes this toward airgap-optimal single-quant selection.
+"Done" = steps 1–6 below are run and any coverage gap is fixed.
+
+## Context
+
+Read first: `tasks/reference/glimmer-models-and-airgap-quant-selection.md`. Caveat on "Current state"
+below: it was measured 2026-08-25, and `server/Makefile` has since become a per-model table
+(`MODEL ?= glimmer`, `MODEL_REPO := $(MODEL_REPO_$(MODEL))`, `MODEL_FILES ?=` empty) and the `FULL=1`
+block in `vendor.sh` has moved down a few lines; re-read both before step 1.
 
 Three things, in order:
 
@@ -68,7 +84,8 @@ everything.
 
 ## Open questions
 
-1. **Is "all of the Glimmer models" one repo's quant ladder, or multiple repos?** If several (other
+1. **ANSWERED** (see Status; detail in `tasks/reference/glimmer-models-and-airgap-quant-selection.md`).
+   **Is "all of the Glimmer models" one repo's quant ladder, or multiple repos?** If several (other
    sizes / a base+instruct split / a distinct mmproj repo), `FULL=1` as written misses them — it only
    globs `MODEL_REPO` (GGUF) + `FULL_MODEL_REPO` (safetensors). **Recommend** first running `check-repo`
    and browsing the `meta-models` HF namespace to settle the model universe, *then* deciding whether

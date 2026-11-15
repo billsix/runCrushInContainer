@@ -16,7 +16,21 @@ system** (maintainer builds the client image offline fine, but has done no neste
 **Difficulty:** 5
 **Started:** 2026-08-22
 
-## Goal
+## BLUF
+
+Make a project's own container build work nested inside the Crush client on an airgapped system, where
+`FROM <base>` has no registry to pull from. Since 2026-11-12 a nested build already finds any base image
+the host has (the host store is mounted read-only); what remains is the case where the host itself lacks
+the base. "Done" = that case works with the chosen approach, or the task is closed as no longer applying.
+
+## Context
+
+Read first: the re-scope note above, `tasks/nested-podman-host-image-store-ignored.md` (the host-store
+reuse, still awaiting host verification) and `tasks/reference/nested-podman-design.md`. Current state:
+`client/Makefile` defaults `NESTED_PODMAN_STORE ?= dir` and mounts the host store via
+`NESTED_PODMAN_HOST_IMAGESTORE`; the two Open questions (approach, seed set) are unanswered.
+
+### Original goal
 
 Make a project's own container build/run work **nested inside the Crush client on an offline/airgapped
 system**. Today nested podman is verified only where a registry is reachable; offline, the first thing
