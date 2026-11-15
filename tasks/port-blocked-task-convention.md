@@ -1,9 +1,10 @@
 # Port the blocked-task convention + `/recheck-blocked` into runCrushInContainer
 
-**Status:** proposed — needs go-ahead. Not started.
-**Priority:** 5
+**Status:** proposed — in the 2026-11-15 audit batch (go-ahead given 2026-11-15)
+**Priority:** 3
 **Difficulty:** 3
 **Started:** 2026-08-23
+**Source:** tasks/review/2026/11/15/repo-review.md §3.3
 
 ## Goal
 
