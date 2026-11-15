@@ -1,21 +1,25 @@
-# Reorder the client Dockerfile and pin Lean
+# Reordered the client Dockerfile and pinned Lean
 
-**Status:** proposed — in the 2026-11-15 audit batch
+**Status:** complete
+**Completed:** 2026-11-15
 **Priority:** 6
 **Difficulty:** 2
 **Created:** 2026-11-15 (William Emerison Six <billsix@gmail.com>)
 **Source:** tasks/review/2026/11/15/repo-review.md §8.1 F18
 
-## BLUF
+## What this did
 
-The Lean install sits after the Crush build and all its `ARG`s, so a Crush bump or patch edit re-downloads Lean, and `ARG VENDOR_TOOLS` near the top couples the vendor build and the normal build. Done means Lean sits next to `01b` and is pinned, and each `ARG` is declared just before the first layer that reads it.
+- The Lean install now comes right after the toolchain layers (`00`, `01`, `01b`) and before the Crush
+  build and its seventeen-odd `ARG`s, so a `CRUSH_TAG` bump, a patch edit or a flag flip no longer
+  re-downloads Lean.
+- Lean is pinned: `ELAN_VERSION ?= v4.2.4` and `LEAN_TOOLCHAIN ?= leanprover/lean4:v4.35.0` in
+  `client/Makefile`, passed as build args, declared just before the Lean layer, and read by
+  `client/entrypoint/install-lean.sh` and `client/entrypoint/vendor/vendor-lean.sh` (they fetched elan
+  from `master` and the `stable` toolchain). Both tags were checked with `git ls-remote`.
+- `ARG VENDOR_TOOLS` and its `hf` install moved after the Crush build, so `make vendor`
+  (`VENDOR_TOOLS=1`) and a normal build share every layer above it.
 
-## Context
+## Verification
 
-- `client/Dockerfile:151-152` (Lean, unpinned elan `master` + `stable`), `:93-112` (ARGs), `:61` (`VENDOR_TOOLS`).
-
-## Plan
-
-1. Move the Lean layer up; pin the elan and toolchain versions as Makefile variables.
-2. Move `ARG VENDOR_TOOLS` / `CRUSH_VENDORED` down.
-3. `make image` (nested).
+Nested `make -C client image` (on a native-overlay store) passed in 22m32s: `Lean (version 4.35.0)`,
+both LSP patches PRESENT, `crush version v0.89.0+dirty`. `make -n image` passes the two pins.

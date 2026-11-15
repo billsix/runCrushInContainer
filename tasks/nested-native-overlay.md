@@ -1,6 +1,8 @@
 # Use native kernel overlay for the nested store, and keep the RAM store behind its toggle
 
-**Status:** proposed — in the 2026-11-15 audit batch
+**Status:** blocked — implemented and verified in the sandbox 2026-11-15; waiting on the maintainer's host rebuild + relaunch
+**Blocked on:** `[LINUX HOST] make -C client image`, then one launcher session, so a client actually runs the new config.
+**Recheck:** `[CONTAINER] podman info --format '{{index .Store.GraphStatus "Native Overlay Diff"}}'` prints `true`, the shell prints no `[nested podman] … no native overlay diff` warning, and a small nested build (`FROM <host image>` + one `RUN`) commits in seconds. Cleared → done-record + archive.
 **Priority:** 1
 **Difficulty:** 4
 **Created:** 2026-11-15 (William Emerison Six <billsix@gmail.com>)
@@ -21,3 +23,18 @@ Mirror of github.com/billsix/runClaudeInContainer `tasks/nested-native-overlay.m
 1. Same storage.conf, containers.conf (`image_copy_tmp_dir`) and `shell.sh` warning as runClaude.
 2. Rewrite the listed docs; document the RAM toggle in README and `CLAUDE.md` (no `exampleRunClaude.sh` here; the README's hand-run commands carry the commented variant).
 3. `make image` (nested); then `blocked` on the host check.
+
+## Log
+
+- **2026-11-15, implemented** (commit "nested podman: native kernel overlay instead of
+  fuse-overlayfs"), mirroring github.com/billsix/runClaudeInContainer `tasks/nested-native-overlay.md`:
+  `storage.conf` without `mount_program`, `mountopt = "nodev"`; the `containers.conf` drop-in
+  (`image_copy_tmp_dir`), installed as `/etc/containers/containers.conf.d/50-crush-nested.conf`;
+  the unread `/etc/containers/storage.conf` copy removed; `client/entrypoint/shell.sh` creates the
+  temp dir and warns when podman reports no native diff; README / `CLAUDE.md` / the delivered
+  conventions / `nested-podman-design.md` / the pipeline doc / Makefile comments rewritten, with the
+  RAM-store toggle documented in the README and `CLAUDE.md`.
+- **2026-11-15, verified in the sandbox.** Nested `make -C client image` on a native-overlay scratch
+  store passed (22m32s). In the image: no `mount_program`, no `/etc/containers/storage.conf`, both
+  `50-crush-nested.conf` drop-ins. The native-overlay timing itself was measured in runClaude (13 s
+  against 62 s). Not verifiable here: a client launched from this image, which is the Recheck.
