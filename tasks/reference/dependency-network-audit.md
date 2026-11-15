@@ -141,7 +141,9 @@ call sites, wire-protocol imports, or endpoint string literals — gets a phase-
 above. The tier is a *lead, not a verdict* — phase 2 confirms or refutes each flagged row at
 source level.
 
-Counts: **NETWORK: 46 · imports-only: 13 · url-strings-only: 7 · no-network: 147**.
+Counts: **NETWORK: 45 · imports-only: 13 · url-strings-only: 7 · no-network: 148** (2026-11-15, after the
+triage stopped counting nested modules' code under their parent; it had listed
+`cloud.google.com/go`, which ships no `.go` files of its own, as NETWORK).
 
 ### Flagged modules (phase-2 work-list)
 
@@ -149,7 +151,7 @@ Counts: **NETWORK: 46 · imports-only: 13 · url-strings-only: 7 · no-network: 
 |---|---|---|
 | charm.land/catwalk | v0.51.18 | NETWORK |
 | charm.land/fantasy | v0.41.0 | NETWORK |
-| cloud.google.com/go | v0.123.0 | NETWORK |
+| cloud.google.com/go | v0.123.0 | no-network (its children carry the code) |
 | cloud.google.com/go/auth | v0.22.0 | NETWORK |
 | cloud.google.com/go/compute/metadata | v0.9.0 | NETWORK |
 | github.com/Azure/azure-sdk-for-go/sdk/azcore | v1.22.0 | NETWORK |
