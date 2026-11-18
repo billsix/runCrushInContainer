@@ -68,6 +68,19 @@ the tail,"* that work is a **map over the tail** — not an accumulator carrying
 elements forward. Letting the recursion follow the data this way is the difference between a
 function a reader can see is correct and one they have to simulate.
 
+**Handle the head first — a strong preference** (William Emerison Six <billsix@gmail.com>,
+2026-11-18). Write the recursive case as `[head, *tail]`, deal with the first element, then recurse
+on the rest, rather than `[*init, last]`. When an algorithm seems to need the last element first,
+look before settling for a tail-first recursion at how its *data is built*: the order usually comes
+from a construction step that can be turned around so the head can go first. Matching `[head, *tail]`
+on a reversed list does not count; that is the same tail-first computation with two reversals added.
+Worked example: github.com/billsix/geometricalgebra `Frame.to_invertible_function`'s peel inverse. Its
+orthogonal set was built first-to-last, so only the *last* orthogonal vector was perpendicular to all
+the others, and the peel had to start at the end. Orthogonalizing the frame from its last vector
+instead makes the *first* one perpendicular to all the rest, and the peel became
+`case [(u, v), *later]` (`tasks/reference/frames-qr-and-reciprocal-frames.md` there, "The peel
+inverse, step by step").
+
 **Worked example — orthogonalizing a frame (github.com/billsix/geometricalgebra, `frame.py`).**
 Gram–Schmidt over a list of vectors. The first draft used *accumulator-passing*: carry the
 already-orthogonalized vectors in a `done` parameter, and for each new vector `reduce` the
