@@ -7,7 +7,7 @@ triggered read-on-demand pointers in runClaude's mounted conventions (~18.5K tok
 already did this). **Decision 1** (2026-09-14) — runClaude's conventions body condensed 134.5 KB →
 49.9 KB (−63%), rationale/examples relocated verbatim into 10 new topic reference docs + `print-debugging.md`;
 runCrush's baked conventions were already the lean port, so no change there.
-**Only decision 3 is left** (see below), and the maintainer has put it off.
+**Decision 3 un-parked 2026-11-18** (William Emerison Six <billsix@gmail.com>: "whatever you recommend"): do (a), the split — move the overlay's container-template section to a read-on-demand file.
 
 **Priority:** 8 (parked — deferred)
 **Difficulty:** 3
