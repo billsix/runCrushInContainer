@@ -545,6 +545,26 @@ code breaks later at import or type-check.
   transitive deps free to drift, and a drifted transitive dep breaks things far from its cause.
   The image/packaging mechanics are the container-template contract (the personal overlay's
   "Self-contained images" + "Python deps" sections), not this code-style doc.
+- **Every `uv pip install` in the image takes `-c constraints.txt`, or else installs nothing a
+  later constrained layer installs again.** A `Dockerfile` often `COPY`s `constraints.txt` late,
+  so a pin bump doesn't re-run the slow layers above it. An early, unpinned install of a package
+  that the constrained layer also installs then shows up in the build log as `-`/`+` pairs
+  (`- numpy==2.5.5` / `+ numpy==2.5.4`): uv installs PyPI's newest and then rolls it back to the
+  pin. The final venv is still right, but the package is downloaded twice, the early layer depends
+  on whatever PyPI serves that day, and a release that won't install on the image's Python can
+  break a build the pins would have passed. So install a package once, in the constrained layer.
+  The exception is a package an intermediate layer actually needs before that layer (for example
+  setuptools for a `--no-build-isolation` editable install of a dependency built from source).
+  Install only that package early, and say why in a comment. A `-`/`+` pair in the build output
+  means some layer broke this rule. (github.com/billsix/geometricalgebra, 2026-11-18: an early
+  `numpy sympy` and a docs-layer `sphinx furo nbsphinx myst-nb` were reinstalled under the
+  constraints, with 9 downgrades.)
+- **Set `ENV UV_LINK_MODE=copy` in any image that runs uv under
+  `RUN --mount=type=cache,target=/root/.cache/uv`.** The cache mount is a different filesystem
+  from the image layer, so uv can't hardlink from it, falls back to copying, and prints
+  "warning: Failed to hardlink files". Copying is what the image needs anyway, because the cache
+  mount is thrown away after the build and the files have to physically be in the layer. The
+  setting just says so and removes a warning that would otherwise hide real ones in the log.
 - Worked incident (modelviewprojection, 2026-11-06): unpinned `moviepy` + `Pillow==13.0.0` (the
   only pillow with a cp315 wheel on Python 3.15) → uv backtracked `moviepy` to the 6-year-old
   `1.0.3` (no top-level `ImageSequenceClip`), surfacing as a `ty` `unresolved-attribute` **and**
