@@ -68,18 +68,23 @@ the tail,"* that work is a **map over the tail** — not an accumulator carrying
 elements forward. Letting the recursion follow the data this way is the difference between a
 function a reader can see is correct and one they have to simulate.
 
-**Handle the head first — a strong preference** (William Emerison Six <billsix@gmail.com>,
-2026-11-18). Write the recursive case as `[head, *tail]`, deal with the first element, then recurse
-on the rest, rather than `[*init, last]`. When an algorithm seems to need the last element first,
-look before settling for a tail-first recursion at how its *data is built*: the order usually comes
-from a construction step that can be turned around so the head can go first. Matching `[head, *tail]`
-on a reversed list does not count; that is the same tail-first computation with two reversals added.
-Worked example: github.com/billsix/geometricalgebra `Frame.to_invertible_function`'s peel inverse. Its
-orthogonal set was built first-to-last, so only the *last* orthogonal vector was perpendicular to all
-the others, and the peel had to start at the end. Orthogonalizing the frame from its last vector
-instead makes the *first* one perpendicular to all the rest, and the peel became
-`case [(u, v), *later]` (`tasks/reference/frames-qr-and-reciprocal-frames.md` there, "The peel
-inverse, step by step").
+**Handle the head first when the data is in that order — a preference, not a mandate** (William
+Emerison Six <billsix@gmail.com>, 2026-11-18, revised the same day). Write the recursive case as
+`[head, *tail]`, deal with the first element, then recurse on the rest, rather than `[*init, last]`,
+when the data already lets you. Some data does not: when the way it was *built* makes the last element
+the one you can solve first, tail-first is the honest shape. Examples are back-substitution over a
+triangular factor and unwinding a stack. Don't invent a second construction just so the recursion can
+start at the head. Building the data reversed, then reversing it back, is the same tail-first
+computation with the reversal moved into the data. It is no better than matching `[head, *tail]` on a
+reversed list, and it costs a reader a structure that exists nowhere else.
+
+*Counter-example:* github.com/billsix/geometricalgebra `Frame.to_invertible_function`'s peel inverse.
+The frame's orthogonal set is built first-to-last, so only the *last* orthogonal vector is
+perpendicular to all the others, and the peel solves the last coordinate first: back-substitution,
+`case [*earlier, (w, v)]`. A head-first rewrite orthogonalized the frame from its last vector instead.
+It gave the same answers, but needed a set found nowhere else in the code, the book or the Lean model,
+so it was reverted (`tasks/reference/frames-qr-and-reciprocal-frames.md` there, "Why the order is
+last-first").
 
 **Worked example — orthogonalizing a frame (github.com/billsix/geometricalgebra, `frame.py`).**
 Gram–Schmidt over a list of vectors. The first draft used *accumulator-passing*: carry the

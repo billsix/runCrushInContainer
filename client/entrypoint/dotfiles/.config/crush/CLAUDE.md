@@ -413,8 +413,9 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   the three recursions you keep hand-writing; reach for the most specific scheme that fits (map
   for a 1:1 transform, filter for selection, fold/`reduce` last), and hand-write recursion only
   when none fits. When you recurse, shape it to the data (nil/cons: base case + recursive case),
-  head first (handle `[head, *tail]`'s head, then recurse; if the tail seems to have to come first,
-  reorder how the data is built before settling), and do per-element work by mapping over the tail, not by threading a hand-rolled accumulator;
+  head first when the data is in that order (`[head, *tail]`; when the data's construction makes
+  the last element the solvable one, as in back-substitution, tail-first is right; don't build the
+  data reversed just to start at the head), and do per-element work by mapping over the tail, not by threading a hand-rolled accumulator;
   keep an accumulator only when genuinely needed and name it `acc`. Per-language spelling differs
   (in Python map/filter is a comprehension; no TCO, so recurse only over bounded structures, else
   iterate). Read on demand before writing or reviewing a non-trivial recursion:
