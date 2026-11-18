@@ -28,6 +28,15 @@ Read first: `tasks/reference/crush-context-assembly.md` (how the Crush system pr
 re-measure procedure), then "Decisions needed" below. Current state: Lever 1 and decisions 1–2 are done
 (see Status); only decision 3, the personal-overlay split, remains, and the maintainer has deferred it.
 
+## Re-measured 2026-11-18: the client side doubled
+
+`tools/measure_context.py` (results in `tasks/measure-preseeded-context.md`) shows the Crush client's
+always-loaded layer is no longer lean. The baked conventions grew from 27 KB to 57,785 B (~14.4K tok),
+and the personal overlay from 32 KB to 66,721 B (~16.7K tok). With the template, tool schemas and
+skills, every session starts at 44,799 tokens, 68% of the 65,536 window. The overlay's container
+template section alone is 14,756 tokens, so decision 3 below is now worth about twice what it was. The
+claim under "Decisions needed" that the Crush baked conventions need no trim no longer holds.
+
 ## The always-loaded set, measured (2026-09-14)
 
 **runClaudeInContainer — mounted every Claude Code session (`~/.claude/`):**

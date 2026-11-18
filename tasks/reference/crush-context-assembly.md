@@ -19,7 +19,7 @@ The first request to the model is **system prompt + tool schemas + the conversat
 Only the **system prompt** is project-dependent and is where bloat lives: it is the base "coder"
 template with the project's context files, the per-user global context files, the skills XML, and a
 git-status summary all spliced in. On a big repo the context files dominate — geometricalgebra's own
-`/work/CLAUDE.md` is ~75 KB (~18.7K tokens) by itself. Tool schemas and the base template are
+`/work/CLAUDE.md` was ~75 KB (~18.7K tokens) by itself in September (58.6 KB on 2026-11-18). Tool schemas and the base template are
 roughly fixed per session. To attribute the total, instrument the system-prompt assembly (the
 `crush-context-debug.patch`, below) and compare its total against the provider-reported input
 tokens; the gap is tools + messages.
@@ -88,6 +88,45 @@ The system prompt is attached at `agent.go:687` (`fantasy.WithSystemPrompt`), to
 So: **CTXDBG `system-prompt-total`** (below) vs the UI's input tokens → the difference is the tool
 schemas plus the messages. On the *first* turn the only message is the user's prompt, so the gap is
 essentially the fixed tool-schema overhead.
+
+## Measuring it statically: `tools/measure_context.py`
+
+The CTXDBG patch measures a real session, but it needs a specially built image and a manual run.
+`tools/measure_context.py` gives the same breakdown from the files alone, with no container, network
+or Crush build, so the numbers can be re-checked after any edit to a conventions file:
+
+```sh
+python3 tools/measure_context.py [PROJECT_DIR ...] [--overlay FILE] [--window TOKENS ...] \
+    [--tokenize-url http://127.0.0.1:8080] [--sections N]
+```
+
+What it models, and where each rule comes from:
+- **Global files:** each `option global-context-path` in `client/entrypoint/crushrc`, or Crush's two
+  defaults when there is none (`internal/config/load.go`).
+- **Project files:** `defaultContextPaths`, parsed from the vendored `internal/config/config.go`, looked
+  up in the project root as if it were mounted at `/work`, with directory entries walked recursively
+  and paths deduplicated case-insensitively.
+- **`@`-import:** `expandContextImports` from `client/patches/crush-at-import.patch`, mirrored exactly
+  (whole-line `@path`, `~` = `/root`, relative to the importing file, depth 5, one shared `visited`
+  set, a missing target left literal).
+- **Container paths:** `/root/.config/crush/` maps to the baked
+  `client/entrypoint/dotfiles/.config/crush/`, except the personal overlay, which maps to `--overlay`.
+  The default is the host file `make shell` mounts (`~/.ai-coding-conventions.personal.md`), or a
+  sandbox's copy at `~/.claude/`.
+- **Fixed parts:** the base template is read from the vendored `coder.md.tpl`. Tool schemas (8,000),
+  skills XML (304) and git status (650) exist only at run time, so they come from the 2026-09-13
+  CTXDBG run above. Re-measure them with the patch after a Crush bump or a tool-set change.
+- **Tokens:** `(bytes + 3) / 4`, Crush's own estimate. `--tokenize-url` counts with a llama-server's
+  `/tokenize` instead, which is exact for the model that server runs. That only works where the tunnel
+  ends (the Linux host), not from an agent sandbox.
+
+It prints the global layer, each project's addition, the total as a share of every registered window,
+and the largest `#`/`##` sections across all spliced files, which are the deferral candidates.
+
+**First run, 2026-11-18:** the global layer was **44,799 tokens, 68% of the 65,536 window**; the
+largest single section was the personal overlay's container-template contract at 14,756 tokens; and
+the template + tools + skills floor was ~13.7K. The full results and recommendations are in
+`tasks/measure-preseeded-context.md`.
 
 ## Where the log goes, and how to read it
 

@@ -19,7 +19,7 @@ read-only reuse of the host store.
 ```
 [LEVEL 1 — HOST]  make image                          [LEVEL 2 — INSIDE THE SANDBOX]  podman build (nested)
   host rootless podman                                  inner rootful-in-userns podman
-  FROM fedora:44 → dnf → build Crush → COPY             FROM <base> → RUN … → COMMIT
+  FROM fedora:45 → dnf → build Crush → COPY             FROM <base> → RUN … → COMMIT
         │                                                     │  writable layers ↓        base images ↑ (read-only)
         ▼                                                     ▼                           │
   ~/.local/share/containers/storage   ◄────reused read-only────┐                          │
@@ -41,7 +41,7 @@ reuse machinery is **only** Level 2.
 `cd client && make image` runs `podman build -t crushcontainer` with the host's **rootless** podman.
 Pipeline (see `client/Dockerfile`):
 
-1. `FROM registry.fedoraproject.org/fedora:44`.
+1. `FROM registry.fedoraproject.org/fedora:45`.
 2. `RUN --mount=type=cache …; dnf upgrade` — the dnf cache is a **build-time cache mount**,
    discarded after the build (not a layer, not in the image).
 3. Package install scripts (`00-install-minimal.sh`, `01-install-base.sh` — the shared ~430-package
