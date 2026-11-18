@@ -215,6 +215,35 @@ Settled 2026-07-18 from what the maintainer accepted and declined:
   helper. Check that this is correct: the helper must never need the outer value, and none of
   its other names (parameters, pattern captures, locals) may hide an enclosing binding it does
   need. (William Emerison Six <billsix@gmail.com>, 2026-11-06.)
+- **A nested function reads only names bound before it, never one bound later in the enclosing
+  function.** Python looks a closure's free names up when it is *called*, so code like this runs:
+
+  ```python
+  def backward_by_peel(y): ...        # reads `orthogonal`, bound below
+  match method:
+      case Method.PEEL:
+          orthogonal = build()
+          backward = backward_by_peel
+  ```
+
+  But the reader meets a name before its definition, and the code needs a comment to explain why
+  it works. The fix: make the later-computed data a parameter, and bind it where it is computed
+  with `functools.partial`. The dispatch then picks the function *and* its data, and the function's
+  signature shows what it depends on:
+
+  ```python
+  def backward_by_peel(orthogonal, y): ...
+  match method:
+      case Method.PEEL:
+          backward = functools.partial(backward_by_peel, build())
+  ```
+
+  This comes up with the "inner functions first, dispatch at the bottom" shape below, because the
+  dispatch is where per-variant data gets computed. `ty` types a `partial` precisely: it checks the
+  bound arguments and the remaining signature against a `Callable[...]` annotation. A lambda would
+  work too, but ruff's E731 rejects assigning one, and it hides the signature. (Found in
+  github.com/billsix/geometricalgebra `Frame.to_invertible_function`; William Emerison Six
+  <billsix@gmail.com>, 2026-11-18.)
 
 **"Inner-fn first, guards below" is a consequence of the above, not the goal.** When an
 extraction is earned, the inner function(s) carrying the core operation go up top (closing

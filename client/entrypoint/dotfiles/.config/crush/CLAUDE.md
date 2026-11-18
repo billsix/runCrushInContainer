@@ -424,7 +424,8 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   e.g. `getattr(obj, name, fallback)`, or repeat a cheap expression); declare a name at the point of
   use; nest a helper that has one caller inside that caller, and give its parameter the caller's name
   when it means the same thing, so it deliberately shadows the outer binding (verify the helper never
-  needs the outer value). Python wording + example: `~/.config/crush/reference/python-coding-standard.md`
+  needs the outer value); a nested function reads only names bound *before* it, and data computed
+  later goes in as a parameter (in Python, bound with `functools.partial`). Python wording + example: `~/.config/crush/reference/python-coding-standard.md`
   ("Inline a value used once…").
 - **C++: follow the shared coding standard** — what clang-format / clang-tidy / the warning level
   enforce, plus the judgment calls they can't check (`auto` with intent and qualifiers, initialize-
