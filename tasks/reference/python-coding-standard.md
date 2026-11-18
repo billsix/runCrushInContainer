@@ -50,6 +50,30 @@ type-checks the file; set only the ty entry and `ruff` / `make format` still lin
 half-exclusion. The worked example lives in your project's additions doc. (William Emerison Six
 <billsix@gmail.com>, 2026-11-02.)
 
+## Notebook cells: turn the unused-expression rule off once, never per line
+
+A notebook cell (jupytext `# %%` percent format, or `.ipynb`) usually ends in a bare expression,
+because that expression is the cell's output. pyright reports each one as
+`reportUnusedExpression`, and ruff's B018 reports the bare names and attributes among them when it
+is selected. **Never answer that with a per-line `# pyright: ignore[reportUnusedExpression]` or
+`# noqa: B018`.** One trailer per cell clutters every cell a reader looks at. Turn the rule off once,
+for the notebooks only. In order of preference:
+
+1. **Scoped by directory, in the project config.** Give each notebook directory a pyright
+   execution environment with the rule off, and give the rest of the repo its own root so it keeps
+   the default. In `pyrightconfig.json` (or `[tool.pyright]`):
+   `"executionEnvironments": [{"root": "notebooks", "reportUnusedExpression": "none"}, {"root": "src"}]`.
+   For ruff: `[tool.ruff.lint.per-file-ignores]` `"notebooks/*.py" = ["B018"]`. The notebooks carry
+   no comment at all. This needs the editor's language server rooted at the repo, so that it reads
+   the config.
+2. **One header line per notebook**, when a notebook must work outside the repo's config (a file
+   handed around on its own): `# pyright: reportUnusedExpression=false` as its first comment. That is
+   one line per file, not one per cell.
+
+Avoid turning the rule off at the top level of the config: that also silences it for library and
+test code, where an unused expression is usually a bug. (Tested with pyright 1.1.414 for all three
+forms, William Emerison Six <billsix@gmail.com>, 2026-11-18.)
+
 ## Line length is the formatter's job, NOT a design input
 
 `ruff format` (via `make format`, which the maintainer runs) wraps long lines
