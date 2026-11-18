@@ -219,6 +219,10 @@ VIMRC_MOUNT := $(shell if [ -f $(VIMRC_REAL_PATH) ]; then echo "-v $(VIMRC_REAL_
 # path is un-dotted (matches runClaudeInContainer).
 PERSONAL_FILE := $(HOME)/.ai-coding-conventions.personal.md
 PERSONAL_MOUNT := $(shell touch $(PERSONAL_FILE) 2>/dev/null; echo "-v $(PERSONAL_FILE):/root/.config/crush/ai-coding-conventions.personal.md:z")
+# The overlay's read-on-demand half (the container-template spec): not @-imported, so it costs no
+# context until a session reads it; the overlay names it. Same touch-then-mount shape as above.
+PERSONAL_TEMPLATE_FILE := $(HOME)/.ai-coding-conventions.personal.template.md
+PERSONAL_MOUNT += $(shell touch $(PERSONAL_TEMPLATE_FILE) 2>/dev/null; echo "-v $(PERSONAL_TEMPLATE_FILE):/root/.config/crush/ai-coding-conventions.personal.template.md:z")
 
 # Diversion stack: intentionally NOT mounted or created on the host. It is IN-SESSION only
 # (a within-session depth gauge), so it lives on the ephemeral --rm overlay at

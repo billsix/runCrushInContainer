@@ -1,115 +1,40 @@
-# Trim the always-loaded conventions layer (Lever 2 — global, every-session context)
+# Trim the always-loaded context files (done)
 
-**Status:** parked — only the overlay split (decision 3) remains, **deferred by the maintainer
-(2026-09-14)**. Done so far: **Lever 1** (per-project `CLAUDE.md` trims) across every repo
-(2026-09-13/14). **Decision 2** (2026-09-14) — the five `@`-imported reference docs demoted to
-triggered read-on-demand pointers in runClaude's mounted conventions (~18.5K tok/session; Crush
-already did this). **Decision 1** (2026-09-14) — runClaude's conventions body condensed 134.5 KB →
-49.9 KB (−63%), rationale/examples relocated verbatim into 10 new topic reference docs + `print-debugging.md`;
-runCrush's baked conventions were already the lean port, so no change there.
-**Decision 3 un-parked 2026-11-18** (William Emerison Six <billsix@gmail.com>: "whatever you recommend"): do (a), the split — move the overlay's container-template section to a read-on-demand file.
+**Done:** 2026-11-18 (William Emerison Six <billsix@gmail.com>). Spans three repos: this one,
+github.com/billsix/runClaudeInContainer, and github.com/billsix/dotfiles (the personal overlay).
 
-**Priority:** 8 (parked — deferred)
-**Difficulty:** 3
+The always-loaded conventions layer (cross-project conventions, `@`-imported reference docs, the
+personal overlay) is paid on every turn of every session, in both sandboxes. How Crush assembles it,
+and how to measure it: `tasks/reference/crush-context-assembly.md`.
 
-## BLUF
+## What was done
 
-Per-project `CLAUDE.md` files are now trimmed everywhere (Lever 1). Lever 2 is the **always-loaded
-conventions layer** — the cross-project conventions + `@`-imported reference docs + the personal
-overlay, paid on *every* turn of *every* session. Measuring both sandboxes (2026-09-14) shows this
-bloat is **almost entirely runClaudeInContainer, not the Crush client** — the Crush port is already
-lean. So Lever 2 is mostly a runClaude job plus the shared overlay, and it is **not a mechanical trim
-like Lever 1**: it partly reverses the maintainer's deliberate "auto-load conventions so they're never
-skipped" design, so it needs explicit decisions before any edit.
+- **Lever 1 (2026-09-13/14):** per-project `CLAUDE.md` trims in every repo; work record
+  `tasks/archive/2026/09/14/trim-claude-md.md` here, and the same in each project repo.
+- **Decision 1 (2026-09-14):** runClaude's conventions `CLAUDE.md` condensed 133.5 KB → 49.9 KB
+  (−63%). Every rule stayed inline; rationale and examples moved verbatim into 10 topic reference
+  docs plus `print-debugging.md`. runCrush's baked conventions were already the lean port then.
+- **Decision 2 (2026-09-14):** the five `@`-imported reference docs in runClaude's conventions became
+  triggered read-on-demand pointers (~18.5K tok/session), as Crush already did.
+- **Decision 3 (2026-11-18):** parked by the maintainer on 2026-09-14, un-parked after
+  `tools/measure_context.py` showed the overlay had grown from 32 KB to 66.7 KB
+  (`tasks/archive/2026/11/18/measure-preseeded-context.md`). The overlay's "My project layout (the
+  container-per-project template)" section (59 KB, ~14.7K tok) moved verbatim to a new dotfiles file,
+  `.ai-coding-conventions.personal.template.md`. The overlay keeps a one-paragraph summary and a
+  trigger saying when to read it (creating, conforming or reviewing a project's container files, or
+  when a new project is mounted). The `client/Makefile` here and runClaude's `Makefile` touch and
+  mount host `~/.ai-coding-conventions.personal.template.md` beside the overlay (`~/.config/crush/`
+  and `~/.claude/`); it is not `@`-imported. Both `FORKING.md` files and runClaude's conventions
+  "My project layout" section name the new file.
 
-## Context
+## Result
 
-Read first: `tasks/reference/crush-context-assembly.md` (how the Crush system prompt is assembled, and the
-re-measure procedure), then "Decisions needed" below. Current state: Lever 1 and decisions 1–2 are done
-(see Status); only decision 3, the personal-overlay split, remains, and the maintainer has deferred it.
+`python3 tools/measure_context.py --overlay <dotfiles overlay>`: the Crush global layer went from
+44,799 to **30,237 tokens (68% → 46% of the 65,536 window)**; the overlay from 16,681 to 2,118
+tokens. Claude Code sessions drop the same ~14.6K. The largest remaining sections are the baked
+conventions' "Code conventions" (2,436 tok) and a handful near 1K, listed in the measure task's
+recommendation 2 (not done; no task yet).
 
-## Re-measured 2026-11-18: the client side doubled
-
-`tools/measure_context.py` (results in `tasks/measure-preseeded-context.md`) shows the Crush client's
-always-loaded layer is no longer lean. The baked conventions grew from 27 KB to 57,785 B (~14.4K tok),
-and the personal overlay from 32 KB to 66,721 B (~16.7K tok). With the template, tool schemas and
-skills, every session starts at 44,799 tokens, 68% of the 65,536 window. The overlay's container
-template section alone is 14,756 tokens, so decision 3 below is now worth about twice what it was. The
-claim under "Decisions needed" that the Crush baked conventions need no trim no longer holds.
-
-## The always-loaded set, measured (2026-09-14)
-
-**runClaudeInContainer — mounted every Claude Code session (`~/.claude/`):**
-
-| Piece | Size | ~Tok |
-|---|---|---|
-| conventions `CLAUDE.md` (`entrypoint/dotfiles/.claude/CLAUDE.md`) | 133,501 B | ~33.4K |
-| `@`-import `llm-overused-phrases.md` | 29,341 B | ~7.3K |
-| `@`-import `nested-podman-design.md` | 15,741 B | ~3.9K |
-| `@`-import `claude-config-layering.md` | 12,695 B | ~3.2K |
-| `@`-import `print-debugging.md` | 8,721 B | ~2.2K |
-| `@`-import `sandbox-capability-map.md` | 7,203 B | ~1.8K |
-| `@`-import personal overlay (host file) | 32,080 B | ~8.0K |
-| **total** | **~239 KB** | **~60K/session** |
-
-**runCrushInContainer — baked into the client, every Crush session (`~/.config/crush/`):**
-
-| Piece | Size | ~Tok |
-|---|---|---|
-| baked conventions `CLAUDE.md` (the condensed port) | 27,505 B | ~6.9K |
-| `@`-import personal overlay (host file) | 32,080 B | ~8.0K |
-| **total** | **~60 KB** | **~15K/session** |
-
-The Crush client is **already lean**: the port condensed the conventions to 27.5 KB (vs runClaude's
-133.5 KB for the same rules) and made the reference docs **read-on-demand** (on disk at
-`~/.config/crush/reference/`, not `@`-imported). So the client's only Lever-2 item is the shared
-32 KB overlay. **The ~45K-tok/session excess lives in runClaude.**
-
-## The design tension (why this is not a free win)
-
-runClaude's size is **deliberate**: its own conventions state the `@`-imports exist so the content is
-"loaded by the harness, not by my choosing" — the fix for "CLAUDE.md tells me to read X but I skip
-it." Trimming Lever 2 trades that never-skipped guarantee for context savings. The Crush port already
-chose the opposite (lean + read-on-demand). So Lever 2 = **bring runClaude toward the Crush model**,
-which reverses a stated design choice — the maintainer's call, not a discretionary bulk edit. The
-personal overlay is additionally a **host file** (personal content), so how to split it is the
-maintainer's too.
-
-## Decisions needed (each with a recommendation)
-
-1. **✓ DONE 2026-09-14 — did (a): condensed to 49.9 KB (−63%), all rules kept inline, rationale/examples
-   relocated verbatim into 10 new topic reference docs (`task-doc-conventions`, `reference-doc-conventions`,
-   `communication-conventions`, `code-style-conventions`, `git-workflow-conventions`, `versioning-and-changelogs`,
-   `codegen-conventions`, `nested-run-and-gates`, `shell-and-gate-scripts`, `diversion-stack-and-scope`) +
-   appended to `print-debugging.md`; all 53 headings preserved. runCrush's baked conventions were already lean.**
-   *(Original framing:)* **runClaude conventions `CLAUDE.md` (133.5 KB → ?).** The Crush port proves the same rules fit in
-   ~27.5 KB. Recommend **(a) condense toward the port's density** — keep every *rule* inline, move
-   worked-examples/rationale/history to read-on-demand reference docs — saving ~25K tok/session.
-   Alt: (b) leave as-is (you want the full detail always in front of the agent).
-2. **✓ DONE 2026-09-14 — the maintainer chose (a): demote ALL five with triggered pointers.** All
-   five are now referenced read-on-demand at task triggers in runClaude's mounted conventions
-   (`llm-overused-phrases`'s distilled list stays inline); ~18.5K tok/session removed. *(Original
-   options, for the record:)* **The 5 `@`-imported reference docs (~73.7 KB / ~18K tok, runClaude only).** Recommend **(c) split**:
-   keep the always-relevant `llm-overused-phrases.md` `@`-imported; demote the situational ones
-   (`nested-podman-design`, `sandbox-capability-map`, `print-debugging`, `claude-config-layering`) to
-   read-on-demand (matching Crush), pointed at from the conventions. Alt: (a) demote all (max saving,
-   most reversal of the design) or (b) keep all auto-loaded.
-3. **Personal overlay (32 KB / ~8K tok, both sandboxes — a host file).** Recommend **(a) split**:
-   essentials (identity, project→URL map, standing authorizations) stay always-loaded; the long
-   project-template/spec detail → a read-on-demand personal reference doc. You'd steer what counts as
-   essential since it's your content. Alt: (b) leave as-is.
-
-The Crush baked conventions need no trim (already condensed); only the overlay decision (#3) touches
-the client side.
-
-## Verification
-
-- After edits, re-run each sandbox and confirm the always-loaded token count dropped as expected
-  (Crush: `CRUSH_CONTEXT_DEBUG=1` + `grep CTXDBG .crush/logs/crush.log`; runClaude: compare the
-  mounted-file sizes / the session's reported context).
-
-## Related
-
-- `tasks/archive/2026/09/14/investigate-context-bloat-geometricalgebra.md` (archived) — the diagnosis + method.
-- `tasks/reference/crush-context-assembly.md` — how the system prompt is assembled; the re-measure procedure.
-- Lever 1 work records: `tasks/archive/2026/09/{13,14}/trim-claude-md.md` (this repo) and the same in every project repo.
+**Host step the change needs:** copy both dotfiles files to the host home
+(`~/.ai-coding-conventions.personal.md` and `~/.ai-coding-conventions.personal.template.md`) and
+relaunch the sandbox. Until then the Makefiles mount an empty template file.
