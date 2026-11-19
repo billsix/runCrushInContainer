@@ -81,8 +81,8 @@ Crush's "no LSP client handles file" is expected there); measure both sizes and 
 project's `CLAUDE.md`; a project with nothing optional (pyNuklear) adopts the standard by stating so.
 
 **For new projects:** the template's Makefile flag block uses the `MINIMAL_IMAGE`-keyed form above for
-every optional flag. The template spec lives in the maintainer's personal overlay
-(`~/.ai-coding-conventions.personal.md`, host-side); the line to add there is the `make` block above.
+every optional flag. The template spec lives in the read-on-demand half of the maintainer's
+personal overlay (`~/.ai-coding-conventions.personal.template.md`, host-side); the line to add there is the `make` block above.
 The tracked cross-project `CLAUDE.md` documents `MINIMAL_IMAGE` as an option under "Running projects in
 a nested container".
 

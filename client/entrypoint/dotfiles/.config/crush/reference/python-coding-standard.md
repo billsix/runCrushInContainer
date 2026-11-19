@@ -543,8 +543,8 @@ code breaks later at import or type-check.
   every transitive dependency), install with `-c constraints.txt`, and regenerate it from a
   `make update-pins` target (needs the network) — never by hand. Direct pins alone leave the
   transitive deps free to drift, and a drifted transitive dep breaks things far from its cause.
-  The image/packaging mechanics are the container-template contract (the personal overlay's
-  "Self-contained images" + "Python deps" sections), not this code-style doc.
+  The image/packaging mechanics are the container-template contract (the "Self-contained images"
+  + "Python deps" sections of the personal overlay's `ai-coding-conventions.personal.template.md`), not this code-style doc.
 - **Every `uv pip install` in the image takes `-c constraints.txt`, or else installs nothing a
   later constrained layer installs again.** A `Dockerfile` often `COPY`s `constraints.txt` late,
   so a pin bump doesn't re-run the slow layers above it. An early, unpinned install of a package
