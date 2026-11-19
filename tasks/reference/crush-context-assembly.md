@@ -76,7 +76,7 @@ Findings that generalize:
   files spliced.
 - The always-loaded CLAUDE.md files being the entire problem is the lesson: an oversized project or
   global CLAUDE.md is paid on **every** turn. Trim record:
-  `tasks/trim-crush-context-files.md`, work record `tasks/archive/2026/09/14/investigate-context-bloat-geometricalgebra.md`.
+  `tasks/archive/2026/11/18/trim-crush-context-files.md`, work record `tasks/archive/2026/09/14/investigate-context-bloat-geometricalgebra.md`.
 
 ## L2 — the authoritative total, and where the gap is
 
@@ -126,7 +126,8 @@ and the largest `#`/`##` sections across all spliced files, which are the deferr
 **First run, 2026-11-18:** the global layer was **44,799 tokens, 68% of the 65,536 window**; the
 largest single section was the personal overlay's container-template contract at 14,756 tokens; and
 the template + tools + skills floor was ~13.7K. The full results and recommendations are in
-`tasks/measure-preseeded-context.md`.
+`tasks/archive/2026/11/18/measure-preseeded-context.md`. Moving the overlay's container template to
+a read-on-demand file the same day took the global layer to 30,237 tokens (46%).
 
 ## Where the log goes, and how to read it
 

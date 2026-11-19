@@ -40,13 +40,17 @@ Since September the global layer doubled, from 59,146 B to 124,506 B. The overla
 is 42% of a 32K window and 84% of a 16K one, so with Crush a 16K model is unusable and a 32K one needs
 the conventions cut to a few thousand tokens.
 
-## Recommendations (the maintainer's to decide; nothing was trimmed)
+## Recommendations (the maintainer's to decide)
+
+Recommendation 1 was done the same day: the global layer is now 30,237 tokens (46% of 65,536);
+see `tasks/archive/2026/11/18/trim-crush-context-files.md`. Recommendations 2–4 are not done.
+
 
 1. **Defer the personal overlay's "My project layout (the container-per-project template)" section:
    14,756 tokens, 23% of a 64K window, in every session.** It is a conformance reference needed only
    when working on a project's Dockerfile/Makefile/entrypoint. Move it to a read-on-demand reference
    doc with a short trigger line in the overlay. This alone takes the global layer from 44.8K to about
-   30K. It is decision 3 in `tasks/trim-crush-context-files.md` (parked by the maintainer 2026-09-14),
+   30K. It is decision 3 in `tasks/archive/2026/11/18/trim-crush-context-files.md` (parked by the maintainer 2026-09-14),
    now twice the size it was then. The overlay is the maintainer's own file (github.com/billsix/dotfiles)
    and Claude Code loads it too.
 2. **Move the baked conventions' long sections behind triggers**, as runClaudeInContainer did in

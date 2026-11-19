@@ -42,7 +42,10 @@ conflicts.
    `~/.ai-coding-conventions.personal.md` on your host and fill in your identity, project→URL mapping,
    and standing authorizations. The client Makefile mounts that file over the baked blank default
    (which the conventions `@`-import), creating it empty if absent. Empty is fine — you just get the
-   portable conventions with nothing added.
+   portable conventions with nothing added. Long material the overlay only needs now and then can go
+   in `~/.ai-coding-conventions.personal.template.md`, mounted beside it at
+   `~/.config/crush/ai-coding-conventions.personal.template.md` and not `@`-imported, so it costs no
+   context until the overlay says to read it.
 
 4. **Your dotfiles.** Replace `client/entrypoint/dotfiles/.extrabashrc` (prompt/aliases) with your own.
 
