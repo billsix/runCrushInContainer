@@ -482,6 +482,11 @@ identity, project→URL mapping, mount layout, standing authorizations, any pers
 agent picks them up every session, while the conventions tracked in this repo stay maintainer-agnostic.
 So you customize the setup without editing anything tracked: just fill in that host file. Start from
 `client/entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md`; see `FORKING.md`.
+Optionally, a long read-on-demand spec (e.g. your project template) goes in the host's
+**`~/.ai-coding-conventions.personal.template.md`**, which `make shell` mounts at
+`~/.config/crush/ai-coding-conventions.personal.template.md` (auto-created empty if absent). It is not
+`@`-imported; your overlay says when the agent should read it. Both files go directly in your **host**
+home directory; relaunch `make shell` after creating one.
 
 ## Forking
 
