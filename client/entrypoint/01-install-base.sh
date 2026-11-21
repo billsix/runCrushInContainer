@@ -64,6 +64,7 @@ dnf install -y \
     cairo-devel \
     cargo \
     ccache \
+    chromium \
     clang \
     clang-analyzer \
     clang-devel \
