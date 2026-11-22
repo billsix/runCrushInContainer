@@ -145,6 +145,13 @@ every assignment binding carries its own explicit type too**, including obvious 
 waved through as noise (`n: int = 3`, `total: float = 0.0`) — do NOT skip a binding
 (William Emerison Six <billsix@gmail.com>, 2026-09-28). Holds in library code
 (`r: Versor = a * b`) AND in throwaway `tasks/adhoc/` scripts.
+**A doctest is code under this rule too:** every binding on a `>>>` line carries its type
+(`>>> v: Vector = 2 * e_1 + 3 * e_2`), and a name bound by an unpack is declared on its own
+`>>>` line above (`>>> x: sympy.Symbol`, then `>>> x, k = sympy.symbols("x k")`), exactly as
+the code around the docstring would write it. The example imports whatever its annotations
+name. A reader copies a doctest, so it models the house style; and since `ty` does not read
+inside a docstring, a project with an annotation checker extends it to doctest examples
+(William Emerison Six <billsix@gmail.com>, 2026-11-22).
 **Loop/unpack / `with as` / `except as` targets** can't carry an inline annotation, and a
 project's completeness checker deliberately **exempts** them — so by default **leave them
 inferred**, matching what the project's existing code does. Add a type on the line *above*
@@ -495,6 +502,8 @@ def zero(cls) -> Self:
   types + meaning.
 - An existing doctest moves under an `Example:` header (napoleon renders it; it still runs
   under `pytest --doctest-modules`).
+- **A doctest's bindings are annotated like any other code** (`>>> name: T = ...`) — see
+  "Type annotations — annotate every binding".
 - **Prefer a doctest over a plain `pytest` test by default** — an `example → output` belongs in the
   docstring next to the code, collected by `--doctest-modules`. The rule, the keep-as-pytest
   exceptions, the migration/consolidation hazards (dangling `pinned by tests/…` references, book
