@@ -183,8 +183,10 @@ agnostic; the examples are Python because that is where it came up.
   plot helpers, net **-75 lines**. Giving each caller its own private copy of the helper
   would have been *more* duplication, not less — so "extract a local helper" was the
   wrong instinct even though something clearly needed extracting.
-- **Nest it when it closes over the enclosing function's parameters** and names a real
-  phase of the algorithm. A BFS routine split into `breadth_first_parents` /
+- **Nest it when it closes over the enclosing function's parameters, or when it has exactly one
+  caller,** and names a real phase of the algorithm (`nest_one_caller.py`, in this directory,
+  does the one-caller case mechanically; a helper with a doctest or one another file imports
+  stays at module level). A BFS routine split into `breadth_first_parents` /
   `walk_back`, both capturing the endpoints, reads as the algorithm; its tail collapsed
   to one line.
 - **Do neither when the helper would be used exactly once** and exists only to reshape

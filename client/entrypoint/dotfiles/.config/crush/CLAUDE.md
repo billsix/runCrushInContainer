@@ -487,7 +487,7 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   the default branch (raise, documented fallback, or explicit no-op with reason). `match`/`switch` +
   mandatory default. (Don't over-apply to plain two-branch conditionals.)
 - **Extract a function for duplication or to name a distinct phase — not to reshape control flow.**
-  Lift to shared scope when >1 caller needs it; nest when it closes over the enclosing params. A
+  Lift to shared scope when >1 caller needs it; nest when it has one caller or closes over the enclosing params. A
   single-use helper that only avoids a mutation isn't worth it.
 - **Never orphan a word on its own comment line** — reflow the whole paragraph, not the offending
   line. Don't reflow lists, tables, aligned literals, commented-out code, or line-structure that is
