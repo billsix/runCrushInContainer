@@ -3,8 +3,10 @@
 **Reference document** — the detail behind the terse rules in `~/.config/crush/CLAUDE.md`: "A
 multi-step check script must propagate every step's failure", "A format-on-exit hook `cd`s to the
 repo root first" and "Batch container runs don't take `-it`", plus the executable-bit and
-run-anywhere rules for format scripts. Read it when writing or reviewing a gate or format script, a
-Makefile `podman run` target, or a shell-exit hook, or after editing a committed script.
+run-anywhere rules for format scripts and the bash naming and scope rules ("Names and scope in
+bash"), which apply to every bash script. Read it when writing or reviewing a gate or format script
+or any other bash script, a Makefile `podman run` target, or a shell-exit hook, or after editing a
+committed script.
 
 Copied from github.com/billsix/runClaudeInContainer `tasks/reference/shell-and-gate-scripts.md`
 (William Emerison Six <billsix@gmail.com>, 2026-11-13). Only that doc's portable sections are here,
@@ -125,3 +127,56 @@ does run, the pty merges stderr into stdout and turns `\n` into `\r\n`, so logs,
 `grep` see mangled output. If one tool inside an otherwise batch target is interactive, keep `-it`
 on that target and say why in a comment next to it. (William Emerison Six <billsix@gmail.com>,
 2026-11-13.)
+
+## Names and scope in bash — inline what is used once, `local` at the point of use, no nested helpers
+
+The bash wording of the five naming and scope rules in `python-coding-standard.md` ("Inline a value
+used once, and name it in a comment instead of a binding" and "What earns an extraction"). This doc is
+the only bash standard there is, so the section lives here; it applies to any bash script, not only to
+gate scripts. (William Emerison Six <billsix@gmail.com>, 2026-11-25.)
+
+**How bash scopes names, since the rules depend on it.** A variable is global to the script unless a
+function declares it `local`. `local` is dynamically scoped: a function sees the locals of whoever
+called it. Every function is global, and one defined inside another function becomes global the first
+time the outer one runs. The only scopes that isolate are a subshell (`( … )`, `$( … )`) and each side
+of a pipeline.
+
+**1. A variable assigned once and used once is inlined**, with a comment above the expression that names
+it (`"$(dirname "${BASH_SOURCE[0]}")"` goes straight into the `cd`). Keep the assignment when it does
+something the expression alone cannot:
+
+- **The command's failure must stop the script.** `set -e` ignores a command substitution that fails
+  inside another command's arguments (`echo "$(false)"` carries on), and so does `local x="$(cmd)"`,
+  which returns `local`'s own status (shellcheck SC2155). A command whose failure matters is assigned in
+  a statement of its own: `local version` and then `version="$(read_version)"`.
+- **It is a regular expression for `[[ … =~ … ]]`**, which has to be an unquoted variable to be read as
+  a pattern.
+- **It is a table or a setting:** an array of files or cases, a `readonly` constant in the block at the
+  top of the script that a reader edits, or a default the environment may override
+  (`: "${IMAGE_TAG:=latest}"`).
+- **It reads a value before a later command changes its source** (`status=$?` on the line after the
+  command, before anything else runs).
+
+**2. Two uses do not automatically earn a name.** "This value, or a fallback" is `${VAR:-default}`; "this
+value, or stop" is `${VAR:?message}`; a suffix or prefix removed is `${path%.sh}` or `${path##*/}`.
+
+**3. Assign at the point of use.** Inside a function, write `local` on the line that first assigns the
+variable, not in a block at the top. In a script's main body, assign beside the use. The one deliberate
+exception is the settings block at the top of the script.
+
+**4. Nesting a helper inside its caller does not apply to bash.** Functions are global, so a function
+written inside another is not scoped to it; it only looks as if it were, and it does not exist until the
+outer one has run. A function with one caller stays at the top level, defined directly above that
+caller, and it earns its place by naming a phase; one that exists only to reshape control flow is
+inlined. When the aim is to keep a helper's variables from leaking, give it a subshell body
+(`helper() ( … )`), which also discards any `cd` or `set` it does.
+
+**5. Declare every variable in a function `local`, the loop variables included.** That is the bash form
+of deliberate shadowing: `local path` inside a function hides the caller's `path`, and without it the
+function overwrites the caller's variable (`for i in …` in a function leaves a global `i` behind). The
+reverse leak also exists: a function can read its caller's locals. Don't rely on it; pass the value as an
+argument.
+
+**What shellcheck reports:** SC2034 (a variable assigned and never used), SC2155 (declare and assign
+separately) and SC2154 (a variable read and never assigned). Nothing reports a single-use variable, so
+rules 1 to 3 are review rules.

@@ -427,7 +427,10 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   when it means the same thing, so it deliberately shadows the outer binding (verify the helper never
   needs the outer value); a nested function reads only names bound *before* it, and data computed
   later goes in as a parameter (in Python, bound with `functools.partial`). Python wording + example: `~/.config/crush/reference/python-coding-standard.md`
-  ("Inline a value used once…").
+  ("Inline a value used once…"). **How to nest is per language** (each standard's "Locals and helpers"
+  section): Rust a nested `fn`, or a closure when it captures a local; JavaScript a nested function;
+  C++ a named function directly above its caller, not a lambda; bash never (functions are global;
+  `~/.config/crush/reference/shell-and-gate-scripts.md`, "Names and scope in bash").
 - **C++: follow the shared coding standard** — what clang-format / clang-tidy / the warning level
   enforce, plus the judgment calls they can't check (`auto` with intent and qualifiers, initialize-
   and-`const`, RAII/`unique_ptr` with non-owning raw pointers, the four parameter shapes, `enum

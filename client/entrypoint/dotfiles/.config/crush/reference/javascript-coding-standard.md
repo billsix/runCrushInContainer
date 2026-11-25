@@ -97,6 +97,64 @@ them visible. (Tool-agnostic — holds under Deno or the npm fallback.)
   and `rust-coding-standard.md` "annotate every binding"): sweep the whole file/project only in a repo I
   maintain; in someone else's repo JSDoc-type the code I *add*, and don't restyle the rest.
 
+## (b) Judgment calls — locals and helpers: inline what is used once, nest a one-caller helper
+
+The JavaScript wording of the five naming and scope rules in `python-coding-standard.md` ("Inline a
+value used once, and name it in a comment instead of a binding" and "What earns an extraction"); the
+language-agnostic summary is `code-style-conventions.md` ("Names: inline what is used once, declare at the
+point of use, nest and shadow"). JavaScript's nested functions and closures work as Python's do, so the
+rules carry over almost unchanged; this section says where the spelling differs. (William Emerison Six
+<billsix@gmail.com>, 2026-11-25.)
+
+**1. A `const` bound once and used once is inlined**, with a comment above the expression that names it.
+This takes precedence over "JSDoc types on every binding": don't keep a single-use `const` to hang a
+`@type` on. Where the value comes from an opaque source, the cast form carries the type with no binding:
+`render(/** @type {Snapshot} */ (await invoke("do_move", { from, to })));`. Keep the binding when it does
+something the expression alone cannot:
+
+- **It is a snapshot taken before an `await`.** Other handlers run while a function is suspended, so
+  `const count = latest.review;` before `await confirm(…)` is not the same value as `latest.review` read
+  afterwards. A copy of shared, mutable state that must not change under the function stays a binding.
+- **It is a call made for its side effect** (a DOM write, an IPC call whose result is read later): it
+  stays a statement, because inlining it into an argument hides the effect.
+- **It reads a value before a later statement changes its source.**
+- **The name carries information the expression does not:** a test's input, expected value or case
+  table; a table of rows (a palette, a list of permutations); a step of the method that teaching code
+  exists to show.
+
+**2. Two uses do not automatically earn a name.** "This value, or a fallback" is `??`, `?.`, `??=`, a
+default parameter or `map.get(k) ?? fallback`. A cheap expression (`xs.length`) is repeated. Keep the name
+when repeating would read worse or compute something expensive twice.
+
+**3. Declare at the point of use, in the smallest block.** `const` by default, `let` only for a name that
+is reassigned, never `var`: a `var` belongs to the whole function wherever it is written, which defeats
+the rule.
+
+**4. A helper with one caller is nested inside that caller**, as in Python.
+
+- **Form:** a `function` declaration at the top of the caller's body, or a `const` arrow function at the
+  point of use when it is short. A `function` declaration is not written inside an `if` or loop block
+  (its scope there differs between strict and sloppy code); use a `const` arrow function in a block.
+- **A nested function reads only names bound before it.** A `function` declaration is hoisted, and a
+  closure may name a `const` declared further down; the call then works only if it happens after that
+  line runs, and throws a `ReferenceError` otherwise. Declare the data first, or pass it as a parameter.
+- **It stays at module level** when it is exported, when a test imports it, or when something outside
+  the module names it (an HTML attribute, a framework that looks a function up by name). A function
+  called once from the module's top level has no caller to nest into.
+- **Cost:** a closure is created each time the caller runs. That is negligible, except in a caller that
+  runs per frame or per element of a large collection; leave such a helper at module level and say why.
+- **Do neither** when the helper would exist only to reshape control flow.
+
+**5. Shadow deliberately, and verify it.** Give the nested helper's parameter the caller's name when it
+holds the same kind of value, so the reader knows the outer binding is out of play inside the helper.
+Check that the helper never needs the outer value and that none of its other names hides a binding it
+does need. A project whose linter reports shadowing (ESLint's `no-shadow`) suppresses it at the site with
+the reason.
+
+**No tool nests a JavaScript helper** (`nest_one_caller.py` reads Python only). The linter's `no-var`,
+`prefer-const` and unused-variable rules cover part of rule 3; nothing reports a single-use binding or a
+one-caller function, so these are review rules.
+
 ## The `make type-check` target
 
 A `.PHONY`, `## `-documented `make type-check` run in-container — the JS sibling of the Python `type-check`

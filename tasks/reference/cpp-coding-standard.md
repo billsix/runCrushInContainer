@@ -133,6 +133,66 @@ misc-const-correctness` finds never-modified locals mechanically; the change is 
 section — but where a raw `T*`/iterator is the right tool, qualify it this way. The same idiom lives
 in the C standard, `c-coding-standard.md`.)
 
+### Locals and helpers — inline what is used once; a one-caller helper stays a named function
+
+The C++ wording of the five naming and scope rules in `python-coding-standard.md` ("Inline a value
+used once, and name it in a comment instead of a binding" and "What earns an extraction"); the
+language-agnostic summary is `code-style-conventions.md` ("Names: inline what is used once, declare at
+the point of use, nest and shadow"). The reasons are the Python doc's; this section says what each rule
+means in C++ and where C++ differs, which is mainly rule 4. (William Emerison Six
+<billsix@gmail.com>, 2026-11-25.)
+
+**1. A local declared once and used once is inlined**, with a comment above the expression that names
+it. Don't keep a single-use `const` local to show a type. Keep the declaration when it does something
+the expression alone cannot:
+
+- **It is an RAII object.** A `std::lock_guard`, a stream, a scope timer: the declaration is the scope
+  of the effect, and an unnamed temporary would end it at the semicolon.
+- **Something refers into it.** A reference, pointer, `std::string_view`, span or iterator into a
+  temporary dangles once the full expression ends, so the object those refer to stays a named local
+  (`const std::string line{read()};` before a `string_view` into it).
+- **It is a call made for its side effect, or one of two such calls.** The order in which a function's
+  arguments are evaluated is unspecified, so two calls that each have an effect are never inlined into
+  one argument list; each stays its own statement, in the order intended.
+- **It copies a value before a later statement changes its source** (`const int from{app.pending_from};`
+  then `app.clear_pending();`). Inlining it changes the result.
+- **It is the target of an out-parameter** (`double width{0}; dc.GetTextExtent(text, &width, …);`).
+- **The name carries information the expression does not:** a test's input, expected value or case
+  table; a table of rows; a step of the method that teaching code exists to show.
+
+**2. Two uses do not automatically earn a name.** "This value, or a fallback" is
+`std::optional::value_or`, `std::max`/`std::clamp` or `try_emplace`; a lookup used in a test and then in
+that branch is an `if` with an initializer (`if (const auto it{m.find(k)}; it != m.end())`), which
+scopes the name to the branch. A cheap expression (`xs.size()`) is repeated.
+
+**3. Declare at the point of first use, in the smallest scope** — `ES.5`/`ES.21`, stated under
+"Initialize everything; `const` by default" above.
+
+**4. A helper with one caller stays a named function, defined directly above that caller; it is not
+turned into a lambda.** C++ has no nested function. A lambda is the nearest thing, but it cannot be
+overloaded, recursion needs extra machinery, it appears as `operator()` in a stack trace or profile,
+and a doctest `TEST_CASE` cannot sit beside it. So:
+
+- **In a `.cpp` file** the helper goes in the file's anonymous namespace; **in a header** it is an
+  `inline` function in a `detail` namespace. Either way the definition sits immediately before the
+  function that calls it, which gives the reader the nearness that nesting gives in Python.
+- **A lambda is for local state:** use one when the helper captures the caller's locals (the "Lambdas"
+  section below), declared at the point of use.
+- **A private member function with one caller stays a member** when it needs `this`. A function that a
+  `TEST_CASE` calls has a second caller. A handler bound to a toolkit event, or drawn once per frame
+  from the frame function, names a phase and stays.
+- **Do neither** when the helper would exist only to reshape control flow.
+
+**5. Do not shadow.** Rule 5 in Python makes a nested helper's parameter hide the caller's binding on
+purpose. A C++ helper is a separate function, so its parameters take the caller's names for the same
+kind of value with no shadowing involved, and the reader gets the same signal. Inside a lambda, a
+parameter may not repeat the name of an explicit capture (the program is ill-formed), and one that
+repeats a name taken by a default capture hides it and is reported by `-Wshadow`; give it another name.
+
+**No tool does this for C++** (`nest_one_caller.py` reads Python only). `clang-tidy
+misc-const-correctness` and `-Wunused-variable` report what they name; nothing reports a single-use
+local or a one-caller function, so these are review rules.
+
 ### Ownership and lifetime — RAII, `unique_ptr`, raw pointers never own
 
 - **Resources are owned by objects** (`R.1`): memory, files, locks, handles are acquired in a
