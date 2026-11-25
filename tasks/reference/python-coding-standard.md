@@ -256,6 +256,14 @@ Settled 2026-07-18 from what the maintainer accepted and declined:
   the caller) but has only one caller. Nesting shows its scope at a glance; the only cost is
   creating a function object per call of the caller, negligible unless that caller runs in a
   tight loop.
+- **`nest_one_caller.py` does the nesting mechanically** (same directory as this doc, mounted at
+  `~/.claude/reference/`; Crush: `~/.config/crush/reference/`).
+  `python3 ~/.claude/reference/nest_one_caller.py --dry-run FILE ...` lists what would move and what
+  is skipped and why; it keeps a helper at module level when it has a doctest (a nested function is
+  not collected), is named by another file, holds a triple-quoted string, or reads a name its caller
+  rebinds. It cascades: a helper that becomes single-caller once its sibling nests nests too. Run the
+  formatter afterwards, then reflow any comment or docstring paragraph it pushed past the line limit
+  (a formatter does not reflow prose).
 - **When nesting, shadow deliberately, and verify the shadowing.** Give the nested helper's
   parameter the caller's name when it holds the same kind of value (`peel(remaining, y)`
   inside `backward(y)`), so the reader knows the outer binding is out of play inside the
