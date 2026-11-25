@@ -217,6 +217,22 @@ dimension computation used in a check and again in that check's error message.
 the reader carry it across everything in between. Move it down to where it is used, or, if it is
 used once, inline it there.
 
+**A name that documents what it holds keeps its binding.** Inlining removes a name that only
+restates its expression. Keep the binding when the name carries information the expression
+does not:
+
+- a test's input, expected value or case table: a reader scans an assertion for them;
+- a table of rows (`faces`, `corners`, `edges`) or the named corners of a shape: the name says
+  what the rows are;
+- a slice of a packed array named for its layout (`positions`, `normals`, `texcoords`);
+- a call made for its side effect (`glGenBuffers`, a subprocess whose output is read
+  afterwards): it stays a statement, because inlining it into an argument hides the effect;
+- a value computed before a later statement changes its inputs (`dt = now - last_time`, then
+  `last_time = now`): inlining it changes the result, not only the shape.
+
+(William Emerison Six <billsix@gmail.com>, 2026-11-25, from applying these rules across the
+Programming3DComputerGraphics repository.)
+
 Worked example: gacalc's `Frame.to_invertible_function` refactor, 2026-11-06 (that project's
 additions doc). Earlier examples, 2026-10-29: `rest_orthogonal_to_v` in
 `frame.make_orthogonal_frame` and the `prepended` blade in `Gn._geometric_product`, each inlined
