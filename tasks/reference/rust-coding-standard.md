@@ -102,6 +102,78 @@ repo it is:**
   buries what I actually changed and isn't my call. Use my style for my additions, or the project's own
   documented style where it has a conflicting one.
 
+### Locals and helpers — inline what is used once, declare at the point of use, nest a one-caller helper
+
+The Rust wording of the five naming and scope rules in `python-coding-standard.md` ("Inline a value
+used once, and name it in a comment instead of a binding" and "What earns an extraction"); the
+language-agnostic summary is `code-style-conventions.md` ("Names: inline what is used once, declare at
+the point of use, nest and shadow"). The reasons are the Python doc's; this section says what each rule
+means in Rust and where Rust differs. (William Emerison Six <billsix@gmail.com>, 2026-11-25.)
+
+**1. A `let` bound once and used once is inlined.** This takes precedence over "annotate every
+binding": don't keep a single-use `let` to give its value a type. Put a comment above the expression
+that names it, or, in a `format!`-family call, keep the name as a named argument with no binding
+(`format!("{moves} {noun}", noun = if moves == 1 { "move" } else { "moves" })`; an inline capture takes
+only an identifier, so the expression goes in the argument list). Where the inlined expression needs a
+type for inference, use the turbofish the annotation rule already allows where there is no binding.
+Keep the binding when it does something the expression alone cannot:
+
+- **It owns a value that a later borrow needs.** A temporary is dropped at the end of its statement, so
+  `let line: String = read(); let word: &str = line.trim();` cannot become `read().trim()` held across
+  statements (error E0716). Likewise a `let mut x` exists so that `&mut x` can be passed.
+- **It is a guard.** A `MutexGuard`, an open `File`, a tracing span or any other value whose `Drop` does
+  the work lives as long as its binding, so the binding is the scope of the lock. Name it (`_guard`);
+  `let _ = …` drops it at once.
+- **It is a clone made to move into a closure** (`let d: Dialog = dlg.clone();` before
+  `button.on_click(move |_| d.end_modal(ID_OK))`). The closure needs its own value; put the pair in a
+  block so the clone's name ends with it.
+- **It reads a value before a later statement moves or changes its source**
+  (`let failed: bool = result.error.is_some(); results.push(result);`). Inlining it would read after the
+  move, which does not compile, or after the change, which compiles and is wrong.
+- **The name carries information the expression does not:** a test's input, expected value or case
+  table; a table of rows; and, in teaching code, a step of the method being taught (three calls to the
+  same function bound to names that say which sub-problem each one solves).
+
+**2. Two uses do not automatically earn a name.** "This value, or a fallback" is `Option::unwrap_or`,
+`unwrap_or_else`, `map_or` or `HashMap::entry(k).or_insert_with(f)`; "use it if present" is `if let`
+or `let … else`, which bind the name only in the branch that needs it. A cheap expression (`xs.len()`)
+is repeated. Keep the name when repeating would read worse or compute something expensive twice.
+
+**3. Declare a `let` at the point of use, in the smallest block.** A block is an expression, so a value
+that takes several statements to build is `let x: T = { … };` and its working names end with the block.
+
+**4. A helper with one caller is nested inside that caller.** Which form depends on what it reads:
+
+- **It reads none of the caller's locals: a nested `fn` item**, at the top of the caller's body, before
+  the statements (clippy's pedantic `items_after_statements` asks for the same place). A nested `fn` is
+  an ordinary item: it costs nothing per call, may recurse, and cannot see the caller's locals, its
+  generic parameters or `Self` (error E0401), so everything it needs is a parameter.
+- **It reads a local: a closure**, declared at the point of use, after the locals it captures. A
+  closure borrows what it captures until its last use, so declare it late and let it end early. A
+  closure cannot call itself; a recursive helper is a nested `fn` that takes the captured values as
+  parameters.
+- **It stays at module level** when a `#[cfg(test)]` function calls it (a second caller), when it has a
+  doctest (a doctest is compiled as a separate crate and calls the item by its path, and a nested `fn`
+  has none; rustdoc does run an example written on a nested item, but the example cannot call it),
+  when it is `pub`, or when it is a method:
+  a method with one caller stays in its `impl`, because it needs `self`. The same holds for the
+  arms of a dispatch (one method per command, each called once from the `match`) and for a function
+  passed to a framework as a callback: each names a phase, and its real caller is the dispatch or the
+  framework.
+- **Do neither** when the helper would exist only to reshape control flow: a block expression,
+  `let … else` or a labelled block gives the early exit or the scoped locals without a function.
+
+**5. Shadow deliberately.** Rebinding a name to its next form (`let line: &str = line.trim();`) is the
+idiom; prefer it to `line_trimmed` when the old value is out of play, and never reuse a name for an
+unrelated value (clippy's `shadow_unrelated`). A nested `fn` cannot see the caller's locals, so giving
+its parameter the caller's name for the same kind of value is always safe. In a closure a parameter
+with the caller's name hides the capture: check that the closure never needs the outer value.
+
+**No tool nests a Rust helper** (`nest_one_caller.py` reads Python only), and no lint reports a
+single-use binding. What the toolchain does catch: `clippy::let_and_return` (a `let` returned on the
+next line), rustc's `unused_variables`, and, where a project turns them on, the `shadow_*` restriction
+lints, which a deliberate shadow then suppresses at the site with the reason.
+
 ### Imports and `use` — unqualified types, module-qualified functions, no globs
 
 - **Import types and traits and use them unqualified** — `use regex::Regex;` then `Regex`, not
