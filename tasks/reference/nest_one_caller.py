@@ -235,9 +235,10 @@ def nest_once(
         return None
 
 
-    def start_line(fn: FunctionNode, lines: list[str]) -> int:
+    def start_line(fn: ast.stmt, lines: list[str]) -> int:
         """The first line (0-based) of ``fn``: decorators and comments above it."""
-        first: int = min([d.lineno for d in fn.decorator_list] + [fn.lineno]) - 1
+        decorators: list[ast.expr] = getattr(fn, "decorator_list", [])
+        first: int = min([d.lineno for d in decorators] + [fn.lineno]) - 1
         while first > 0 and lines[first - 1].lstrip().startswith("#"):
             first -= 1
         return first
@@ -285,7 +286,7 @@ def nest_once(
             if isinstance(first, ast.Expr)
             and isinstance(first.value, ast.Constant)
             and isinstance(first.value.value, str)
-            else first.lineno - 1
+            else start_line(first, lines)
         )
         print(f"  nest  {path.name}: {name} -> {caller}")
         rest: list[str] = lines[:top] + lines[end:]
