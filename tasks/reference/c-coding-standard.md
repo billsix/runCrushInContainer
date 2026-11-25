@@ -162,6 +162,64 @@ destructors, no references, and no templates to lean on.
   It is the lighter move when the phases are not worth separate functions; when a phase is
   substantial, reused, or has a name worth stating, pull it into its own named function instead.
 
+### Locals and helpers — inline what is used once; a one-caller helper is `static` above its caller
+
+The C wording of the five naming and scope rules in `python-coding-standard.md` ("Inline a value used
+once, and name it in a comment instead of a binding" and "What earns an extraction"); the
+language-agnostic summary is `code-style-conventions.md` ("Names: inline what is used once, declare at
+the point of use, nest and shadow"). The reasons are the Python doc's; this section says what each rule
+means in C and where C differs, which is mainly rule 4. `cpp-coding-standard.md` ("Locals and helpers")
+is the C++ sibling. (William Emerison Six <billsix@gmail.com>, 2026-11-25.)
+
+**1. A local declared once and used once is inlined**, with a comment above the expression that names
+it. Keep the declaration when it does something the expression alone cannot:
+
+- **It is the target of an out-parameter**, or anything else whose address is taken
+  (`size_t length = 0; read_line(file, buffer, &length);`).
+- **It saves a value before a later call changes its source.** `const int saved_errno = errno;` before
+  the `close` in an error path is the standard case; a count read before the list it counts is
+  cleared is another.
+- **It is a call made for its side effect, or one of two such calls.** The order in which a function's
+  arguments are evaluated is unspecified, so two calls that each have an effect are never inlined into
+  one argument list; each stays its own statement, in the order intended.
+- **It would otherwise be an argument to a function-like macro.** A macro may expand its argument more
+  than once, so an expression with a side effect or a real cost is evaluated into a local first.
+- **It holds a result that has to be checked** (`const ssize_t written = write(fd, buffer, length);`
+  followed by the test for `-1`): that is two uses.
+- **The name carries information the expression does not:** a test's input, expected value or case
+  table; a table of rows; a step of the method that teaching code exists to show.
+
+**2. Two uses do not automatically earn a name.** C has no library call for "this value, or a fallback";
+a conditional expression does it (`name != nullptr ? name : "(none)"`), and a cheap expression
+(`count - 1`, a struct field) is repeated. A call that walks its argument (`strlen`) is not cheap: its
+result keeps a name.
+
+**3. Declare at the point of first use, in the smallest scope**, stated under "Scope and
+initialization" above, including the bare `{ }` phase block for a variable that only one phase needs.
+
+**4. A helper with one caller stays a `static` function, defined directly above that caller.** ISO C
+has no nested function. GCC accepts one as an extension, clang does not compile it, and where it is
+accepted, taking its address needs an executable stack; do not use it. So:
+
+- **Define the helper `static`, in the same file, immediately before the function that calls it.** No
+  prototype is then needed, and the reader gets the nearness that nesting gives in Python.
+- **It stays non-`static`, declared in a header,** when a test in another translation unit calls it; that
+  test is a second caller. A function whose address goes into a table or is passed as a callback
+  (a `qsort` comparator, a signal handler, an opcode's handler in a dispatch table) names a phase and
+  stays, however few direct calls it has.
+- **Do neither** when the helper would exist only to reshape control flow: a bare block scopes the
+  locals without a function.
+
+**5. Do not shadow.** `-Wshadow` is in the gate, and an inner declaration that hides an outer one is a
+finding. A helper is a separate function, so its parameters take the caller's names for the same kind
+of value with no shadowing involved, and the reader gets the signal rule 5 gives in Python. A
+function-like macro that declares a local can hide the caller's variable of the same name; that is one
+more reason to prefer a `static inline` function (below).
+
+**No tool does this for C** (`nest_one_caller.py` reads Python only). `-Wunused-variable`,
+`-Wunused-function` (a `static` function with no caller at all) and `-Wshadow` report what they name;
+nothing reports a single-use local or a one-caller function, so these are review rules.
+
 ### Types — fixed width, the right size type, real booleans
 
 - **Use the explicit-width types from `<stdint.h>`** (`int32_t`, `uint64_t`, `int_least16_t`,
