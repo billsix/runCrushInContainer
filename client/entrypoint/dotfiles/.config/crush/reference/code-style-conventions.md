@@ -212,7 +212,9 @@ William Emerison Six <billsix@gmail.com>, 2026-11-06, while refactoring gacalc's
 Each rule is reworded for its language, with the bindings that language must keep, in
 `rust-coding-standard.md`, `cpp-coding-standard.md`, `c-coding-standard.md`,
 `haskell-coding-standard.md` and `javascript-coding-standard.md` ("Locals and helpers") and, for bash,
-in `shell-and-gate-scripts.md` ("Names and scope in bash") (2026-11-25).
+in `shell-and-gate-scripts.md` ("Names and scope in bash") (2026-11-25). `survey_names_and_scope.py`,
+in this directory, lists the leads for those languages: functions named exactly twice and locals named
+exactly twice inside their function. Its counts are textual, so read each lead.
 
 - **A name bound once and used once is inlined, even if it was there to explain the expression.** A
   reader who meets a declaration scans ahead to see how far it is used, and a single-use binding makes
