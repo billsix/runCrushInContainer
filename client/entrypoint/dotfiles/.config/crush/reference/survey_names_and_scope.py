@@ -214,7 +214,13 @@ def survey(language: Language, root: pathlib.Path, tracked: list[str]) -> None:
             found: re.Match[str] | None = pattern.match(line)
             if found is None:
                 continue
-            uses: int = sum(len(re.findall(rf"\b{found.group(1)}\b", row)) for row in body)
+            # A Haskell signature line (`name :: Type`) names the binding without using it.
+            signature: re.Pattern[str] = re.compile(rf"^\s*(?:let\s+)?{found.group(1)}\s*::[^=]*$")
+            uses: int = sum(
+                len(re.findall(rf"\b{found.group(1)}\b", row))
+                for row in body
+                if not (language is Language.HASKELL and signature.match(row))
+            )
             if uses == 2:
                 print(f"{function.path}:{function.line + offset}: {line.strip()}")
 
