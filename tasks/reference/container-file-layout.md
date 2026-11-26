@@ -135,6 +135,7 @@ the baked `~/.config/crush/reference/…` path**; in repo docs cite
 | `shell-and-gate-scripts.md` | no | yes (portable sections copied from runClaudeInContainer; added 2026-11-13) — **keep in sync** |
 | `repo-review-conventions.md` | yes | yes (copied from runClaudeInContainer; added 2026-11-08) — **keep in sync** |
 | `review_status.py` (a tool, not a doc) | yes | yes (copied from runClaudeInContainer; added 2026-11-09) — **keep the copies byte-identical** |
+| `survey_names_and_scope.py` (a tool, not a doc) | yes | yes (copied from runClaudeInContainer; added 2026-11-25) — **keep the copies byte-identical** |
 | `javascript-coding-standard.md` | no | yes (copied from runClaudeInContainer) |
 | `reimplementing-third-party-libraries.md` | no | yes (copied from runClaudeInContainer) |
 | `token-and-context-economy.md` | yes | yes (copied from runClaudeInContainer) — **keep in sync** |

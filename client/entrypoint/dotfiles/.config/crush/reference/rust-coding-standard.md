@@ -118,6 +118,9 @@ only an identifier, so the expression goes in the argument list). Where the inli
 type for inference, use the turbofish the annotation rule already allows where there is no binding.
 Keep the binding when it does something the expression alone cannot:
 
+- **Its value takes several lines.** Inlined, a multi-line expression sits inside another expression
+  (a three-line conditional among a call's arguments), which is harder to read than the name was. Rule
+  1 is for a value that fits on one source line.
 - **It owns a value that a later borrow needs.** A temporary is dropped at the end of its statement, so
   `let line: String = read(); let word: &str = line.trim();` cannot become `read().trim()` held across
   statements (error E0716). Likewise a `let mut x` exists so that `&mut x` can be passed.

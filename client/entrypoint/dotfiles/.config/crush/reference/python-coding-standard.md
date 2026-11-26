@@ -217,6 +217,11 @@ dimension computation used in a check and again in that check's error message.
 the reader carry it across everything in between. Move it down to where it is used, or, if it is
 used once, inline it there.
 
+**A value that takes several lines keeps its name.** Inlined, a multi-line expression sits
+inside another expression (a three-line conditional among a call's arguments), which is harder
+to read than the name was. Inline a single-use value when it fits on one source line. (Decided
+by William Emerison Six <billsix@gmail.com>, 2026-11-26.)
+
 **A name that documents what it holds keeps its binding.** Inlining removes a name that only
 restates its expression. Keep the binding when the name carries information the expression
 does not:

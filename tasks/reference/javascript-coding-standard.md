@@ -112,6 +112,9 @@ This takes precedence over "JSDoc types on every binding": don't keep a single-u
 `render(/** @type {Snapshot} */ (await invoke("do_move", { from, to })));`. Keep the binding when it does
 something the expression alone cannot:
 
+- **Its value takes several lines.** Inlined, a multi-line expression sits inside another expression
+  (a three-line conditional among a call's arguments), which is harder to read than the name was. Rule
+  1 is for a value that fits on one source line.
 - **It is a snapshot taken before an `await`.** Other handlers run while a function is suspended, so
   `const count = latest.review;` before `await confirm(…)` is not the same value as `latest.review` read
   afterwards. A copy of shared, mutable state that must not change under the function stays a binding.

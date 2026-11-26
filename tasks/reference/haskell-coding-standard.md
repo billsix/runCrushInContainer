@@ -142,6 +142,70 @@ and list each binding of the required kinds that lacks a type.
 - **Haddock every top-level binding and type:** `-- |` above it, and `-- ^` after a constructor or
   field. Describe what it does now; history goes in the commit message.
 
+### Locals and helpers — inline what is used once; a one-caller helper goes in `where`
+
+The Haskell wording of the five naming and scope rules in `python-coding-standard.md` ("Inline a value
+used once, and name it in a comment instead of a binding" and "What earns an extraction"); the
+language-agnostic summary is `code-style-conventions.md` ("Names: inline what is used once, declare at
+the point of use, nest and shadow"). The reasons are the Python doc's; this section says what each rule
+means in Haskell and where Haskell differs, which is mainly rule 5. (William Emerison Six
+<billsix@gmail.com>, 2026-11-25.)
+
+**1. A `let` or `where` binding used once is inlined**, with a comment above the expression that names
+it. This takes precedence over "annotate every binding": don't keep a single-use binding to give its
+value a signature; where the type helps the reader, annotate the expression (`(fromIntegral n ::
+Word32)`). A pure binding can always be inlined without changing the result, so the reasons to keep
+one are about cost, effects and meaning:
+
+- **Its value takes several lines.** Inlined, a multi-line expression sits inside another expression
+  (a three-line conditional among a call's arguments), which is harder to read than the name was. Rule
+  1 is for a value that fits on one source line.
+- **It is shared.** A binding outside a lambda or a local function, used once inside it, is computed
+  once for all the calls; inlined into the body it is computed on every call.
+- **It is forced on purpose.** `let !total = …` evaluates at that line; without the binding the
+  evaluation moves to wherever the value is demanded, and an accumulation can leak.
+- **It is a monadic bind.** `x <- action` is a call made for its effect, at that point in the sequence.
+  It stays a statement, except where the pipeline form reads plainly (`mapM_ putStrLn =<< readLines
+  path`).
+- **Several guards read it.** A `where` binding used by more than one guard of an equation has more
+  than one use, even though each run reads it once.
+- **The name carries information the expression does not:** a test's input, expected value or case
+  table; a table of rows; a step of the algorithm that teaching code exists to show.
+
+**2. Two uses do not automatically earn a name.** "This value, or a fallback" is `fromMaybe`, `maybe`,
+`either` or `Map.findWithDefault`; "use it if present" is a `case` that binds the name only in the
+branch that needs it. Repeating an expression costs nothing in correctness, since it is pure; keep the
+name when the expression is long or expensive.
+
+**3. Bind in the smallest scope.** A value one branch needs is a `let` in that branch (or in that
+`do` block, on the line before its use), not a `where` over the whole equation. A `where` is for what
+several guards share and for helper functions. A top-level constant stays at the top level when it is
+costly to build: there it is evaluated once for the program, and inside a function's `where` it can be
+rebuilt on every call.
+
+**4. A helper with one caller goes in that caller's `where`**, not at the top level.
+
+- **Let it read the caller's arguments.** A `where` helper sees them, so drop the parameters that
+  were only passed through; this is the worker idiom (`go`), and what remains of the signature shows
+  what changes from call to call. It carries its own signature like any binding, with `forall` on the
+  caller when the helper's type names the caller's type variables (above).
+- **It stays at the top level** when it is exported, when a test module imports it, when another
+  top-level function also calls it, or when it is the handler for one constructor of a dispatch (one
+  function per opcode or command, each called once from the `case`): each of those names a phase, and
+  a `where` holding all of them would bury the dispatch.
+- **Do neither** when the helper would exist only to reshape control flow: a guard chain, a `case` or
+  `maybe`/`either` usually removes the need.
+
+**5. Do not shadow.** `-Wall` includes `-Wname-shadowing`, and the build is `-Werror`, so a `where`
+helper's parameter cannot repeat a name the caller binds. Rule 5 in Python hides the caller's binding
+to show it is out of play; in Haskell, show it by not passing the value at all (rule 4), and where
+the helper takes a different value of the same kind (the rest of a list, the next state), give it a
+name that says so (`rest`, `next`), not the caller's name with a prime.
+
+**What the tools report:** `-Wall` gives unused local bindings and name shadowing, and `hlint` suggests
+some inlinings (a redundant `let`, an eta reduction). Nothing reports a single-use binding or a
+one-caller top-level function, so rules 1 to 4 are review rules.
+
 ### Structure
 
 - **Name a recursion scheme rather than hand-writing it.** Use `map`, `filter`, a fold (`foldl'`
@@ -150,6 +214,7 @@ and list each binding of the required kinds that lacks a type.
 - **A `where` helper earns its name** by being used more than once, or by naming a phase of the
   function. That is the same test as the shared "what earns pulling code into its own function"
   rule. A `where` binding used once that only renames an expression is inlined, with a comment.
+  The full rules are in "Locals and helpers" above.
 - **IO at the edges:** keep pure logic in pure functions and the `IO` in a thin layer that calls
   them. It is easier to test and to read.
 

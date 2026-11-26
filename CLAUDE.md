@@ -109,7 +109,8 @@ copied into downstream projects' `tools/`. The **canonical** lives in `runClaude
 tasks/reference/`; these are kept byte-identical (edit the canonical there, re-copy here).
 `tools/check_helm_file_at_point.{sh,el}` (an ERT check that a vendored `.emacs.d`'s `C-x C-f` prefills a
 repo-root-relative doc path; `bash tools/check_helm_file_at_point.sh <.emacs.d>`) is likewise a byte-identical mirror of
-runClaudeInContainer's `tools/` copy.
+runClaudeInContainer's `tools/` copy. `survey_names_and_scope.py` (leads for the naming and scope rules
+in Rust, C++, C, Haskell, bash and JavaScript) is a shared tool run in place, mirrored the same way.
 `tools/measure_context.py` prints how much of each registered model's context window the
 preseeded context (conventions, overlay, project `CLAUDE.md`, template, tools) uses, with no
 build or network; see `tasks/reference/crush-context-assembly.md`.

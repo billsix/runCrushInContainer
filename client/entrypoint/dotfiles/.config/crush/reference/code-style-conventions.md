@@ -210,13 +210,18 @@ William Emerison Six <billsix@gmail.com>, 2026-11-06, while refactoring gacalc's
 `Frame.to_invertible_function`; the Python wording and worked example are in
 `python-coding-standard.md` ("Inline a value used once, and name it in a comment instead of a binding").
 Each rule is reworded for its language, with the bindings that language must keep, in
-`rust-coding-standard.md`, `cpp-coding-standard.md` and `javascript-coding-standard.md` ("Locals and
-helpers") and, for bash, in `shell-and-gate-scripts.md` ("Names and scope in bash") (2026-11-25).
+`rust-coding-standard.md`, `cpp-coding-standard.md`, `c-coding-standard.md`,
+`haskell-coding-standard.md` and `javascript-coding-standard.md` ("Locals and helpers") and, for bash,
+in `shell-and-gate-scripts.md` ("Names and scope in bash") (2026-11-25). `survey_names_and_scope.py`,
+in this directory, lists the leads for those languages: functions named exactly twice and locals named
+exactly twice inside their function. Its counts are textual, so read each lead.
 
 - **A name bound once and used once is inlined, even if it was there to explain the expression.** A
   reader who meets a declaration scans ahead to see how far it is used, and a single-use binding makes
   that scan pointless; the longer the function, the worse. Put a comment above the inlined
   subexpression that describes it and gives it its name instead.
+  A value that takes several lines keeps its name: inlined, it would sit inside another expression
+  and read worse than the name did.
 - **Two uses do not automatically earn a name.** Check whether one expression absorbs them: "this value,
   or a fallback if it is absent" is usually a library call with a default argument (`getattr(obj,
   name, fallback)`, `dict.get(key, default)`, `next(it, default)`, `std::optional::value_or`,
@@ -224,8 +229,9 @@ helpers") and, for bash, in `shell-and-gate-scripts.md` ("Names and scope in bas
   the name when repeating the expression would read worse or recompute something expensive.
 - **Declare a name at the point of use**, not many lines before it.
 - **A helper with one caller is nested inside that caller** where the language has a nested function (a
-  nested `def` in Python, a nested function in JavaScript, a `let`/`flet`/`labels` in Lisp, in Rust an
-  inner `fn` or, when it captures a local, a closure). Where it does not, keep it private and directly
+  nested `def` in Python, a nested function in JavaScript, a `where` helper in Haskell, a
+  `let`/`flet`/`labels` in Lisp, in Rust an inner `fn` or, when it captures a local, a closure). Where
+  it does not, keep it private and directly
   above its caller: `static` in C, an anonymous-namespace or `detail` function in C++ (a lambda only
   when it captures local state), a top-level function in bash, where every function is global.
 - **When nesting, shadow deliberately and verify it.** Give the helper's parameter the caller's name when
@@ -233,8 +239,10 @@ helpers") and, for bash, in `shell-and-gate-scripts.md` ("Names and scope in bas
   helper. Correct shadowing means the helper never needs the outer value, and none of its other names
   hide an enclosing binding it does need. A linter that warns on shadowing (`-Wshadow`, clippy's
   `shadow_*`, pylint `redefined-outer-name`) gets a narrow suppression with the reason at the site.
-  C++ and bash differ: a C++ helper is a separate function, so its parameters reuse the caller's names
-  with no shadowing, and in bash the rule becomes "declare every function variable `local`".
+  C, C++, Haskell and bash differ: a C or C++ helper is a separate function, so its parameters reuse
+  the caller's names with no shadowing; Haskell's `-Wall -Werror` build rejects shadowing, so a `where`
+  helper reads the caller's arguments and takes no parameter for them; and in bash the rule becomes
+  "declare every function variable `local`".
 
 ## Prefer total dispatch over an open-ended conditional chain
 

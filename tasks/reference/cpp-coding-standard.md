@@ -146,6 +146,9 @@ means in C++ and where C++ differs, which is mainly rule 4. (William Emerison Si
 it. Don't keep a single-use `const` local to show a type. Keep the declaration when it does something
 the expression alone cannot:
 
+- **Its value takes several lines.** Inlined, a multi-line expression sits inside another expression
+  (a three-line conditional among a call's arguments), which is harder to read than the name was. Rule
+  1 is for a value that fits on one source line.
 - **It is an RAII object.** A `std::lock_guard`, a stream, a scope timer: the declaration is the scope
   of the effect, and an unnamed temporary would end it at the semicolon.
 - **Something refers into it.** A reference, pointer, `std::string_view`, span or iterator into a

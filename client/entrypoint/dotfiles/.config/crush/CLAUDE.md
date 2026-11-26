@@ -421,7 +421,7 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   iterate). Read on demand before writing or reviewing a non-trivial recursion:
   `~/.config/crush/reference/recursive-design.md`.
 - **Names** (language-agnostic) — inline a binding used once and put a comment above the inlined
-  subexpression that gives it its name; two uses don't automatically earn a name either (absorb them,
+  subexpression that gives it its name (a value that takes several lines keeps its name); two uses don't automatically earn a name either (absorb them,
   e.g. `getattr(obj, name, fallback)`, or repeat a cheap expression); declare a name at the point of
   use; nest a helper that has one caller inside that caller, and give its parameter the caller's name
   when it means the same thing, so it deliberately shadows the outer binding (verify the helper never
@@ -429,7 +429,9 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   later goes in as a parameter (in Python, bound with `functools.partial`). Python wording + example: `~/.config/crush/reference/python-coding-standard.md`
   ("Inline a value used once…"). **How to nest is per language** (each standard's "Locals and helpers"
   section): Rust a nested `fn`, or a closure when it captures a local; JavaScript a nested function;
-  C++ a named function directly above its caller, not a lambda; bash never (functions are global;
+  Haskell a `where` helper (no shadowing: `-Wall -Werror` rejects it); C++ a named function directly
+  above its caller, not a lambda; C a `static` function directly above its caller; bash never
+  (functions are global;
   `~/.config/crush/reference/shell-and-gate-scripts.md`, "Names and scope in bash").
 - **C++: follow the shared coding standard** — what clang-format / clang-tidy / the warning level
   enforce, plus the judgment calls they can't check (`auto` with intent and qualifiers, initialize-
