@@ -29,6 +29,8 @@ Five naming and scope rules are written for every language in the shared coding 
 
 **The survey tool.** `python3 ~/.claude/reference/survey_names_and_scope.py [--language rust] [--exclude REGEX]` (canonical in github.com/billsix/runClaudeInContainer `tasks/reference/`; Crush: `~/.config/crush/reference/`) lists functions named exactly twice and locals named exactly twice inside their function, for Rust, C++, C, Haskell, bash and JavaScript. Its counts are textual: a callback passed by name, a trait method and a name repeated in a comment are miscounted, so read every lead. For Python, `python3 ~/.claude/reference/nest_one_caller.py --dry-run FILE ...` lists the one-caller helpers and why it would skip each.
 
+**The `entrypoint/*.sh` scripts are done** (2026-11-26, in the fleet-wide pass recorded in github.com/billsix/runClaudeInContainer `tasks/archive/2026/11/26/survey-entrypoint-template-scripts-naming-and-scope.md`): no changes; none of this repository's leads was a single-use assignment the rule removes. This task keeps the repository's other shell scripts.
+
 ## Plan
 
 - [ ] Settle scope: list the trees that are the maintainer's own code, and write the excluded ones here with the reason.
