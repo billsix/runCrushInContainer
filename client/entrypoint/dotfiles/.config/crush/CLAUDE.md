@@ -421,7 +421,7 @@ catalog with alternatives (read on demand): `~/.config/crush/reference/llm-overu
   iterate). Read on demand before writing or reviewing a non-trivial recursion:
   `~/.config/crush/reference/recursive-design.md`.
 - **Names** (language-agnostic) — inline a binding used once and put a comment above the inlined
-  subexpression that gives it its name; two uses don't automatically earn a name either (absorb them,
+  subexpression that gives it its name (a value that takes several lines keeps its name); two uses don't automatically earn a name either (absorb them,
   e.g. `getattr(obj, name, fallback)`, or repeat a cheap expression); declare a name at the point of
   use; nest a helper that has one caller inside that caller, and give its parameter the caller's name
   when it means the same thing, so it deliberately shadows the outer binding (verify the helper never

@@ -145,6 +145,9 @@ of a pipeline.
 it (`"$(dirname "${BASH_SOURCE[0]}")"` goes straight into the `cd`). Keep the assignment when it does
 something the expression alone cannot:
 
+- **Its value takes several lines.** Inlined, a multi-line expression sits inside another expression
+  (a three-line conditional among a call's arguments), which is harder to read than the name was. Rule
+  1 is for a value that fits on one source line.
 - **The command's failure must stop the script.** `set -e` ignores a command substitution that fails
   inside another command's arguments (`echo "$(false)"` carries on), and so does `local x="$(cmd)"`,
   which returns `local`'s own status (shellcheck SC2155). A command whose failure matters is assigned in

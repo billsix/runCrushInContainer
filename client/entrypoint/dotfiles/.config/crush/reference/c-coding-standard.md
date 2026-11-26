@@ -174,6 +174,9 @@ is the C++ sibling. (William Emerison Six <billsix@gmail.com>, 2026-11-25.)
 **1. A local declared once and used once is inlined**, with a comment above the expression that names
 it. Keep the declaration when it does something the expression alone cannot:
 
+- **Its value takes several lines.** Inlined, a multi-line expression sits inside another expression
+  (a three-line conditional among a call's arguments), which is harder to read than the name was. Rule
+  1 is for a value that fits on one source line.
 - **It is the target of an out-parameter**, or anything else whose address is taken
   (`size_t length = 0; read_line(file, buffer, &length);`).
 - **It saves a value before a later call changes its source.** `const int saved_errno = errno;` before

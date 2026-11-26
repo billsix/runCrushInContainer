@@ -220,6 +220,8 @@ exactly twice inside their function. Its counts are textual, so read each lead.
   reader who meets a declaration scans ahead to see how far it is used, and a single-use binding makes
   that scan pointless; the longer the function, the worse. Put a comment above the inlined
   subexpression that describes it and gives it its name instead.
+  A value that takes several lines keeps its name: inlined, it would sit inside another expression
+  and read worse than the name did.
 - **Two uses do not automatically earn a name.** Check whether one expression absorbs them: "this value,
   or a fallback if it is absent" is usually a library call with a default argument (`getattr(obj,
   name, fallback)`, `dict.get(key, default)`, `next(it, default)`, `std::optional::value_or`,

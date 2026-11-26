@@ -157,6 +157,9 @@ value a signature; where the type helps the reader, annotate the expression (`(f
 Word32)`). A pure binding can always be inlined without changing the result, so the reasons to keep
 one are about cost, effects and meaning:
 
+- **Its value takes several lines.** Inlined, a multi-line expression sits inside another expression
+  (a three-line conditional among a call's arguments), which is harder to read than the name was. Rule
+  1 is for a value that fits on one source line.
 - **It is shared.** A binding outside a lambda or a local function, used once inside it, is computed
   once for all the calls; inlined into the body it is computed on every call.
 - **It is forced on purpose.** `let !total = …` evaluates at that line; without the binding the
