@@ -11,8 +11,13 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
 # the local model, run `make vendor`, and host a runtime egress check (golang, git, ripgrep,
 # strace, tcpdump …). The full toolchain (01-install-base.sh) is layered on top below; both
 # always run, so the client is always the full dev image. See entrypoint/00-install-minimal.sh.
-COPY entrypoint/00-install-minimal.sh /usr/local/bin/
-RUN --mount=type=cache,target=/var/cache/libdnf5 \
+#
+# Each install or build script is bind-mounted into the one RUN that executes it: the
+# script's content is part of that layer's cache key, and no copy of it stays in the
+# image. One mount per script, with no relabel option. See
+# github.com/billsix/runClaudeInContainer tasks/reference/build-time-bind-mounts-for-install-scripts.md.
+RUN --mount=type=bind,source=entrypoint/00-install-minimal.sh,target=/usr/local/bin/00-install-minimal.sh \
+    --mount=type=cache,target=/var/cache/libdnf5 \
     --mount=type=cache,target=/var/lib/dnf \
     /usr/local/bin/00-install-minimal.sh
 
@@ -22,15 +27,15 @@ RUN --mount=type=cache,target=/var/cache/libdnf5 \
 # the crushrc declares. Formerly gated behind FULL_TOOLCHAIN (auto-minimal when nested), which
 # silently produced a language-server-less image on `make shell NESTED_PODMAN=1`; the gate was
 # removed 2026-09-12 — see tasks/reference/nested-podman-vs-image-content.md.
-COPY entrypoint/01-install-base.sh /usr/local/bin/
-RUN --mount=type=cache,target=/var/cache/libdnf5 \
+RUN --mount=type=bind,source=entrypoint/01-install-base.sh,target=/usr/local/bin/01-install-base.sh \
+    --mount=type=cache,target=/var/cache/libdnf5 \
     --mount=type=cache,target=/var/lib/dnf \
     /usr/local/bin/01-install-base.sh
 
 # shfmt and procs were dnf packages under Fedora 44 but were dropped in Fedora 45;
 # install them from upstream release binaries (own layer, own host-runnable script).
-COPY entrypoint/01b-install-binary-tools.sh /usr/local/bin/
-RUN /usr/local/bin/01b-install-binary-tools.sh
+RUN --mount=type=bind,source=entrypoint/01b-install-binary-tools.sh,target=/usr/local/bin/01b-install-binary-tools.sh \
+    /usr/local/bin/01b-install-binary-tools.sh
 
 # Lean 4 (theorem prover) via elan. install-lean.sh installs OFFLINE from the vendored
 # /vendor/elan when CRUSH_VENDORED=1 (airgap; the elan volume is mounted by the Makefile
@@ -40,8 +45,8 @@ RUN /usr/local/bin/01b-install-binary-tools.sh
 # patch-flag flip does not re-download Lean.
 ARG ELAN_VERSION=v4.2.4
 ARG LEAN_TOOLCHAIN=leanprover/lean4:v4.35.0
-COPY entrypoint/install-lean.sh /usr/local/bin/
-RUN ELAN_VERSION="$ELAN_VERSION" LEAN_TOOLCHAIN="$LEAN_TOOLCHAIN" /usr/local/bin/install-lean.sh
+RUN --mount=type=bind,source=entrypoint/install-lean.sh,target=/usr/local/bin/install-lean.sh \
+    ELAN_VERSION="$ELAN_VERSION" LEAN_TOOLCHAIN="$LEAN_TOOLCHAIN" /usr/local/bin/install-lean.sh
 ENV PATH="/root/.elan/bin:${PATH}"
 
 # --- RHEL 9 variant (UBI 9 / CentOS Stream 9 base): the Python language server from a /venv ---
@@ -124,11 +129,11 @@ ENV GOBIN=/usr/local/bin GOFLAGS=-trimpath
 COPY patches/ /patches/
 COPY entrypoint/vendor/ /usr/local/bin/vendor/
 RUN chmod +x /usr/local/bin/vendor/*.sh
-COPY entrypoint/03-build-crush.sh /usr/local/bin/
 # Build Crush from source (vendored or clone+vendor, then flag-guarded patches);
 # see entrypoint/03-build-crush.sh. ARGs aren't inherited by a child process, so
 # every flag is passed to the script explicitly.
-RUN --mount=type=cache,target=/root/.cache/go-build \
+RUN --mount=type=bind,source=entrypoint/03-build-crush.sh,target=/usr/local/bin/03-build-crush.sh \
+    --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/root/go/pkg/mod \
     CRUSH_TAG="$CRUSH_TAG" CRUSH_VENDORED="$CRUSH_VENDORED" CRUSH_AT_IMPORT="$CRUSH_AT_IMPORT" \
     CRUSH_SHELL_HISTORY="$CRUSH_SHELL_HISTORY" \
@@ -156,8 +161,8 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 # After the Crush build, so `make vendor` (VENDOR_TOOLS=1) and a normal build share every
 # layer above.
 ARG VENDOR_TOOLS=0
-COPY entrypoint/02-install-vendor-tools.sh /usr/local/bin/
-RUN --mount=type=cache,target=/var/cache/libdnf5 \
+RUN --mount=type=bind,source=entrypoint/02-install-vendor-tools.sh,target=/usr/local/bin/02-install-vendor-tools.sh \
+    --mount=type=cache,target=/var/cache/libdnf5 \
     --mount=type=cache,target=/var/lib/dnf \
     if [ "$VENDOR_TOOLS" = "1" ]; then /usr/local/bin/02-install-vendor-tools.sh; fi
 

@@ -137,6 +137,10 @@ build or network; see `tasks/reference/crush-context-assembly.md`.
 - `tasks/reference/image-build-and-storage-pipeline.md` — the two podman levels (host `make image`
   building `crushcontainer` vs nested podman inside the sandbox), where every image layer is written,
   and how to reclaim disk.
+- github.com/billsix/runClaudeInContainer `tasks/reference/build-time-bind-mounts-for-install-scripts.md`
+  (not copied here) — why `client/Dockerfile` bind-mounts each install and build script into its
+  `RUN` instead of `COPY`ing it: cache behaviour, the SELinux and Docker results, which files stay
+  `COPY`. What happened in this repo: `tasks/install-scripts-bind-mount-at-build-instead-of-copy.md`.
 - `tasks/reference/container-file-layout.md` — the baked-vs-mounted map of the client container (every
   `COPY`, every `SHELL_RUN_FLAGS` mount, final runtime paths, the repo↔baked reference-doc mapping and
   **the cite-by-baked-path rule**). Printable via `make -C client manifest`. Consult before citing a

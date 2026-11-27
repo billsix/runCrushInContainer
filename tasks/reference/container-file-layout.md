@@ -41,16 +41,16 @@ the session log alongside it).
 
 | Repo source (under `client/`) | Container path | Shadowed at run time? |
 | --- | --- | --- |
-| `entrypoint/00-install-minimal.sh` | `/usr/local/bin/00-install-minimal.sh` | no (always run at build) |
-| `entrypoint/01-install-base.sh` | `/usr/local/bin/01-install-base.sh` | no (always run at build) |
-| `entrypoint/01b-install-binary-tools.sh` | `/usr/local/bin/01b-install-binary-tools.sh` | no (shfmt + procs from upstream binaries) |
-| `entrypoint/install-lean.sh` | `/usr/local/bin/install-lean.sh` | no (Lean 4 via elan, pinned `ELAN_VERSION` / `LEAN_TOOLCHAIN`; offline-copies /vendor/elan when it is mounted) |
+| `entrypoint/00-install-minimal.sh` | not in the image: bind-mounted into the `RUN` that executes it (github.com/billsix/runClaudeInContainer `tasks/reference/build-time-bind-mounts-for-install-scripts.md`) | — (always run at build) |
+| `entrypoint/01-install-base.sh` | not in the image: bind-mounted into the `RUN` that executes it (github.com/billsix/runClaudeInContainer `tasks/reference/build-time-bind-mounts-for-install-scripts.md`) | — (always run at build) |
+| `entrypoint/01b-install-binary-tools.sh` | not in the image: bind-mounted into the `RUN` that executes it (github.com/billsix/runClaudeInContainer `tasks/reference/build-time-bind-mounts-for-install-scripts.md`) | — (shfmt + procs from upstream binaries) |
+| `entrypoint/install-lean.sh` | not in the image: bind-mounted into the `RUN` that executes it (github.com/billsix/runClaudeInContainer `tasks/reference/build-time-bind-mounts-for-install-scripts.md`) | — (Lean 4 via elan, pinned `ELAN_VERSION` / `LEAN_TOOLCHAIN`; offline-copies /vendor/elan when it is mounted) |
 | `patches/` | `/patches/` | no |
 | `entrypoint/vendor/` | `/usr/local/bin/vendor/` (`chmod +x`) | no |
-| `entrypoint/03-build-crush.sh` | `/usr/local/bin/03-build-crush.sh` | no |
+| `entrypoint/03-build-crush.sh` | not in the image: bind-mounted into the `RUN` that executes it (github.com/billsix/runClaudeInContainer `tasks/reference/build-time-bind-mounts-for-install-scripts.md`) | — |
 | — (built by `03-build-crush.sh`) | `/usr/local/bin/crush` (via `GOBIN`) | no |
-| `entrypoint/02-install-vendor-tools.sh` | `/usr/local/bin/02-install-vendor-tools.sh` | no (run iff `VENDOR_TOOLS=1`) |
-| `entrypoint/install-lean.sh` | `/usr/local/bin/install-lean.sh` | no (Lean 4 via elan; offline-copies /vendor/elan iff `CRUSH_VENDORED=1`, else online) |
+| `entrypoint/02-install-vendor-tools.sh` | not in the image: bind-mounted into the `RUN` that executes it (github.com/billsix/runClaudeInContainer `tasks/reference/build-time-bind-mounts-for-install-scripts.md`) | — (run iff `VENDOR_TOOLS=1`) |
+| `entrypoint/install-lean.sh` | not in the image: bind-mounted into the `RUN` that executes it (github.com/billsix/runClaudeInContainer `tasks/reference/build-time-bind-mounts-for-install-scripts.md`) | — (Lean 4 via elan; offline-copies /vendor/elan iff `CRUSH_VENDORED=1`, else online) |
 | `entrypoint/dotfiles/.extrabashrc` | `/root/.extrabashrc` | no |
 | `entrypoint/dotfiles/.vimrc` | `/root/.vimrc` | yes — by the host's `~/.vimrc` when it exists (2026-09-10) |
 | `entrypoint/dotfiles/.config/containers/storage.conf` | `/root/.config/containers/storage.conf`, and again as `/etc/containers/storage.conf.d/50-crush-nested.conf` | no (nested podman: native overlay, host image store) |
