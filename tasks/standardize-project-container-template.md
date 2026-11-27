@@ -31,6 +31,13 @@ The maintainer's instruction (2026-08-29): where projects aren't done in a stand
 selective mount), **formalize a standard in the nested CLAUDE.md** for the projects these meta-repos
 manage — in **both** runClaudeInContainer and runCrushInContainer.
 
+## Related, settled 2026-11-27: install scripts are bind-mounted at build
+
+The contract now says a build-only install script is bind-mounted into the `RUN` that executes it,
+not `COPY`'d (github.com/billsix/runClaudeInContainer
+`tasks/reference/build-time-bind-mounts-for-install-scripts.md`). Each project has its own
+`tasks/install-scripts-bind-mount-at-build.md`; that item is not part of the standard below.
+
 ## The proposed standard
 
 The full divergence table + the proposed standard (one `shell.sh` path, always bind-mounted; mandatory
