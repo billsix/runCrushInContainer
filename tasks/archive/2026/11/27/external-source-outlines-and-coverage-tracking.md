@@ -1,10 +1,10 @@
 # Mirror: a convention for holding an external book's outline, citing it, and tracking which of its topics a project has covered
 
-**Status:** done 2026-11-27 — staged; the archive move is owed after the work commit
+**Status:** done 2026-11-27
 **Priority:** 5
 **Difficulty:** 3
 **Created:** 2026-11-27 (William Emerison Six <billsix@gmail.com>)
-**Mirrors:** github.com/billsix/runClaudeInContainer `tasks/external-source-outlines-and-coverage-tracking.md`
+**Mirrors:** github.com/billsix/runClaudeInContainer `tasks/archive/2026/11/27/external-source-outlines-and-coverage-tracking.md`
 **Related:** `tasks/review-record-shows-dispositions.md` (the same derived-status problem, for review records)
 
 ## What this did
@@ -32,6 +32,18 @@ never typed by hand, and the source's own wording is never committed.
 - `tasks/reference/container-file-layout.md` and its baked copy: two rows.
 - `CLAUDE.md`, `README.md`, `FORKING.md`, `tasks/reference/architecture.md`: the tool named, and
   the command count 13 → 14.
+
+## Order of events (2026-11-27, from the commit history before it was squashed)
+
+1. The mirror task was added as *proposed*, waiting on runClaudeInContainer's five open questions.
+2. The maintainer answered them there; this task was marked ready and gained the one design fact
+   that matters to a reader here (the outline grows over months; IDs never change).
+3. After the convention and the tool existed and had been run on geometricalgebra's first outline,
+   they were mirrored here. The first copy script stopped at a `cmp` of the two
+   `container-file-layout.md` copies, which already differed; that is how the older drift below
+   was found. The rest was then applied in a second pass.
+4. At archive, the reference doc was re-copied after runClaudeInContainer fixed its pointer to the
+   archived task.
 
 ## Verification
 

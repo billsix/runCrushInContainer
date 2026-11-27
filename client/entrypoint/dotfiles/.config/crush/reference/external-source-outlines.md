@@ -12,8 +12,8 @@ file, tagging a page with `covers:`, or answering "what haven't I covered yet?".
 2026-11-27 (William Emerison Six <billsix@gmail.com>) for github.com/billsix/geometricalgebra,
 whose book reads a high-school geometry textbook for topics to connect to geometric
 algebra; that repo's `tasks/sources/pearson-geo.toml` is the worked example. The task that
-produced this is `external-source-outlines-and-coverage-tracking.md` in
-github.com/billsix/runClaudeInContainer (under `tasks/`, then `tasks/archive/`).
+produced this is `tasks/archive/2026/11/27/external-source-outlines-and-coverage-tracking.md` in
+github.com/billsix/runClaudeInContainer.
 
 ## The three parts
 
