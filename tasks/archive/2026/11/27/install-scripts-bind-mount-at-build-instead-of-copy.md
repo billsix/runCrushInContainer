@@ -2,7 +2,7 @@
 
 **Status:** done 2026-11-26 — verdict: they can be mounted; contract, both sandbox Dockerfiles and the per-project tasks follow from it
 **Created:** 2026-11-26 (William Emerison Six <billsix@gmail.com>)
-**Mirrored from:** github.com/billsix/runClaudeInContainer `tasks/install-scripts-bind-mount-at-build-instead-of-copy.md`, so this repo records what happened. The `tasks/reference/`, `tasks/adhoc/` and `tools/` paths below are in that repo.
+**Mirrored from:** github.com/billsix/runClaudeInContainer `tasks/archive/2026/11/27/install-scripts-bind-mount-at-build-instead-of-copy.md`, so this repo records what happened. The `tasks/reference/`, `tasks/adhoc/` and `tools/` paths below are in that repo.
 **Touched:** github.com/billsix/runClaudeInContainer, this repo, the personal overlay template in
 github.com/billsix/dotfiles, github.com/billsix/geometricalgebra (the trial), and one new task doc in
 each of 23 projects.
@@ -65,7 +65,7 @@ Promoted to runClaudeInContainer `tools/`: `survey_dockerfile_copies.py`,
 `convert_install_copy_to_bind_mount.py` (idempotent; used on all three converted Dockerfiles) and
 `check_build_bind_mount.sh` (the host check, podman or Docker). One-shot, in
 `tasks/adhoc/install-scripts-bind-mount-at-build-instead-of-copy/`: `write_project_tasks.py` and its
-input `data/copies.tsv` (removed when this task is archived).
+input `data/copies.tsv` (removed when this task was archived).
 
 ## Not verified
 
