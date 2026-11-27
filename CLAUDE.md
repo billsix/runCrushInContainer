@@ -92,7 +92,7 @@ Three environments are in play; label instructions so it's unambiguous:
 ## What's ported / in use
 
 The full runClaudeInContainer working-method machinery is ported and in use (task/reference-doc
-systems, always-loaded conventions + personal overlay, in-session diversion stack, 13 slash commands,
+systems, always-loaded conventions + personal overlay, in-session diversion stack, 14 slash commands,
 `make shell-exec`, nested podman, seventeen local Crush patches, no-telemetry/no-phone-home). The full
 inventory with per-item detail, and what was deliberately NOT ported, is in
 `tasks/reference/architecture.md` § "Conventions machinery — ported" / "Ported machinery inventory".
@@ -111,6 +111,8 @@ tasks/reference/`; these are kept byte-identical (edit the canonical there, re-c
 repo-root-relative doc path; `bash tools/check_helm_file_at_point.sh <.emacs.d>`) is likewise a byte-identical mirror of
 runClaudeInContainer's `tools/` copy. `survey_names_and_scope.py` (leads for the naming and scope rules
 in Rust, C++, C, Haskell, bash and JavaScript) is a shared tool run in place, mirrored the same way.
+`source_coverage.py` (which entries of a project's `tasks/sources/<key>.toml` outline of an external
+book its pages tag and its tasks cite; `tasks/reference/external-source-outlines.md`) is another.
 `tools/measure_context.py` prints how much of each registered model's context window the
 preseeded context (conventions, overlay, project `CLAUDE.md`, template, tools) uses, with no
 build or network; see `tasks/reference/crush-context-assembly.md`.
