@@ -689,6 +689,29 @@ docs and deleting done narration — whereas here it is in-session, so the sweep
   the repo checks that come first (upstream merges, consumers, generators, mirrors, unbuilt code,
   what must not change), the policy questions, and the rename and proof mechanics.
 
+## External source outlines — the outline in a data file, coverage derived
+
+When a project draws on a book it does not own (a textbook whose topics the project's own book
+answers), keep that source's outline in **`tasks/sources/<key>.toml`**: one entry per chapter,
+lesson or topic, with the source's number and page, the topic in the project's own words, and my
+decision (`want` / `skip` with a reason / `undecided`). **Never write coverage into the outline or
+a reference doc; it is derived.** A product file tags what it covers with a comment,
+`covers: <key>/<entry id>`, written when the page is written; a task names its entries on its
+`**Source:**` line. `/source-coverage` with an optional key (`~/.config/crush/reference/source_coverage.py`, a report,
+not a gate) then prints each entry as covered, planned, skipped or not addressed.
+
+- **Entry IDs are short names, not the source's numbers, and never change** once written; numbers
+  and pages are fields, corrected in place.
+- **The outline grows a few entries at a time.** A partial outline is valid. When I ask to add to
+  one, write only what I gave (page `page_verified` only if I read it from my copy), run the report
+  for the new entries, stage the file.
+- **Commit titles, numbers, pages and own-words summaries only**: never a source's definitions,
+  exercises, examples or figures, and no scans or verbatim notes in git.
+
+Read `~/.config/crush/reference/external-source-outlines.md` **before** creating or adding to an
+outline, tagging a page, citing such a source, or answering "which of its topics have I not
+covered?": the file format, the copyright sources and the tool.
+
 ## Open-issues lists
 
 An "open/known issues" list in a doc holds only **genuinely open** items — when resolved, **remove**

@@ -1,55 +1,46 @@
 # Mirror: a convention for holding an external book's outline, citing it, and tracking which of its topics a project has covered
 
-**Status:** ready — waits on the work in runClaudeInContainer's task of the same name (its questions were answered 2026-11-27)
+**Status:** done 2026-11-27 — staged; the archive move is owed after the work commit
 **Priority:** 5
 **Difficulty:** 3
 **Created:** 2026-11-27 (William Emerison Six <billsix@gmail.com>)
-**Depends on:** github.com/billsix/runClaudeInContainer `tasks/external-source-outlines-and-coverage-tracking.md`
+**Mirrors:** github.com/billsix/runClaudeInContainer `tasks/external-source-outlines-and-coverage-tracking.md`
 **Related:** `tasks/review-record-shows-dispositions.md` (the same derived-status problem, for review records)
 
-## BLUF
+## What this did
 
-The maintainer (2026-11-27) wants a systematic way to hold the outline of a book he does not own the
-rights to (chapters, lessons, topics, page numbers), to cite it from his own book, and to see which
-of its topics his book has covered, plans to cover, has decided to skip, or has not addressed. The
-investigation, the proposal, the copyright findings and the open questions are in
-runClaudeInContainer's task; this task mirrors the result into this repo. Done means this repo's
-shared conventions, reference docs and any shared tool match runClaudeInContainer's once that task
-has been decided and built.
+Mirrored runClaudeInContainer's external-source-outline convention into this repo, so that a
+project developed with Crush gets it too. The reason, the investigation, the maintainer's five
+decisions and the design calls are in runClaudeInContainer's task; the rules are in
+`tasks/reference/external-source-outlines.md`.
 
-## Context
+In short: a project keeps the outline of a book it does not own in `tasks/sources/<key>.toml`
+(the maintainer's first is a high-school geometry textbook, for his book "Geometry 2" in
+github.com/billsix/geometricalgebra), tags the pages of its own product that cover an entry with a
+`covers:` comment, and gets covered / planned / skipped / not-addressed from a report. Coverage is
+never typed by hand, and the source's own wording is never committed.
 
-**Read first:** github.com/billsix/runClaudeInContainer
-`tasks/external-source-outlines-and-coverage-tracking.md`. It holds everything; this doc repeats only
-what a reader needs in order to know why the mirror exists.
+## What was mirrored
 
-- **The goal.** github.com/billsix/geometricalgebra is a library and a book, "Geometry 2", a course
-  for high school or early college that bridges to linear algebra through geometric algebra. The
-  maintainer reads a standard geometry textbook (Charles et al., *Geometry: Common Core*, Pearson,
-  2012) for topics to connect to it. Deciding to cover a topic and writing it may be months apart,
-  and he wants a record that does not depend on his memory. He wants to comply with US copyright law
-  and to cite heavily.
-- **The finding.** A hand-maintained reference doc is the wrong home for the coverage half: the
-  review conventions already say "Status is derived, never written into the record", and
-  geometricalgebra's existing hand-typed "Where" column is the weak version of this.
-- **The design (accepted by the maintainer 2026-11-27).** One data file per external source (stable topic IDs, the
-  source's page numbers, own-words descriptions, a want / skip / undecided decision); coverage read
-  from grep-able tags in the product's pages; a report tool that prints covered / planned / skipped /
-  not addressed; a reference doc for the prose; citations generated from the same data. Committed
-  content is titles, page numbers and own-words descriptions, never the publisher's definitions,
-  exercises or figures. The outline grows over months, a few topics at a time, so a partial
-  outline is valid and a topic's ID never changes once written.
-- **Why this repo is involved.** The convention would live in the shared `CLAUDE.md` and a reference
-  doc, and the tool may be a sibling of `review_status.py`; this repo mirrors all three
-  byte-identically where it mirrors them today.
+- `tasks/reference/source_coverage.py` and `tasks/reference/external-source-outlines.md`, and
+  their baked copies under `client/entrypoint/dotfiles/.config/crush/reference/`: byte-identical
+  to runClaudeInContainer's (`cmp`).
+- `client/entrypoint/dotfiles/.config/crush/commands/source-coverage.md`: a port, not a byte
+  mirror, like the other commands (no frontmatter, an `$OPTIONS` token, `~/.config/crush` paths).
+- `client/entrypoint/dotfiles/.config/crush/CLAUDE.md`: the "External source outlines" section,
+  with `~/.config/crush` paths and its read trigger folded into the section.
+- `tasks/reference/container-file-layout.md` and its baked copy: two rows.
+- `CLAUDE.md`, `README.md`, `FORKING.md`, `tasks/reference/architecture.md`: the tool named, and
+  the command count 13 → 14.
 
-## Plan
+## Verification
 
-- [x] The maintainer answered runClaudeInContainer's five questions (2026-11-27; he took the agent's recommendation on each).
-- [ ] Mirror the convention text, the reference doc and any shared tool, and check the mirrored
-      copies with `cmp`.
-- [ ] Bake the reference doc into the client image where this repo bakes the others.
+`cmp` of the four copied files against runClaudeInContainer's. The client image was not rebuilt and
+the command was not run in a Crush session.
 
-## Open questions
+## Found on the way, not fixed
 
-None. The five questions were asked and answered in runClaudeInContainer's task.
+The baked `client/entrypoint/dotfiles/.config/crush/reference/container-file-layout.md` already
+differed from `tasks/reference/container-file-layout.md` before this work: its install-script rows
+predate the 2026-11-27 bind-mount change, and it lacks the `survey_names_and_scope.py` row. The two
+new rows were added to both; the older drift belongs to `tasks/audit-baked-reference-doc-drift.md`.

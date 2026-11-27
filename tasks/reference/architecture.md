@@ -357,8 +357,8 @@ The full working-method machinery is **ported and in use** (Phases 0–4, 2026-0
   project→URL mapping / mount layout / instructions** without editing anything tracked; the agent loads
   it every session and the tracked conventions stay maintainer-agnostic. Example to copy:
   `client/entrypoint/dotfiles/.config/crush/ai-coding-conventions.personal.example.md`; see `FORKING.md`;
-- **13 slash commands** (`/new-task`, `/new-reference`, `/new-reference-set`, `/archive-task`, `/recheck-blocked`,
-  `/stack` and `/stack-*`, `/audit-repo`, `/findings-to-tasks`, `/review-status`, `/spell-out-names` — in Crush's `/` dialog under the **User** tab). Each is a port of runClaudeInContainer's, not a byte mirror: no YAML frontmatter, `$UPPERCASE` argument tokens instead of `$ARGUMENTS`, `~/.config/crush` paths;
+- **14 slash commands** (`/new-task`, `/new-reference`, `/new-reference-set`, `/archive-task`, `/recheck-blocked`,
+  `/stack` and `/stack-*`, `/audit-repo`, `/findings-to-tasks`, `/review-status`, `/source-coverage`, `/spell-out-names` — in Crush's `/` dialog under the **User** tab). Each is a port of runClaudeInContainer's, not a byte mirror: no YAML frontmatter, `$UPPERCASE` argument tokens instead of `$ARGUMENTS`, `~/.config/crush` paths;
 - **nested-podman** (`make shell NESTED_PODMAN=1`; inner runs: `--network=host` needed at this depth, and the cgroups flag auto-applies via the PODMAN_RUN_FLAGS convention — see `tasks/reference/nested-podman-design.md`);
 - **`make shell-exec`** (`client/Makefile`) — the batch twin of `make shell`: `make shell-exec
   SCRIPT=<path under the mounted PROJECT at /work> | CMD='...'` runs a script/command in the same
