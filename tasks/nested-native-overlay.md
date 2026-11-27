@@ -24,6 +24,15 @@ Mirror of github.com/billsix/runClaudeInContainer `tasks/nested-native-overlay.m
 2. Rewrite the listed docs; document the RAM toggle in README and `CLAUDE.md` (no `exampleRunClaude.sh` here; the README's hand-run commands carry the commented variant).
 3. `make image` (nested); then `blocked` on the host check.
 
+## Also covered by the same host rebuild (added 2026-11-27)
+
+`client/Dockerfile` now bind-mounts its six install and build scripts into their `RUN`s instead of
+`COPY`ing them (`tasks/archive/2026/11/27/install-scripts-bind-mount-at-build-instead-of-copy.md`).
+That image was built nested (18 minutes, `make format` green) but never run through a launcher. The
+`[LINUX HOST] make -C client image` and launcher session this task waits on are also the first host
+build and first real run of that Dockerfile: when they are done, also run `tools/check_launchers.sh`
+and confirm `ls /usr/local/bin` in the container shows `crush` and no `0N-install-*.sh`.
+
 ## Log
 
 - **2026-11-15, implemented** (commit "nested podman: native kernel overlay instead of
